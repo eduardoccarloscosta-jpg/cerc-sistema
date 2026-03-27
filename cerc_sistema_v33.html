@@ -515,9 +515,9 @@ body::after{
 .alert-info{background:#EFF6FF;border-color:#BFDBFE;color:var(--blue)}
 .alert-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px}
 /* CALENDÁRIO — Google Calendar Style */
-.cal-shell{display:flex;gap:0;background:var(--surface);border-radius:var(--rxl);border:1px solid var(--border);overflow:hidden;height:calc(100vh - 170px);min-height:600px}
+.cal-shell{display:flex;gap:0;background:var(--surface);border-radius:var(--rxl);border:1px solid var(--border);overflow:hidden;height:calc(100vh - 140px);min-height:580px}
 .cal-left{width:220px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg);padding:12px 10px;gap:14px;overflow-y:auto}
-.cal-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.cal-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;min-height:0}
 .cal-mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal-mini-hd{text-align:center;font-size:9px;font-weight:700;color:var(--text3);padding:2px 0}
 .cal-mini-day{text-align:center;font-size:11px;font-weight:500;padding:4px 2px;border-radius:50%;cursor:pointer;color:var(--text2);transition:background .1s;line-height:1.2}
@@ -536,11 +536,11 @@ body::after{
 .cal-view-btn{background:none;border:none;border-right:1.5px solid var(--border);padding:5px 13px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text3);transition:all .12s;white-space:nowrap;letter-spacing:.2px}
 .cal-view-btn:last-child{border-right:none}
 .cal-view-btn.active{background:var(--accent);color:#fff}
-.cal-grid-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);overflow-y:auto;flex:1}
+.cal-grid-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;flex:1;min-height:0}
 .cal-day-hd{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:8px 4px;background:var(--bg);border-right:1px solid var(--border);border-bottom:2px solid var(--border);letter-spacing:.4px}
 .cal-day-hd:last-child{border-right:none}
-.cal-day{min-height:100px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 5px;background:var(--surface);cursor:pointer;transition:background .08s;position:relative;overflow:hidden}
+.cal-day{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 5px;background:var(--surface);cursor:pointer;transition:background .08s;position:relative;overflow:hidden}
 .cal-day:nth-child(7n){border-right:none}
 .cal-day:hover{background:#F8FAFF}
 .cal-day.today{background:#FAFBFF}
@@ -5165,8 +5165,12 @@ function renderCalendario() {
       cells+='<div class="cal-day'+(isToday3?' today':'')+'" onclick="if(event.target.closest('.cal-event'))return;setCalView('day',new Date('+dt.getTime()+'))">'+
         '<div class="cal-day-num">'+day+'</div>'+evHtml+'</div>';
     }
+    // Add trailing cells to complete last week row
+    var totalCells=firstDay+daysInMonth;
+    var remainder=totalCells%7;
+    if(remainder!==0){for(var et=0;et<7-remainder;et++)cells+='<div class="cal-day other-month" style="opacity:.5"></div>';}
     gridHtml='<div class="cal-grid-wrap">'+
-      '<div style="display:grid;grid-template-columns:repeat(7,1fr);flex-shrink:0">'+hdCells+'</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(7,1fr);flex-shrink:0;border-bottom:2px solid var(--border)">'+hdCells+'</div>'+
       '<div class="cal-grid">'+cells+'</div>'+
     '</div>';
 
