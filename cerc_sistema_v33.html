@@ -6198,21 +6198,23 @@ function onbBack() {
   if(_onbStep>0){ _onbStep--; renderOnbStep(); }
 }
 async function onbNext() {
-  _onbSteps[_onbStep].save();
+  try { _onbSteps[_onbStep].save(); } catch(e) {}
   if(_onbStep < _onbSteps.length-1) { _onbStep++; renderOnbStep(); return; }
-  // Último passo: salvar perfil
-  if(_sbUser) {
-    await _sb.from('profiles').update({
-      nome: _onbData.nome||'',
-      empresa: _onbData.empresa||'',
-      onboarding_done: true,
-      updated_at: new Date().toISOString()
-    }).eq('id', _sbUser.id);
-    if(_sbProfile) { _sbProfile.nome=_onbData.nome||''; _sbProfile.empresa=_onbData.empresa||''; _sbProfile.onboarding_done=true; }
-    updateSidebarUser(_sbUser, _sbProfile);
-  }
+  // Último passo: fechar overlay PRIMEIRO, depois salvar perfil em background
   document.getElementById('onb-overlay').style.display = 'none';
   toast('Bem-vindo ao CERC! 🎉 Comece criando sua primeira demanda.', 'success');
+  if(_sbUser) {
+    try {
+      await _sb.from('profiles').update({
+        nome: _onbData.nome||'',
+        empresa: _onbData.empresa||'',
+        onboarding_done: true,
+        updated_at: new Date().toISOString()
+      }).eq('id', _sbUser.id);
+      if(_sbProfile) { _sbProfile.nome=_onbData.nome||''; _sbProfile.empresa=_onbData.empresa||''; _sbProfile.onboarding_done=true; }
+      updateSidebarUser(_sbUser, _sbProfile);
+    } catch(e) { console.warn('[ONB] Erro ao salvar perfil:', e.message); }
+  }
 }
 
 // ══ PÁGINA CONFIGURAÇÕES ══════════════════════════════════════════════════════
