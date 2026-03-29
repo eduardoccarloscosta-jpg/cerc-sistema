@@ -1092,7 +1092,13 @@ body::after{
     </div>
   </nav>
   <div class="sb-foot">
-    <div style="padding:4px 8px 0">
+    <div style="padding:6px 10px 4px;display:flex;align-items:center;gap:6px">
+      <span id="sb-online-badge" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#FEF3C7;color:#D97706;border:1px solid #FCD34D" title="Status da conexão com Supabase">
+        <span id="sb-online-dot" style="width:7px;height:7px;border-radius:50%;background:#D97706;flex-shrink:0"></span>
+        <span id="sb-online-label">Verificando</span>
+      </span>
+    </div>
+    <div style="padding:0 8px 0">
       <button onclick="pushLocalToSupabase()" class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start;gap:6px;font-size:11px;color:var(--text2)" title="Enviar dados do navegador para o Supabase">
         ☁️ Sincronizar dados locais
       </button>
@@ -1116,6 +1122,13 @@ body::after{
 <main class="main">
   <div class="topbar">
     <span class="topbar-title" id="topbar-title">Dashboard</span>
+    <div style="position:relative;flex:1;max-width:320px;margin:0 12px">
+      <input id="global-search-input" type="text" placeholder="🔍 Buscar demandas, clientes, contratos..." autocomplete="off"
+        style="width:100%;padding:7px 12px 7px 32px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-family:inherit;outline:none;background:var(--surface2);color:var(--text);transition:border .12s"
+        oninput="onGlobalSearch(this.value)" onkeydown="onGlobalSearchKey(event)" onfocus="if(this.value)showGlobalResults()" />
+      <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text3)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <div id="global-search-results" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);box-shadow:var(--shm);z-index:2000;max-height:340px;overflow-y:auto"></div>
+    </div>
     <div class="topbar-actions" id="topbar-actions"></div>
   </div>
   <div class="content" id="page-content"></div>
@@ -1948,10 +1961,26 @@ async function loadStateFromSupabase() {
 
 function setSbStatus(st) {
   var el=document.getElementById('sb-status');
-  if(!el) return;
-  if(st==='online'){ el.style.background='#16a34a'; el.title='☁️ Supabase: online'; }
-  else if(st==='syncing'){ el.style.background='#d97706'; el.title='☁️ Supabase: sincronizando...'; }
-  else { el.style.background='#dc2626'; el.title='☁️ Supabase: offline (dados locais)'; }
+  if(el){
+    if(st==='online'){ el.style.background='#16a34a'; el.title='☁️ Supabase: online'; }
+    else if(st==='syncing'){ el.style.background='#d97706'; el.title='☁️ Supabase: sincronizando...'; }
+    else { el.style.background='#dc2626'; el.title='☁️ Supabase: offline (dados locais)'; }
+  }
+  var badge=document.getElementById('sb-online-badge');
+  var dot=document.getElementById('sb-online-dot');
+  var label=document.getElementById('sb-online-label');
+  if(badge && dot && label){
+    if(st==='online'){
+      badge.style.background='#DCFCE7'; badge.style.color='#16A34A'; badge.style.borderColor='#86EFAC';
+      dot.style.background='#16A34A'; label.textContent='Online';
+    } else if(st==='syncing'){
+      badge.style.background='#FEF3C7'; badge.style.color='#D97706'; badge.style.borderColor='#FCD34D';
+      dot.style.background='#D97706'; label.textContent='Sincronizando';
+    } else {
+      badge.style.background='#FEE2E2'; badge.style.color='#DC2626'; badge.style.borderColor='#FCA5A5';
+      dot.style.background='#DC2626'; label.textContent='Offline';
+    }
+  }
 }
 
 async function pushLocalToSupabase() {
@@ -2171,6 +2200,72 @@ function showPage(pg) {
 }
 
 // ══ DASHBOARD ════════════════════════════════════════════
+/* ══ BUSCA GLOBAL ════════════════════════════════════ */
+var _gsTimer=null;
+function onGlobalSearch(val){
+  clearTimeout(_gsTimer);
+  if(!val||!val.trim()){hideGlobalResults();return;}
+  _gsTimer=setTimeout(function(){showGlobalResults(val);},180);
+}
+function onGlobalSearchKey(e){
+  if(e.key==='Escape'){hideGlobalResults();document.getElementById('global-search-input').value='';document.getElementById('global-search-input').blur();}
+  if(e.key==='Enter'){
+    var first=document.querySelector('#global-search-results .gs-item');
+    if(first) first.click();
+  }
+}
+function hideGlobalResults(){var el=document.getElementById('global-search-results');if(el)el.style.display='none';}
+function showGlobalResults(val){
+  var inp=document.getElementById('global-search-input');
+  var q=(val||(inp?inp.value:'')).toLowerCase().trim();
+  var el=document.getElementById('global-search-results');
+  if(!el||!q){hideGlobalResults();return;}
+  var results=[];
+  // Demandas
+  (state.demandas||[]).forEach(function(dem){
+    var hay=((dem.proposta||'')+' '+(dem.servico||'')+' '+(dem.cliente||'')+' '+(dem.obs||'')).toLowerCase();
+    if(hay.indexOf(q)>=0) results.push({tipo:'demanda',icone:'📋',titulo:dem.servico||dem.proposta,sub:(dem.proposta||'')+(dem.cliente?' — '+dem.cliente:''),id:dem.id});
+  });
+  // Clientes
+  (state.clientes||[]).forEach(function(cli){
+    var hay=((cli.nome||'')+' '+(cli.email||'')+' '+(cli.telefone||'')+' '+(cli.empresa||'')).toLowerCase();
+    if(hay.indexOf(q)>=0) results.push({tipo:'cliente',icone:'👤',titulo:cli.nome||cli.empresa,sub:cli.empresa||cli.email||'',id:cli.id});
+  });
+  // Contratos
+  (state.contratos||[]).forEach(function(ct){
+    var hay=((ct.titulo||'')+' '+(ct.cliente||'')+' '+(ct.descricao||'')).toLowerCase();
+    if(hay.indexOf(q)>=0) results.push({tipo:'contrato',icone:'📄',titulo:ct.titulo||'Contrato',sub:ct.cliente||'',id:ct.id});
+  });
+  if(!results.length){
+    el.innerHTML='<div style="padding:14px;text-align:center;font-size:12px;color:var(--text3)">Nenhum resultado para "'+q+'"</div>';
+    el.style.display='block';return;
+  }
+  var tipoLabel={demanda:'Demanda',cliente:'Cliente',contrato:'Contrato'};
+  el.innerHTML=results.slice(0,12).map(function(r,idx){
+    return '<div class="gs-item" tabindex="0" onclick="gsOpen(\''+r.tipo+'\',\''+r.id+'\')" style="display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s" onmouseenter="this.style.background=\'var(--surface2)\'" onmouseleave="this.style.background=\'\'">'+
+      '<span style="font-size:16px">'+r.icone+'</span>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.titulo+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)">'+tipoLabel[r.tipo]+' '+( r.sub?'• '+r.sub:'')+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('')+(results.length>12?'<div style="padding:8px;text-align:center;font-size:11px;color:var(--text3)">+'+(results.length-12)+' resultados</div>':'');
+  el.style.display='block';
+}
+function gsOpen(tipo,id){
+  hideGlobalResults();
+  var inp=document.getElementById('global-search-input');
+  if(inp) inp.value='';
+  if(tipo==='demanda'){ showPage('demandas'); setTimeout(function(){openModalEdit(id);},200); }
+  else if(tipo==='cliente'){ showPage('clientes'); setTimeout(function(){openClienteDetalhe(id);},200); }
+  else if(tipo==='contrato'){ showPage('contratos'); setTimeout(function(){verContrato(id);},200); }
+}
+document.addEventListener('click',function(e){
+  var sr=document.getElementById('global-search-results');
+  var si=document.getElementById('global-search-input');
+  if(sr&&si&&!sr.contains(e.target)&&e.target!==si) hideGlobalResults();
+});
+
 function renderDashboard() {
   var d=state.demandas;
   var byS={};
@@ -2267,6 +2362,10 @@ function renderDashboard() {
       '<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:14px">Funil por Status</div>'+funilRows+'</div>' +
       '<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px">Por Tipo de Serviço</div><div style="position:relative;height:200px"><canvas id="chart-tipo"></canvas></div></div>' +
     '</div>' +
+    '<div class="card" style="margin-bottom:14px">' +
+      '<div style="font-size:13px;font-weight:700;margin-bottom:10px">Receita vs Despesa — Últimos 6 Meses</div>' +
+      '<div style="position:relative;height:200px"><canvas id="chart-tendencia"></canvas></div>' +
+    '</div>' +
     '<div class="card">' +
       '<div style="font-size:13px;font-weight:700;margin-bottom:12px">Demandas Recentes</div>' +
       '<div class="tw" style="border:none">' +
@@ -2291,6 +2390,50 @@ function renderDashboard() {
       }
     });
   },100);
+
+  setTimeout(function(){
+    var ct=document.getElementById('chart-tendencia');
+    if(!ct||!window.Chart) return;
+    if(ct._chartInstance){ ct._chartInstance.destroy(); }
+    var meses=[],receitasMes=[],despesasMes=[];
+    var hoje=new Date();
+    for(var m=5;m>=0;m--){
+      var dt=new Date(hoje.getFullYear(),hoje.getMonth()-m,1);
+      var anoM=dt.getFullYear(), mesM=dt.getMonth()+1;
+      var nomeMes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][dt.getMonth()]+'/'+String(anoM).slice(2);
+      meses.push(nomeMes);
+      var prefM=String(anoM)+'-'+String(mesM).padStart(2,'0');
+      // Receitas: demandas concluídas ou pagas no mês
+      var rec=state.demandas.filter(function(x){
+        var dRef=x.dataPagamento||x.dataCriacao||'';
+        return dRef.indexOf(prefM)===0 && (x.status==='Concluído' || x.statusPagamento==='Pago');
+      }).reduce(function(a,b){return a+(b.valorBruto||0);},0);
+      receitasMes.push(parseFloat(rec.toFixed(2)));
+      // Despesas: despesas do mês
+      var desp=state.despesas.filter(function(x){
+        return (x.data||'').indexOf(prefM)===0;
+      }).reduce(function(a,b){return a+(b.valor||0);},0);
+      despesasMes.push(parseFloat(desp.toFixed(2)));
+    }
+    ct._chartInstance=new Chart(ct,{
+      type:'bar',
+      data:{
+        labels:meses,
+        datasets:[
+          {label:'Receita',data:receitasMes,backgroundColor:'rgba(22,163,74,0.7)',borderColor:'#16A34A',borderWidth:1.5,borderRadius:4},
+          {label:'Despesa',data:despesasMes,backgroundColor:'rgba(220,38,38,0.7)',borderColor:'#DC2626',borderWidth:1.5,borderRadius:4}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{family:'Inter',size:11},padding:10,boxWidth:10,usePointStyle:true}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{family:'Inter',size:11}}},
+          y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{family:'Inter',size:11},callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':''+v;}}}
+        }
+      }
+    });
+  },150);
 }
 
 // ══ DEMANDAS ═════════════════════════════════════════════
@@ -2892,7 +3035,7 @@ function addAnexoSub(idx) {
   var input=document.createElement('input'); input.type='file'; input.accept='image/*,application/pdf,.doc,.docx,.xls,.xlsx,.dwg';
   input.onchange=function(e) {
     var file=e.target.files[0]; if(!file) return;
-    if(file.size>8*1024*1024){toast('Limite: 8MB por arquivo');return;}
+    if(file.size>2*1024*1024){toast('Limite: 2MB por arquivo. Este arquivo tem '+Math.round(file.size/1024)+'KB.','danger');return;}
     var rd=new FileReader();
     rd.onload=function(ev){
       if(!modalSubs[idx].anexos) modalSubs[idx].anexos=[];
@@ -2917,7 +3060,7 @@ function renderDocsFiscais() {
   });
   el.innerHTML=html||'<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum documento fiscal.</div>';
 }
-function addDocFiscal(tipo){var input=document.createElement('input');input.type='file';input.accept='image/*,application/pdf';input.onchange=function(e){var file=e.target.files[0];if(!file) return;if(file.size>8*1024*1024){toast('Limite 8MB');return;}var rd=new FileReader();rd.onload=function(ev){modalDocsFiscais[tipo]={nome:file.name,tipo:file.type,tamanho:file.size,dados:ev.target.result,data:new Date().toISOString()};renderDocsFiscais();toast(tipo==='nf'?'Nota Fiscal anexada!':'Boleto anexado!');};rd.readAsDataURL(file);};input.click();}
+function addDocFiscal(tipo){var input=document.createElement('input');input.type='file';input.accept='image/*,application/pdf';input.onchange=function(e){var file=e.target.files[0];if(!file) return;if(file.size>2*1024*1024){toast('Limite: 2MB por arquivo. Este arquivo tem '+Math.round(file.size/1024)+'KB.','danger');return;}var rd=new FileReader();rd.onload=function(ev){modalDocsFiscais[tipo]={nome:file.name,tipo:file.type,tamanho:file.size,dados:ev.target.result,data:new Date().toISOString()};renderDocsFiscais();toast(tipo==='nf'?'Nota Fiscal anexada!':'Boleto anexado!');};rd.readAsDataURL(file);};input.click();}
 function viewDoc(tipo){var doc=modalDocsFiscais[tipo];if(!doc) return;var w=window.open('','_blank');if(doc.tipo&&doc.tipo.startsWith('image/'))w.document.write('<img src="'+doc.dados+'" style="max-width:100%;display:block;margin:auto"/>');else w.document.write('<iframe src="'+doc.dados+'" style="width:100vw;height:100vh;border:none"></iframe>');}
 function removeDoc(tipo){modalDocsFiscais[tipo]=null;renderDocsFiscais();}
 
