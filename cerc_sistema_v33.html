@@ -530,7 +530,7 @@ body::after{
 .cal-mini-day.mini-other{opacity:.35}
 /* ── cabeçalho da grade ── */
 .cal-toolbar{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
-.cal-toolbar-title{font-size:16px;font-weight:700;flex:1}
+.cal-toolbar-title{font-size:20px;font-weight:700;flex:1}
 .cal-nav-btn{background:none;border:1px solid var(--border);cursor:pointer;padding:4px 9px;font-size:14px;color:var(--text2);border-radius:6px;transition:background .1s;line-height:1}
 .cal-nav-btn:hover{background:var(--border)}
 .cal-view-grp{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden}
@@ -539,16 +539,16 @@ body::after{
 .cal-view-btn.active{background:var(--accent);color:#fff}
 /* ── grade mensal ── */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);flex:1;align-content:stretch}
-.cal-day-hd{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:8px 4px;background:var(--bg);border-right:1px solid var(--border);border-bottom:2px solid var(--border)}
+.cal-day-hd{text-align:center;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:10px 4px;background:var(--bg);border-right:1px solid var(--border);border-bottom:2px solid var(--border)}
 .cal-day-hd:last-child{border-right:none}
-.cal-day{min-height:96px;height:100%;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 5px;background:var(--surface);cursor:pointer;transition:background .1s;position:relative}
+.cal-day{min-height:130px;height:100%;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 7px;background:var(--surface);cursor:pointer;transition:background .1s;position:relative}
 .cal-day:nth-child(7n){border-right:none}
 .cal-day:hover{background:var(--bg)}
 .cal-day.today .cal-day-num{background:var(--accent);color:#fff;border-radius:50%}
 .cal-day.other-month{background:var(--surface2)}
 .cal-day.other-month .cal-day-num{opacity:.4}
-.cal-day-num{font-size:11px;font-weight:700;color:var(--text2);width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin-bottom:3px}
-.cal-event{pointer-events:auto;cursor:pointer;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;line-height:1.4;border-left:3px solid transparent}
+.cal-day-num{font-size:14px;font-weight:700;color:var(--text2);width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+.cal-event{pointer-events:auto;cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;border-radius:4px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;line-height:1.4;border-left:3px solid transparent}
 .cal-event:hover{filter:brightness(.92)}
 /* ── grade semanal ── */
 .cal-week-outer{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -720,14 +720,14 @@ body::after{
 .cal-view-btn.active{background:var(--accent);color:#fff}
 /* Grade mensal */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)}
-.cal-day-hd{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:8px 4px;background:var(--bg);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
-.cal-day{min-height:90px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 5px;background:var(--surface);cursor:pointer;transition:background .1s}
+.cal-day-hd{text-align:center;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:10px 4px;background:var(--bg);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.cal-day{min-height:130px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 7px;background:var(--surface);cursor:pointer;transition:background .1s}
 .cal-day:hover{background:var(--bg)}
-.cal-day.today .cal-day-num{background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px}
+.cal-day.today .cal-day-num{background:var(--accent);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px}
 .cal-day.other-month{background:var(--surface2);}
 .cal-day.other-month .cal-day-num{color:var(--text3);opacity:.5}
-.cal-day-num{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
-.cal-event{pointer-events:auto;cursor:pointer;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;line-height:1.4;border-left:3px solid transparent}
+.cal-day-num{font-size:14px;font-weight:700;color:var(--text2);margin-bottom:4px;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+.cal-event{pointer-events:auto;cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;border-radius:4px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;line-height:1.4;border-left:3px solid transparent}
 .cal-event:hover{filter:brightness(.93)}
 /* Grade semanal */
 .cal-week-wrap{display:flex;flex-direction:column;overflow:hidden}
@@ -5271,11 +5271,11 @@ function renderCalendario() {
       var evts=evtMap[ds]||[];
       var cEvts=evtCustomMap[ds]||[];
       var gEvts=gcEvtMap[ds]||[];
-      var eh=evts.slice(0,1).map(evtDemHtml).join('')+cEvts.slice(0,1).map(evtCustomHtmlMon).join('')+gEvts.slice(0,1).map(evtGoogleHtml).join('');
+      var eh=evts.slice(0,2).map(evtDemHtml).join('')+cEvts.slice(0,2).map(evtCustomHtmlMon).join('')+gEvts.slice(0,2).map(evtGoogleHtml).join('');
       var tot=evts.length+cEvts.length+gEvts.length;
       // Renderizar TODOS os eventos (sem slice) para ter no popup
       var ehAll=evts.map(evtDemHtml).join('')+cEvts.map(evtCustomHtmlMon).join('')+gEvts.map(evtGoogleHtml).join('');
-      if(tot>3) eh+='<div class="cal-more-btn" onclick="event.stopPropagation();calShowMore(\''+ds+'\',this)" style="font-size:9px;font-weight:700;color:var(--accent);padding:2px 4px;cursor:pointer;border-radius:4px;background:var(--bg2)">+'+(tot-3)+' mais</div>';
+      if(tot>6) eh+='<div class="cal-more-btn" onclick="event.stopPropagation();calShowMore(\''+ds+'\',this)" style="font-size:11px;font-weight:700;color:var(--accent);padding:3px 6px;cursor:pointer;border-radius:4px;background:var(--bg2)">+'+(tot-6)+' mais</div>';
       cells+='<div class="cal-day'+(isToday?' today':'')+'" data-day-evts="" onclick="if(event.target.closest(\'.cal-event\')||event.target.closest(\'.cal-more-btn\')) return; openModalEvento(null,\''+ds+'\')">' +
         '<div class="cal-day-num">'+day+'</div>'+eh+'</div>';
     }
