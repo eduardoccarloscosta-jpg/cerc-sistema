@@ -1487,11 +1487,11 @@ body::after{
     </div>
     <div class="fgrid2">
       <div class="fg"><label>Valor (R$)</label><input class="finput" id="d-valor" type="number" step="0.01"/></div>
-      <div class="fg"><label>Data</label><input class="finput" id="d-data" type="date"/></div>
+      <div class="fg"><label id="d-data-lbl">Data</label><input class="finput" id="d-data" type="date"/></div>
     </div>
     <div class="fgrid2">
       <div class="fg"><label>Recorrência</label>
-        <select class="finput" id="d-rec"><option>Única</option><option>Mensal</option><option>Anual</option></select>
+        <select class="finput" id="d-rec" onchange="onRecChange(this.value)"><option>Única</option><option>Mensal</option><option>Anual</option></select>
       </div>
       <div class="fg"><label>Status do Pagamento</label>
         <select class="finput" id="d-pago">
@@ -1500,6 +1500,7 @@ body::after{
         </select>
       </div>
     </div>
+    <div class="fg" id="d-datafim-row" style="display:none"><label>Encerrar em <span style="font-size:11px;color:var(--text3);font-weight:400">(opcional — deixe vazio para repetir indefinidamente)</span></label><input class="finput" id="d-datafim" type="date"/></div>
     <div class="fg"><label>Observação</label><input class="finput" id="d-obs" placeholder="Nota, referência..."/></div>
   </div>
   <div class="modal-ft">
@@ -3338,6 +3339,7 @@ function saveCliente() {
     state.clientes.push(Object.assign({id:uid()},c));
   }
   saveState();
+  if(sbOnline) sbUpsertCliente(state.clientes.find(function(x){return x.id===(editingClienteId||state.clientes[state.clientes.length-1].id);}));
   document.getElementById('modal-cliente').style.display='none';
   toast('Cliente salvo!','success');
   if(currentPage==='clientes') renderClientes();
@@ -3433,9 +3435,21 @@ function openClienteDetalhe(id) {
 // ══ FINANCEIRO ════════════════════════════════════════════
 var finTab='fluxo';
 
+function onRecChange(val) {
+  var isRec=val!=='Única';
+  document.getElementById('d-datafim-row').style.display=isRec?'block':'none';
+  document.getElementById('d-data-lbl').textContent=isRec?'Data de Início':'Data';
+  document.getElementById('d-pago').closest('.fg').style.opacity=isRec?'0.4':'1';
+  document.getElementById('d-pago').closest('.fg').title=isRec?'Para recorrentes, marque o pagamento mês a mês na lista':'';
+}
 function openModalDespesa() {
   ['d-desc','d-valor','d-obs'].forEach(function(id){setF(id,'');});
   setF('d-rec','Única'); setF('d-pago','0'); setF('d-data',new Date().toISOString().slice(0,10));
+  setF('d-datafim','');
+  document.getElementById('d-datafim-row').style.display='none';
+  document.getElementById('d-data-lbl').textContent='Data';
+  document.getElementById('d-pago').closest('.fg').style.opacity='1';
+  document.getElementById('d-pago').closest('.fg').title='';
   var sel=document.getElementById('d-proposta');
   sel.innerHTML='<option value="">— Nenhuma —</option>';
   state.demandas.forEach(function(d){var o=document.createElement('option');o.value=d.id;o.textContent=(d.proposta||'')+(d.cliente?' — '+d.cliente:'');sel.appendChild(o);});
@@ -3455,11 +3469,15 @@ function openModalReceita() {
       '<div class="fg"><label>Descrição *</label><input id="ra-desc" class="finput" placeholder="Ex: Consultoria avulsa, Reembolso..." /></div>' +
       '<div class="fgrid2">' +
         '<div class="fg"><label>Valor Bruto *</label><input id="ra-valor" type="number" class="finput" placeholder="0,00" step="0.01" /></div>' +
-        '<div class="fg"><label>Data *</label><input id="ra-data" type="date" class="finput" value="'+hoje+'" /></div>' +
+        '<div class="fg"><label id="ra-data-lbl">Data *</label><input id="ra-data" type="date" class="finput" value="'+hoje+'" /></div>' +
       '</div>' +
       '<div class="fgrid2">' +
         '<div class="fg"><label>Categoria</label><select id="ra-cat" class="finput"><option>Serviço</option><option>Reembolso</option><option>Bonificação</option><option>Consultoria</option><option>Outros</option></select></div>' +
-        '<div class="fg"><label>Status</label><select id="ra-pago" class="finput"><option value="1">✅ Recebido</option><option value="0">⏳ A Receber</option></select></div>' +
+        '<div class="fg"><label>Recorrência</label><select id="ra-rec" class="finput" onchange="var r=this.value,isR=r!==\'Única\';document.getElementById(\'ra-datafim-row\').style.display=isR?\'block\':\'none\';document.getElementById(\'ra-pago\').closest(\'.fg\').style.opacity=isR?\'0.4\':\'1\';document.getElementById(\'ra-data-lbl\').textContent=isR?\'Data de Início\':\'Data *\'"><option>Única</option><option>Mensal</option><option>Anual</option></select></div>' +
+      '</div>' +
+      '<div class="fgrid2">' +
+        '<div class="fg" id="ra-pago-wrap"><label>Status</label><select id="ra-pago" class="finput"><option value="1">✅ Recebido</option><option value="0">⏳ A Receber</option></select></div>' +
+        '<div class="fg" id="ra-datafim-row" style="display:none"><label>Encerrar em <span style="font-size:11px;color:#92400E;font-weight:400">(opcional)</span></label><input id="ra-datafim" type="date" class="finput"/></div>' +
       '</div>' +
       '<div class="fg"><label>Observação</label><textarea id="ra-obs" class="finput" rows="2" placeholder="Observações..."></textarea></div>' +
     '</div>' +
@@ -3476,16 +3494,21 @@ function saveReceita() {
   var desc=document.getElementById('ra-desc').value.trim();
   var valor=parseFloat(document.getElementById('ra-valor').value)||0;
   if(!desc||!valor){toast('Preencha descrição e valor');return;}
-  // Registrar como despesa negativa não — registrar como demanda avulsa
+  var rec=document.getElementById('ra-rec')?document.getElementById('ra-rec').value:'Única';
+  var pago=document.getElementById('ra-pago').value==='1';
+  var dataVal=document.getElementById('ra-data').value;
   var d={
     id:uid(), proposta:'REC-'+Date.now().toString(36).toUpperCase(),
     servico:desc, cliente:'Receita Avulsa',
     tipo:'Receita Avulsa', status:'Concluído',
-    dataCriacao:document.getElementById('ra-data').value,
-    dataPagamento:document.getElementById('ra-pago').value==='1'?document.getElementById('ra-data').value:'',
-    statusPagamento:document.getElementById('ra-pago').value==='1'?'Pago':'Pendente',
-    valorBruto:valor, valorLiquido:valor, valorPago:document.getElementById('ra-pago').value==='1'?valor:0,
+    dataCriacao:dataVal,
+    dataPagamento:pago&&rec==='Única'?dataVal:'',
+    statusPagamento:rec!=='Única'?'Recorrente':(pago?'Pago':'Pendente'),
+    valorBruto:valor, valorLiquido:valor, valorPago:pago&&rec==='Única'?valor:0,
     impostoEstimado:0, custoOperacional:0,
+    rec:rec,
+    dataFim:rec!=='Única'?(document.getElementById('ra-datafim')?document.getElementById('ra-datafim').value:''):'',
+    recebidoMeses:rec!=='Única'?{}:null,
     obs:document.getElementById('ra-obs').value,
     categoriaReceita:document.getElementById('ra-cat').value,
     log:[{tipo:'fin',desc:'Receita avulsa registrada',ts:new Date().toISOString()}]
@@ -3493,7 +3516,7 @@ function saveReceita() {
   state.demandas.push(d);
   saveState();
   document.getElementById('modal-receita').remove();
-  toast('Receita registrada!','success');
+  toast(rec!=='Única'?'Receita recorrente registrada! Aparecerá todo mês automaticamente.':'Receita registrada!','success');
   renderFinanceiro();
 }
 
@@ -3503,19 +3526,57 @@ function renderFinanceiro() {
   var anos=[]; var ay=new Date().getFullYear();
   for(var yi=ay-2;yi<=ay+1;yi++) anos.push(yi);
   function inMes(ds,m,y){if(!ds) return false; var dt=new Date(ds.length===10?ds+'T12:00':ds); return dt.getMonth()+1===m&&dt.getFullYear()===y;}
+  function despesaApareceMes(x,m,y){
+    if(!x.data) return false;
+    var dt=new Date(x.data+'T12:00'),dM=dt.getMonth()+1,dY=dt.getFullYear();
+    if(x.rec==='Mensal'){
+      if((dY>y)||(dY===y&&dM>m)) return false;
+      if(x.dataFim){var fim=new Date(x.dataFim+'T12:00'),fM=fim.getMonth()+1,fY=fim.getFullYear();if((fY<y)||(fY===y&&fM<m)) return false;}
+      return true;
+    } else if(x.rec==='Anual'){
+      if(dM!==m||dY>y) return false;
+      if(x.dataFim){var fim2=new Date(x.dataFim+'T12:00');if(fim2.getFullYear()<y) return false;}
+      return true;
+    }
+    return inMes(x.data,m,y);
+  }
+  var mesKey=finAno+'-'+String(finMes).padStart(2,'0');
   // Mês atual selecionado
-  var esMes=e.filter(function(x){return inMes(x.data,finMes,finAno);});
+  var esMes=[];
+  e.forEach(function(x){
+    if(!despesaApareceMes(x,finMes,finAno)) return;
+    if(x.rec&&x.rec!=='Única'){
+      esMes.push(Object.assign({},x,{_virtual:true,_mesKey:mesKey,pago:x.pagoMeses?!!(x.pagoMeses[mesKey]):false}));
+    } else { esMes.push(x); }
+  });
   var dMes=d.filter(function(x){return inMes(x.dataCriacao,finMes,finAno);});
+  function receitaApareceMes(x,m,y){
+    if(!x.dataCriacao) return false;
+    var dt=new Date(x.dataCriacao+'T12:00'),dM=dt.getMonth()+1,dY=dt.getFullYear();
+    if(x.rec==='Mensal'){
+      if((dY>y)||(dY===y&&dM>m)) return false;
+      if(x.dataFim){var fim=new Date(x.dataFim+'T12:00'),fM=fim.getMonth()+1,fY=fim.getFullYear();if((fY<y)||(fY===y&&fM<m)) return false;}
+      return true;
+    } else if(x.rec==='Anual'){
+      if(dM!==m||dY>y) return false;
+      if(x.dataFim){var fim2=new Date(x.dataFim+'T12:00');if(fim2.getFullYear()<y) return false;}
+      return true;
+    }
+    return false;
+  }
+  var recAvulsaRecMes=d.filter(function(x){return x.tipo==='Receita Avulsa'&&x.rec&&x.rec!=='Única'&&receitaApareceMes(x,finMes,finAno);});
   var recPagoMes=d.filter(function(x){
     if(x.statusPagamento!=='Pago') return false;
     return inMes(x.dataPagamento||x.dataCriacao,finMes,finAno);
-  }).reduce(function(a,b){return a+(b.valorBruto||0);},0);
+  }).reduce(function(a,b){return a+(b.valorBruto||0);},0)
+  +recAvulsaRecMes.filter(function(x){return x.recebidoMeses&&x.recebidoMeses[mesKey];}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
   var recParcialMes=d.filter(function(x){
     if(x.statusPagamento!=='Parcial') return false;
     return inMes(x.dataPagamentoParcial||x.dataPagamento||x.dataCriacao,finMes,finAno);
   }).reduce(function(a,b){return a+(b.valorPago||0);},0);
   var recParceladoMes=d.filter(function(x){if(x.statusPagamento!=='Parcelado')return false;return(x.parcelas||[]).some(function(p){return p.status==='Pago'&&p.dataPagamento&&inMes(p.dataPagamento,finMes,finAno);});}).reduce(function(a,b){return a+(b.parcelas||[]).filter(function(p){return p.status==='Pago'&&p.dataPagamento&&inMes(p.dataPagamento,finMes,finAno);}).reduce(function(s,p){return s+p.valor;},0);},0);
-  var recPendMes=dMes.filter(function(x){return ['Pendente','Parcial','Parcelado'].indexOf(x.statusPagamento)>=0&&['Em Execução','Concluído'].indexOf(x.status)>=0;}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
+  var recPendMes=dMes.filter(function(x){return ['Pendente','Parcial','Parcelado'].indexOf(x.statusPagamento)>=0&&['Em Execução','Concluído'].indexOf(x.status)>=0;}).reduce(function(a,b){return a+(b.valorBruto||0);},0)
+  +recAvulsaRecMes.filter(function(x){return !x.recebidoMeses||!x.recebidoMeses[mesKey];}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
   var totDespMes=esMes.reduce(function(a,b){return a+(b.valor||0);},0);
   var totDespMesPago=esMes.filter(function(x){return x.pago;}).reduce(function(a,b){return a+(b.valor||0);},0);
   var totDespMesPend=esMes.filter(function(x){return !x.pago;}).reduce(function(a,b){return a+(b.valor||0);},0);
@@ -3528,7 +3589,7 @@ function renderFinanceiro() {
     var ref=x.dataPagamento||x.dataCriacao;
     return inMes(ref,mesAnt,anoAnt);
   }).reduce(function(a,b){return a+(b.statusPagamento==='Pago'?b.valorBruto:b.valorPago)||0;},0);
-  var despAnt=e.filter(function(x){return inMes(x.data,mesAnt,anoAnt);}).reduce(function(a,b){return a+(b.valor||0);},0);
+  var despAnt=e.filter(function(x){return despesaApareceMes(x,mesAnt,anoAnt);}).reduce(function(a,b){return a+(b.valor||0);},0);
   function varPct(atual,ant){if(!ant) return null; return ((atual-ant)/ant*100);}
   function varHtml(pct,inverted){
     if(pct===null) return '';
@@ -3539,14 +3600,19 @@ function renderFinanceiro() {
   }
   // Despesas vencidas (pend e de meses anteriores)
   var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var mesAtualN=new Date().getMonth()+1, anoAtualN=new Date().getFullYear();
+  var mesAtualKey=anoAtualN+'-'+String(mesAtualN).padStart(2,'0');
   var despVenc=e.filter(function(x){
+    if(x.rec&&x.rec!=='Única'){
+      if(!despesaApareceMes(x,mesAtualN,anoAtualN)) return false;
+      return !(x.pagoMeses&&x.pagoMeses[mesAtualKey]);
+    }
     if(x.pago) return false;
     var dt=new Date(x.data+'T12:00'); dt.setHours(0,0,0,0);
     return dt<hoje;
   });
   var totDespVenc=despVenc.reduce(function(a,b){return a+(b.valor||0);},0);
   // Receitas a receber este mês
-  var mesAtualN=new Date().getMonth()+1, anoAtualN=new Date().getFullYear();
   var aReceberMes=d.filter(function(x){
     if(x.statusPagamento==='Pago') return false;
     return inMes(x.dataCriacao,mesAtualN,anoAtualN)&&['Em Execução','Fechado','Em Revisão'].indexOf(x.status)>=0;
@@ -3585,9 +3651,15 @@ function renderFinanceiro() {
     '<div id="fin-content"></div>';
   var fc=document.getElementById('fin-content');
   if(finTab==='receitas') {
-    var rows=dMes.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0;}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);});
-    if(!rows.length) rows=d.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0;}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);}).slice(0,20);
-    fc.innerHTML='<div class="tw"><table><thead><tr><th>Data</th><th>Proposta</th><th>Serviço</th><th>Status</th><th style="text-align:right">Bruto</th><th style="text-align:right">ISS</th><th style="text-align:right">Custo Op.</th><th style="text-align:right">Líquido</th><th>Pagamento</th><th style="text-align:right">Recebido</th></tr></thead><tbody>' +
+    var rows=dMes.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0&&x.statusPagamento!=='Recorrente';}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);});
+    if(!rows.length) rows=d.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0&&x.statusPagamento!=='Recorrente';}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);}).slice(0,20);
+    var recAvulsaHtml='';
+    if(recAvulsaRecMes.length){
+      recAvulsaHtml='<div class="card" style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px">🔄 Receitas Recorrentes — '+MESES[finMes-1]+' <span style="font-size:11px;font-weight:400;color:var(--text3)">Marque mês a mês conforme receber</span></div><table style="width:100%;border-collapse:collapse"><thead><tr style="font-size:11px;color:var(--text3)"><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Descrição</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Categoria</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Rec.</th><th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)">Valor/mês</th><th style="padding:6px 8px;border-bottom:1px solid var(--border)">'+MESES[finMes-1]+'</th></tr></thead><tbody>'+
+        recAvulsaRecMes.map(function(x){var isRec=x.recebidoMeses&&x.recebidoMeses[mesKey];return '<tr><td style="padding:7px 8px;font-weight:500">'+x.servico+'</td><td style="padding:7px 8px;font-size:11px;color:var(--text2)">'+(x.categoriaReceita||'—')+'</td><td style="padding:7px 8px"><span class="badge b-fec">🔄 '+x.rec+'</span></td><td style="padding:7px 8px;text-align:right;font-family:\'JetBrains Mono\',monospace;color:var(--s-con);font-weight:600">'+fR(x.valorBruto)+'</td><td style="padding:7px 8px"><button class="btn btn-sm" style="font-size:11px;padding:3px 9px;border-radius:20px;border:1.5px solid;cursor:pointer;font-weight:600;background:'+(isRec?'var(--s-con-l)':'var(--s-per-l)')+';color:'+(isRec?'var(--s-con)':'var(--text3)')+';border-color:'+(isRec?'#86EFAC':'var(--border)')+'" onclick="toggleReceitaRecebido(\''+x.id+'\',\''+mesKey+'\',this)">'+(isRec?'✅ Recebido':'⏳ A Receber')+'</button></td></tr>';}).join('')+
+      '</tbody></table></div>';
+    }
+    fc.innerHTML=recAvulsaHtml+'<div class="tw"><table><thead><tr><th>Data</th><th>Proposta</th><th>Serviço</th><th>Status</th><th style="text-align:right">Bruto</th><th style="text-align:right">ISS</th><th style="text-align:right">Custo Op.</th><th style="text-align:right">Líquido</th><th>Pagamento</th><th style="text-align:right">Recebido</th></tr></thead><tbody>' +
       rows.map(function(dem){return '<tr><td style="font-size:11px;color:var(--text3)">'+fD(dem.dataCriacao)+'</td><td style="font-size:11px;color:'+(dem.dataPagamento?'var(--s-con)':'var(--text3)')+'">'+(dem.dataPagamento?fD(dem.dataPagamento):'—')+'</td><td><span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--text3)">'+(dem.proposta||'—')+'</span></td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+dem.servico+'</td><td>'+sBadge(dem.status)+'</td><td class="cn" style="color:var(--s-con);font-weight:600">'+fR(dem.valorBruto)+'</td><td class="cn" style="color:var(--red)">'+fR(dem.impostoEstimado)+'</td><td class="cn" style="color:var(--text2)">'+fR(dem.custoOperacional)+'</td><td class="cn" style="color:var(--accent);font-weight:600">'+fR(dem.valorLiquido)+'</td><td><select style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;background:var(--surface);cursor:pointer" onchange="updatePag(\''+dem.id+'\',this.value)">'+['Pendente','Parcial','Parcelado','Pago','Inadimplente'].map(function(p){return '<option'+(dem.statusPagamento===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select></td><td class="cn" style="color:'+(dem.statusPagamento==='Pago'?'var(--s-con)':'var(--amber)')+'">'+(dem.valorPago?fR(dem.valorPago):'—')+'</td></tr>';}).join('')+
       '</tbody></table></div>';
   } else if(finTab==='despesas') {
@@ -3595,7 +3667,7 @@ function renderFinanceiro() {
     despList=despList.slice().sort(function(a,b){return new Date(b.data)-new Date(a.data);});
     var bycat={};(esMes.length?esMes:e).forEach(function(x){bycat[x.cat]=(bycat[x.cat]||0)+x.valor;});
     var catRows=Object.keys(bycat).sort(function(a,b){return bycat[b]-bycat[a];}).map(function(c){return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px">'+c+'</span><span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--red)">'+fR(bycat[c])+'</span></div>';}).join('');
-    fc.innerHTML='<div style="display:grid;grid-template-columns:240px 1fr;gap:14px"><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:12px">'+MESES[finMes-1]+' — Por Categoria</div>'+(catRows||'<div style="font-size:12px;color:var(--text3)">Sem despesas.</div>')+'<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid var(--border);margin-top:6px;font-weight:700;font-size:13px"><span>Total</span><span style="font-family:\'JetBrains Mono\',monospace;color:var(--red)">'+fR(totDespMes||e.reduce(function(a,b){return a+(b.valor||0);},0))+'</span></div></div><div class="tw"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Proposta</th><th>Rec.</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody>'+despList.map(function(x){var dem=x.propostaId?state.demandas.find(function(d){return d.id===x.propostaId;}):null;return '<tr><td style="font-weight:500">'+x.desc+'</td><td style="font-size:11px;color:var(--text2)">'+x.cat+'</td><td>'+(dem?'<span class="badge b-neg" style="font-size:10px">'+dem.proposta+'</span>':'<span style="color:var(--text3);font-size:11px">—</span>')+'</td><td><span class="badge b-fec">'+x.rec+'</span></td><td style="font-size:12px;color:var(--text2)">'+fD(x.data)+'</td><td class="cn" style="color:var(--red);font-weight:600">'+fR(x.valor)+'</td><td><button class="btn btn-sm" style="font-size:11px;padding:3px 9px;border-radius:20px;border:1.5px solid;cursor:pointer;font-weight:600;background:'+(x.pago?'var(--s-con-l)':'var(--s-per-l)')+';color:'+(x.pago?'var(--s-con)':'var(--text3)')+';border-color:'+(x.pago?'#86EFAC':'var(--border)')+'" onclick="toggleDespPago(\''+x.id+'\',this)">'+(x.pago?'✅ Paga':'⏳ Pendente')+'</button></td><td><button class="btn btn-danger btn-sm btn-icon" onclick="delDesp(\''+x.id+'\')">🗑</button></td></tr>';}).join('')+'</tbody></table></div></div>';
+    fc.innerHTML='<div style="display:grid;grid-template-columns:240px 1fr;gap:14px"><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:12px">'+MESES[finMes-1]+' — Por Categoria</div>'+(catRows||'<div style="font-size:12px;color:var(--text3)">Sem despesas.</div>')+'<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid var(--border);margin-top:6px;font-weight:700;font-size:13px"><span>Total</span><span style="font-family:\'JetBrains Mono\',monospace;color:var(--red)">'+fR(totDespMes||e.reduce(function(a,b){return a+(b.valor||0);},0))+'</span></div></div><div class="tw"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Proposta</th><th>Rec.</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody>'+despList.map(function(x){var dem=x.propostaId?state.demandas.find(function(d){return d.id===x.propostaId;}):null;return '<tr><td style="font-weight:500">'+x.desc+'</td><td style="font-size:11px;color:var(--text2)">'+x.cat+'</td><td>'+(dem?'<span class="badge b-neg" style="font-size:10px">'+dem.proposta+'</span>':'<span style="color:var(--text3);font-size:11px">—</span>')+'</td><td><span class="badge b-fec">'+x.rec+'</span></td><td style="font-size:12px;color:var(--text2)">'+fD(x.data)+'</td><td class="cn" style="color:var(--red);font-weight:600">'+fR(x.valor)+'</td><td><button class="btn btn-sm" style="font-size:11px;padding:3px 9px;border-radius:20px;border:1.5px solid;cursor:pointer;font-weight:600;background:'+(x.pago?'var(--s-con-l)':'var(--s-per-l)')+';color:'+(x.pago?'var(--s-con)':'var(--text3)')+';border-color:'+(x.pago?'#86EFAC':'var(--border)')+'" onclick="toggleDespPago(\''+x.id+'\',this,'+(x._mesKey?'\''+x._mesKey+'\'':'null')+')">'+(x.pago?'✅ Paga':'⏳ Pendente')+'</button></td><td><button class="btn btn-danger btn-sm btn-icon" onclick="delDesp(\''+x.id+'\')">🗑</button></td></tr>';}).join('')+'</tbody></table></div></div>';
   } else {
     var totRecGeral=d.filter(function(x){return x.statusPagamento==='Pago';}).reduce(function(a,b){return a+(b.valorBruto||0);},0)+d.filter(function(x){return x.statusPagamento==='Parcial';}).reduce(function(a,b){return a+(b.valorPago||0);},0)+d.filter(function(x){return x.statusPagamento==='Parcelado';}).reduce(function(a,b){return a+(b.parcelas||[]).filter(function(p){return p.status==='Pago';}).reduce(function(s,p){return s+p.valor;},0);},0);
     var totDespGeral=e.reduce(function(a,b){return a+(b.valor||0);},0);
@@ -3619,23 +3691,44 @@ function updatePag(id,val) {
 function saveDespesa() {
   var desc=document.getElementById('d-desc').value,valor=parseFloat(document.getElementById('d-valor').value)||0;
   if(!desc||!valor){toast('Preencha descrição e valor');return;}
-  state.despesas.unshift({id:uid(),desc:desc,cat:document.getElementById('d-cat').value,valor:valor,data:document.getElementById('d-data').value,rec:document.getElementById('d-rec').value,propostaId:document.getElementById('d-proposta').value,obs:document.getElementById('d-obs').value,pago:document.getElementById('d-pago').value==='1'});
-  saveState(); document.getElementById('modal-despesa').style.display='none'; toast('Despesa registrada!','success'); renderFinanceiro();
+  var rec=document.getElementById('d-rec').value;
+  var novaDesp={id:uid(),desc:desc,cat:document.getElementById('d-cat').value,valor:valor,data:document.getElementById('d-data').value,rec:rec,propostaId:document.getElementById('d-proposta').value,obs:document.getElementById('d-obs').value,pago:rec==='Única'&&document.getElementById('d-pago').value==='1'};
+  if(rec!=='Única'){novaDesp.dataFim=document.getElementById('d-datafim').value||'';novaDesp.pagoMeses={};}
+  state.despesas.unshift(novaDesp);
+  saveState(); document.getElementById('modal-despesa').style.display='none'; toast('Despesa recorrente registrada! Aparecerá todo mês automaticamente.','success'); renderFinanceiro();
 }
 function delDesp(id) {
   if(!confirm('Excluir despesa?')) return;
   state.despesas=state.despesas.filter(function(e){return e.id!==id;}); saveState(); toast('Excluída'); renderFinanceiro();
 }
-function toggleDespPago(id,btn) {
+function toggleReceitaRecebido(id,mk,btn){
+  var i=state.demandas.findIndex(function(x){return x.id===id;}); if(i<0) return;
+  var dem=state.demandas[i];
+  if(!dem.recebidoMeses) dem.recebidoMeses={};
+  dem.recebidoMeses[mk]=!dem.recebidoMeses[mk];
+  var isRec=dem.recebidoMeses[mk];
+  btn.textContent=isRec?'✅ Recebido':'⏳ A Receber';
+  btn.style.background=isRec?'var(--s-con-l)':'var(--s-per-l)';
+  btn.style.color=isRec?'var(--s-con)':'var(--text3)';
+  btn.style.borderColor=isRec?'#86EFAC':'var(--border)';
+  saveState(); toast(isRec?'Receita marcada como recebida ✅':'Marcada como a receber');
+  renderFinanceiro();
+}
+function toggleDespPago(id,btn,mk) {
   var i=state.despesas.findIndex(function(e){return e.id===id;}); if(i<0) return;
-  state.despesas[i].pago=!state.despesas[i].pago;
-  var isPago=state.despesas[i].pago;
+  var desp=state.despesas[i]; var isPago;
+  if(mk&&desp.rec&&desp.rec!=='Única'){
+    if(!desp.pagoMeses) desp.pagoMeses={};
+    desp.pagoMeses[mk]=!desp.pagoMeses[mk];
+    isPago=desp.pagoMeses[mk];
+  } else {
+    desp.pago=!desp.pago; isPago=desp.pago;
+  }
   btn.textContent=isPago?'✅ Paga':'⏳ Pendente';
   btn.style.background=isPago?'var(--s-con-l)':'var(--s-per-l)';
   btn.style.color=isPago?'var(--s-con)':'var(--text3)';
   btn.style.borderColor=isPago?'#86EFAC':'var(--border)';
   saveState(); toast(isPago?'Despesa marcada como paga ✅':'Despesa marcada como pendente');
-  // Re-render KPIs only (not full re-render to avoid losing scroll)
   renderFinanceiro();
 }
 
