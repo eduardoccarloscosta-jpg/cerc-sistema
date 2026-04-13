@@ -5139,7 +5139,8 @@ function renderCalendario() {
     'Lembrete':{bg:'#FEF3C7',c:'#92400E',ico:'🔔',border:'#D97706'},
     'Prazo':   {bg:'#FEE2E2',c:'#991B1B',ico:'⏰',border:'#DC2626'},
     'Reunião': {bg:'#DCFCE7',c:'#14532D',ico:'🤝',border:'#16A34A'},
-    'Vistoria':{bg:'#EDE9FE',c:'#5B21B6',ico:'🔍',border:'#7C3AED'}
+    'Vistoria':{bg:'#EDE9FE',c:'#5B21B6',ico:'🔍',border:'#7C3AED'},
+    'Tarefa':  {bg:'#ECFDF5',c:'#065F46',ico:'☐',border:'#10B981'}
   };
 
   // ── Mapas de eventos ─────────────────────────────────────────────
@@ -5182,9 +5183,21 @@ function renderCalendario() {
   function evtCustomHtmlMon(ev){
     var cfg=TIPO_EVT_CFG[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌',border:'#6B7280'};
     var hora=ev.horaInicio?ev.horaInicio+' ':'';
-    var lbl=ev._multi?(ev._isFirst?cfg.ico+' '+hora+(ev.titulo||'').slice(0,12):'· '+(ev.titulo||'').slice(0,12)):cfg.ico+' '+hora+(ev.titulo||'').slice(0,14);
+    var isTarefa=ev.tipo==='Tarefa';
+    var conc=isTarefa&&ev.concluida;
+    var ico=isTarefa?(conc?'☑':'☐'):cfg.ico;
+    var lbl=ev._multi?(ev._isFirst?ico+' '+hora+(ev.titulo||'').slice(0,12):'· '+(ev.titulo||'').slice(0,12)):ico+' '+hora+(ev.titulo||'').slice(0,14);
+    var strikeStyle=conc?'text-decoration:line-through;opacity:0.6;':'';
     var brL=ev._multi&&!ev._isFirst?'0':'4px',brR=ev._multi&&!ev._isLast?'0':'4px';
-    return '<div class="cal-event" style="background:'+cfg.bg+';color:'+cfg.c+';border-left-color:'+cfg.border+';border-radius:'+brL+' '+brR+' '+brR+' '+brL+'" onclick="event.stopPropagation();openModalEvento(\''+ev.id+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+lbl+'</div>';
+    var checkBtn=isTarefa?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\')" style="margin-right:3px;cursor:pointer;font-size:13px" title="'+(conc?'Marcar como pendente':'Marcar como concluída')+'">'+(conc?'☑':'☐')+'</span>':'';
+    var titleLbl=(ev._multi?(ev._isFirst?hora+(ev.titulo||'').slice(0,12):'· '+(ev.titulo||'').slice(0,12)):hora+(ev.titulo||'').slice(0,14));
+    if(isTarefa){
+      lbl='<span style="'+strikeStyle+'">'+checkBtn+titleLbl+'</span>';
+    }
+    var bg=conc?'#D1FAE5':cfg.bg;
+    var border=conc?'#10B981':cfg.border;
+    var brL2=ev._multi&&!ev._isFirst?'0':'4px',brR2=ev._multi&&!ev._isLast?'0':'4px';
+    return '<div class="cal-event" style="background:'+bg+';color:'+cfg.c+';border-left-color:'+border+';border-radius:'+brL2+' '+brR2+' '+brR2+' '+brL2+'" onclick="event.stopPropagation();openModalEvento(\''+ev.id+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+lbl+'</div>';
   }
 
   function evtGoogleHtml(ev){
@@ -5394,8 +5407,15 @@ function renderCalendario() {
           var pEnd=ev.horaFim.split(':');var hEnd=parseInt(pEnd[0])+(parseInt(pEnd[1]||0)/60);
           heightPx=Math.max(SLOT_H,(hEnd-hStart)*SLOT_H);
         }
-        return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;background:'+cfg2.bg+';color:'+cfg2.c+';border-left-color:'+cfg2.border+'" onclick="event.stopPropagation();openModalEvento(\''+ev.id+'\')">' +
-          '<div class="cal-week-event-title">'+cfg2.ico+' '+ev.titulo+'</div>'+
+        var isTarefaW=ev.tipo==='Tarefa';
+        var concW=isTarefaW&&ev.concluida;
+        var icoW=isTarefaW?(concW?'☑':'☐'):cfg2.ico;
+        var titleW=concW?'<span style="text-decoration:line-through;opacity:0.65">'+ev.titulo+'</span>':ev.titulo;
+        var bgW=concW?'#D1FAE5':cfg2.bg;
+        var borderW=concW?'#10B981':cfg2.border;
+        var checkSpanW=isTarefaW?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\')" style="cursor:pointer;margin-right:2px" title="'+(concW?'Reabrir':'Concluir')+'">'+icoW+'</span> ':''+icoW+' ';
+        return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;background:'+bgW+';color:'+cfg2.c+';border-left-color:'+borderW+'" onclick="event.stopPropagation();openModalEvento(\''+ev.id+'\')">' +
+          '<div class="cal-week-event-title">'+checkSpanW+titleW+'</div>'+
           '<div class="cal-week-event-sub">'+(ev.horaInicio?ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):(ev.descricao||'').slice(0,20))+'</div></div>';
       }).join('');
 
@@ -6138,11 +6158,15 @@ function openModalEvento(id, preData) {
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">' +
         '<div class="fg"><label>⏰ Hora Início</label><select id="ev-hora-ini" class="finput" style="font-size:12px">'+horaIniSel+'</select></div>' +
         '<div class="fg"><label>⏰ Hora Fim</label><select id="ev-hora-fim" class="finput" style="font-size:12px">'+horaFimSel+'</select></div>' +
-        '<div class="fg"><label>Tipo</label><select id="ev-tipo" class="finput">' +
-          ['Evento','Lembrete','Prazo','Reunião','Vistoria'].map(function(t){return '<option'+(ev&&ev.tipo===t?' selected':'')+'>'+t+'</option>';}).join('') +
+        '<div class="fg"><label>Tipo</label><select id="ev-tipo" class="finput" onchange="evTipoChange()">' +
+          ['Evento','Lembrete','Prazo','Reunião','Vistoria','Tarefa'].map(function(t){return '<option'+(ev&&ev.tipo===t?' selected':'')+'>'+t+'</option>';}).join('') +
         '</select></div>' +
       '</div>' +
       '<div class="fg"><label>Descrição / Observação</label><textarea id="ev-desc" class="finput" rows="2" placeholder="Detalhes do evento...">'+(ev?ev.descricao||'':'')+'</textarea></div>' +
+      '<div id="ev-tarefa-row" style="display:'+(ev&&ev.tipo==='Tarefa'||(!ev&&false)?'flex':'none')+';align-items:center;gap:10px;padding:10px 12px;background:#ECFDF5;border:1px solid #10B981;border-radius:8px;margin-bottom:12px">' +
+        '<input type="checkbox" id="ev-concluida" style="width:16px;height:16px;accent-color:#10B981;cursor:pointer"'+(ev&&ev.concluida?' checked':'')+'/>' +
+        '<label for="ev-concluida" style="font-size:13px;font-weight:600;color:#065F46;cursor:pointer;margin:0">Tarefa concluída</label>' +
+      '</div>' +
       '<div class="fg"><label>Demanda Relacionada</label><select id="ev-demanda" class="finput"><option value="">— Nenhuma —</option>' +
         state.demandas.map(function(d){return '<option value="'+d.id+'"'+(ev&&ev.demandaId===d.id?' selected':'')+'>'+(d.proposta||'')+(d.cliente?' — '+d.cliente:'')+'</option>';}).join('') +
       '</select></div>' +
@@ -6167,6 +6191,21 @@ function closeModalEvento() {
   _gcPreFill = null;
 }
 
+function evTipoChange() {
+  var tipo = document.getElementById('ev-tipo').value;
+  var row = document.getElementById('ev-tarefa-row');
+  if(row) row.style.display = tipo === 'Tarefa' ? 'flex' : 'none';
+}
+
+function toggleTarefaConcluida(id) {
+  var ev = (state.eventos||[]).find(function(e){return e.id===id;});
+  if(!ev) return;
+  ev.concluida = !ev.concluida;
+  saveState();
+  renderCalendario();
+  toast(ev.concluida ? '✅ Tarefa concluída!' : '↩ Tarefa reaberta', 'success');
+}
+
 function saveEvento() {
   var titulo  = document.getElementById('ev-titulo').value.trim();
   var data    = document.getElementById('ev-data').value;
@@ -6175,13 +6214,16 @@ function saveEvento() {
   // Validar: dataFim >= data
   if(dataFim && dataFim < data) { toast('Data Fim deve ser igual ou após a Data Início','warn'); return; }
   if(!state.eventos) state.eventos=[];
+  var tipo = document.getElementById('ev-tipo').value;
+  var concluidaEl = document.getElementById('ev-concluida');
   var obj = {
     titulo:titulo, data:data, dataFim:dataFim||null,
     horaInicio: document.getElementById('ev-hora-ini').value||'',
     horaFim:    document.getElementById('ev-hora-fim').value||'',
-    tipo: document.getElementById('ev-tipo').value,
+    tipo: tipo,
     descricao: document.getElementById('ev-desc').value.trim(),
-    demandaId: document.getElementById('ev-demanda').value
+    demandaId: document.getElementById('ev-demanda').value,
+    concluida: tipo==='Tarefa' && concluidaEl ? concluidaEl.checked : false
   };
   if(editingEventoId) {
     var i=state.eventos.findIndex(function(e){return e.id===editingEventoId;});
@@ -6545,65 +6587,344 @@ async function onbNext() {
 }
 
 // ══ PÁGINA CONFIGURAÇÕES ══════════════════════════════════════════════════════
+var cfgTab = 'perfil';
+
 function renderConfiguracoes() {
   var p = _sbProfile||{};
+  var ex = JSON.parse(localStorage.getItem('cerc_profile_extra')||'{}');
   var el = document.getElementById('content');
   if(!el) return;
+
+  // Dados de uso
+  var nDem = state.demandas.length, nCli = state.clientes.length, nDesp = (state.despesas||[]).length;
+  var nEv = (state.eventos||[]).length, nCt = (state.contratos||[]).length;
+  var lsSize = (function(){try{var s=JSON.stringify(localStorage);return (new Blob([s]).size/1024).toFixed(1)+'KB';}catch(e){return '—';}})();
+  var gcStatus = gcIsConnected();
+  var autStatus = !!(p.autentique_key||localStorage.getItem('cerc_autentique_key'));
+  var sbStatus = sbOnline;
+
+  var tabs = [
+    {id:'perfil',    icon:'👤', label:'Perfil'},
+    {id:'empresa',   icon:'🏢', label:'Empresa'},
+    {id:'integracoes',icon:'🔌',label:'Integrações'},
+    {id:'dados',     icon:'🗄️', label:'Dados'},
+    {id:'conta',     icon:'🔒', label:'Conta'}
+  ];
+
+  var tabNav = '<div style="display:flex;gap:2px;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:20px;overflow-x:auto;flex-shrink:0">'+
+    tabs.map(function(t){
+      var active = cfgTab===t.id;
+      return '<button onclick="cfgTab=\''+t.id+'\';renderConfiguracoes()" style="flex:1;min-width:90px;padding:8px 12px;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;background:'+(active?'var(--surface)':'transparent')+';color:'+(active?'var(--accent)':'var(--text3)')+';box-shadow:'+(active?'0 1px 4px rgba(0,0,0,.08)':'none')+'">'+t.icon+' '+t.label+'</button>';
+    }).join('')+
+  '</div>';
+
+  var content = '';
+
+  // ── ABA PERFIL ─────────────────────────────────────────────
+  if(cfgTab==='perfil'){
+    content =
+      '<div class="settings-section">'+
+        '<div class="settings-title">👤 Dados Pessoais</div>'+
+        '<div class="settings-row" style="margin-bottom:12px">'+
+          cfgField('Nome completo *','cfg-nome',p.nome||'','Seu nome completo')+
+          cfgField('Cargo / Função','cfg-cargo',ex.cargo||'','Ex: Engenheiro Mecânico')+
+        '</div>'+
+        '<div class="settings-row" style="margin-bottom:12px">'+
+          cfgField('CREA / Registro profissional','cfg-crea',ex.crea||'','Ex: CREA-PR 12345/D')+
+          cfgField('Telefone / WhatsApp','cfg-telefone',ex.telefone||'','(44) 9 9999-9999')+
+        '</div>'+
+        '<div style="margin-bottom:12px">'+cfgField('E-mail (conta)','cfg-email',(_sbUser&&_sbUser.email)||'','',true)+'</div>'+
+        '<div style="margin-bottom:16px">'+cfgField('Assinatura nos contratos','cfg-assinatura',ex.assinatura||'','Ex: Carlos Eduardo — Engenheiro Mecânico — CREA-PR ...')+'</div>'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<button class="btn btn-primary btn-sm" onclick="salvarPerfil()">💾 Salvar perfil</button>'+
+          '<span style="font-size:11px;color:var(--text3)">Campos com * sincronizados na nuvem</span>'+
+        '</div>'+
+      '</div>'+
+
+      '<div class="settings-section">'+
+        '<div class="settings-title">🖼️ Avatar / Iniciais</div>'+
+        '<div style="display:flex;align-items:center;gap:16px">'+
+          '<div style="width:64px;height:64px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff" id="cfg-avatar-preview">'+
+            (function(){var n=(p.nome||(_sbUser&&_sbUser.email)||'?').trim().split(' ');return n.slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();})() +
+          '</div>'+
+          '<div style="font-size:12px;color:var(--text3);line-height:1.6">As iniciais são geradas automaticamente a partir do seu nome.<br>Altere o nome acima e salve para atualizar.</div>'+
+        '</div>'+
+      '</div>';
+  }
+
+  // ── ABA EMPRESA ────────────────────────────────────────────
+  else if(cfgTab==='empresa'){
+    content =
+      '<div class="settings-section">'+
+        '<div class="settings-title">🏢 Dados da Empresa</div>'+
+        '<div class="settings-row" style="margin-bottom:12px">'+
+          cfgField('Razão Social *','cfg-empresa',p.empresa||'','CERC — Consultoria, Engenharia...')+
+          cfgField('CNPJ','cfg-cnpj',ex.cnpj||'','XX.XXX.XXX/XXXX-XX')+
+        '</div>'+
+        '<div class="settings-row" style="margin-bottom:12px">'+
+          cfgField('Cidade','cfg-cidade',ex.cidade||'','Ex: Maringá')+
+          cfgField('Estado','cfg-estado',ex.estado||'','Ex: PR')+
+        '</div>'+
+        '<div style="margin-bottom:12px">'+cfgField('Endereço completo','cfg-endereco',ex.endereco||'','Rua, número, bairro, CEP')+'</div>'+
+        '<div class="settings-row" style="margin-bottom:12px">'+
+          cfgField('Telefone da empresa','cfg-tel-empresa',ex.telEmpresa||'','(44) 9 9999-9999')+
+          cfgField('Site / Portfólio','cfg-site',ex.site||'','https://...')+
+        '</div>'+
+        '<div style="margin-bottom:16px">'+cfgField('E-mail comercial','cfg-email-empresa',ex.emailEmpresa||'','contato@suaempresa.com.br')+'</div>'+
+        '<button class="btn btn-primary btn-sm" onclick="salvarEmpresa()">💾 Salvar dados da empresa</button>'+
+      '</div>'+
+
+      '<div class="settings-section">'+
+        '<div class="settings-title">📄 Dados para Contratos</div>'+
+        '<div style="background:var(--amber-l);border:1px solid #FCD34D;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400E">'+
+          '💡 Estes dados serão preenchidos automaticamente nos contratos gerados pela IA.'+
+        '</div>'+
+        '<div class="settings-row" style="margin-bottom:12px">'+
+          cfgField('Banco','cfg-banco',ex.banco||'','Ex: Itaú, Bradesco...')+
+          cfgField('Agência / Conta','cfg-conta',ex.conta||'','0000 / 00000-0')+
+        '</div>'+
+        '<div style="margin-bottom:12px">'+cfgField('Chave PIX','cfg-pix',ex.pix||'','CPF, e-mail, telefone ou chave aleatória')+'</div>'+
+        '<button class="btn btn-primary btn-sm" onclick="salvarEmpresa()">💾 Salvar</button>'+
+      '</div>';
+  }
+
+  // ── ABA INTEGRAÇÕES ────────────────────────────────────────
+  else if(cfgTab==='integracoes'){
+    content =
+      // Google Calendar
+      '<div class="settings-section">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">'+
+          '<div class="settings-title" style="margin:0;border:none;padding:0">🗓 Google Calendar</div>'+
+          (gcStatus
+            ? '<span style="background:#DCFCE7;color:#166534;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #86EFAC">● Conectado</span>'
+            : '<span style="background:#FEE2E2;color:#991B1B;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #FCA5A5">○ Desconectado</span>')+
+        '</div>'+
+        '<div style="margin-bottom:12px">'+cfgField('Client ID (Google Cloud Console)','cfg-gcid',p.gc_client_id||localStorage.getItem('cerc_gcClientId')||'','xxx.apps.googleusercontent.com')+'</div>'+
+        '<div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--text2)">'+
+          '📋 <strong>Como configurar:</strong> Acesse <em>console.cloud.google.com</em> → APIs → Google Calendar API → Credenciais → OAuth 2.0 → copie o Client ID.'+
+        '</div>'+
+        '<div style="display:flex;gap:8px">'+
+          '<button class="btn btn-primary btn-sm" onclick="salvarIntegracoes()">💾 Salvar</button>'+
+          (gcStatus?'<button class="btn btn-ghost btn-sm" onclick="gcDisconnect&&gcDisconnect()">Desconectar</button>':'<button class="btn btn-ghost btn-sm" onclick="gcConnect&&gcConnect()">Conectar agora</button>')+
+        '</div>'+
+      '</div>'+
+
+      // Autentique
+      '<div class="settings-section">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">'+
+          '<div class="settings-title" style="margin:0;border:none;padding:0">✍️ Autentique (Assinatura Digital)</div>'+
+          (autStatus
+            ? '<span style="background:#DCFCE7;color:#166534;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #86EFAC">● Configurado</span>'
+            : '<span style="background:#F3F4F6;color:#6B7280;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid var(--border)">○ Não configurado</span>')+
+        '</div>'+
+        '<div style="margin-bottom:12px">'+cfgFieldPassword('API Key','cfg-autentique',p.autentique_key||localStorage.getItem('cerc_autentique_key')||'','Token da API Autentique')+'</div>'+
+        '<div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--text2)">'+
+          '📋 Acesse <em>app.autentique.com.br</em> → Configurações → API → gere ou copie seu token.'+
+        '</div>'+
+        '<button class="btn btn-primary btn-sm" onclick="salvarIntegracoes()">💾 Salvar</button>'+
+      '</div>'+
+
+      // Supabase
+      '<div class="settings-section">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">'+
+          '<div class="settings-title" style="margin:0;border:none;padding:0">☁️ Supabase (Banco de Dados)</div>'+
+          (sbStatus
+            ? '<span style="background:#DCFCE7;color:#166534;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #86EFAC">● Online</span>'
+            : '<span style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #FCD34D">◌ Offline</span>')+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">A conexão com o Supabase é gerenciada automaticamente. Seus dados são sincronizados em tempo real quando online.</div>'+
+        '<button class="btn btn-ghost btn-sm" onclick="pushLocalToSupabase()">☁️ Forçar sincronização agora</button>'+
+      '</div>'+
+
+      // IA
+      '<div class="settings-section">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">'+
+          '<div class="settings-title" style="margin:0;border:none;padding:0">🤖 IA — Geração de Contratos</div>'+
+          '<span style="background:#EDE9FE;color:#6D28D9;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #C4B5FD">Via Netlify</span>'+
+        '</div>'+
+        '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.7">'+
+          '<strong>Como ativar:</strong><br>'+
+          '1. Acesse <em>console.anthropic.com</em> e crie uma API Key<br>'+
+          '2. No Netlify: <em>cerc-sistema → Site configuration → Environment variables</em><br>'+
+          '3. Adicione a variável: <code style="background:var(--surface);padding:1px 6px;border-radius:4px;font-family:monospace">ANTHROPIC_API_KEY</code> = <em>sk-ant-...</em><br>'+
+          '4. Clique em <em>Trigger deploy</em> para aplicar'+
+        '</div>'+
+      '</div>';
+  }
+
+  // ── ABA DADOS ──────────────────────────────────────────────
+  else if(cfgTab==='dados'){
+    content =
+      '<div class="settings-section">'+
+        '<div class="settings-title">📊 Resumo dos Dados</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px">'+
+          cfgStat('Demandas',nDem,'var(--accent)')+
+          cfgStat('Clientes',nCli,'var(--s-con)')+
+          cfgStat('Despesas',nDesp,'var(--red)')+
+          cfgStat('Eventos',nEv,'var(--amber)')+
+          cfgStat('Contratos',nCt,'#1A73E8')+
+          cfgStat('Armazenamento local',lsSize,'var(--text2)')+
+        '</div>'+
+      '</div>'+
+
+      '<div class="settings-section">'+
+        '<div class="settings-title">💾 Backup e Restauração</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+          '<div style="border:1.5px solid var(--border);border-radius:10px;padding:16px">'+
+            '<div style="font-size:13px;font-weight:700;margin-bottom:6px">📤 Exportar backup</div>'+
+            '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Salva todos os dados (demandas, clientes, despesas, eventos, contratos) em um arquivo JSON.</div>'+
+            '<button class="btn btn-primary btn-sm" onclick="exportarDados()">💾 Exportar agora</button>'+
+          '</div>'+
+          '<div style="border:1.5px solid var(--border);border-radius:10px;padding:16px">'+
+            '<div style="font-size:13px;font-weight:700;margin-bottom:6px">📂 Importar backup</div>'+
+            '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Restaura dados a partir de um arquivo JSON exportado anteriormente.</div>'+
+            '<button class="btn btn-ghost btn-sm" onclick="importarDados()">📂 Importar arquivo</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+
+      '<div class="settings-section">'+
+        '<div class="settings-title">☁️ Sincronização</div>'+
+        '<div style="font-size:12px;color:var(--text2);margin-bottom:14px">'+
+          'Status: <strong style="color:'+(sbStatus?'var(--s-con)':'var(--amber)')+'">'+(sbStatus?'Online — sincronizando automaticamente':'Offline — dados salvos localmente')+'</strong>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+          '<button class="btn btn-primary btn-sm" onclick="pushLocalToSupabase()">☁️ Enviar local → Supabase</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="loadStateFromSupabase&&loadStateFromSupabase().then(function(){toast(\'Dados recarregados do Supabase!\',\'success\');})">🔄 Recarregar do Supabase</button>'+
+        '</div>'+
+      '</div>';
+  }
+
+  // ── ABA CONTA ──────────────────────────────────────────────
+  else if(cfgTab==='conta'){
+    var userEmail = (_sbUser&&_sbUser.email)||'—';
+    var createdAt = _sbUser&&_sbUser.created_at ? new Date(_sbUser.created_at).toLocaleDateString('pt-BR') : '—';
+    var plano = (p.plano||'free');
+    content =
+      '<div class="settings-section">'+
+        '<div class="settings-title">🔒 Informações da Conta</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
+          '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px">'+
+            '<div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">E-mail</div>'+
+            '<div style="font-size:13px;font-weight:600">'+escapeHtml(userEmail)+'</div>'+
+          '</div>'+
+          '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px">'+
+            '<div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Plano</div>'+
+            '<div><span class="plan-badge '+(plano==='pro'?'plan-pro':'plan-free')+'" style="font-size:13px;padding:4px 12px">'+plano.toUpperCase()+'</span></div>'+
+          '</div>'+
+          '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px">'+
+            '<div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Membro desde</div>'+
+            '<div style="font-size:13px;font-weight:600">'+createdAt+'</div>'+
+          '</div>'+
+          '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px">'+
+            '<div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Status da sessão</div>'+
+            '<div style="font-size:13px;font-weight:600;color:var(--s-con)">● Autenticado</div>'+
+          '</div>'+
+        '</div>'+
+        '<button class="btn btn-ghost btn-sm" onclick="doSignOut()" style="color:var(--red);border-color:#FECACA">🚪 Sair da conta</button>'+
+      '</div>'+
+
+      '<div class="settings-section">'+
+        '<div class="settings-title" style="color:var(--red)">⚠️ Zona de Perigo</div>'+
+        '<div style="display:flex;flex-direction:column;gap:10px">'+
+          '<div style="border:1px solid #FECACA;border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px">'+
+            '<div>'+
+              '<div style="font-size:13px;font-weight:600">Limpar cache local</div>'+
+              '<div style="font-size:12px;color:var(--text3)">Remove dados do localStorage. Os dados no Supabase são preservados.</div>'+
+            '</div>'+
+            '<button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:#FECACA;white-space:nowrap" onclick="if(confirm(\'Limpar cache local? Os dados no Supabase não serão afetados.\')){localStorage.removeItem(\''+SK+'\');toast(\'Cache limpo. Recarregue a página.\',\'success\');}">Limpar cache</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+
+      '<div class="settings-section">'+
+        '<div class="settings-title">📱 Sobre o Sistema</div>'+
+        '<div style="font-size:12px;color:var(--text2);line-height:1.8">'+
+          '<strong>CERC — Sistema de Gestão</strong><br>'+
+          'Versão v33 · Desenvolvido especialmente para a CERC Engenharia<br>'+
+          'Stack: HTML · JavaScript · Supabase · Netlify<br>'+
+          'IA: Claude (Anthropic) para geração de contratos'+
+        '</div>'+
+      '</div>';
+  }
+
   el.innerHTML =
-    '<div style="max-width:720px;margin:0 auto">'+
-    '<div class="settings-section">'+
-      '<div class="settings-title">👤 Perfil</div>'+
-      '<div class="settings-row">'+
-        '<div class="fg"><label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">Nome</label><input class="finput" id="cfg-nome" value="'+escapeHtml(p.nome||'')+'" placeholder="Seu nome"/></div>'+
-        '<div class="fg"><label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">Empresa</label><input class="finput" id="cfg-empresa" value="'+escapeHtml(p.empresa||'')+'" placeholder="Nome da empresa"/></div>'+
-      '</div>'+
-      '<div class="fg" style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">E-mail</label><input class="finput" value="'+escapeHtml((_sbUser&&_sbUser.email)||'')+'" disabled style="background:var(--surface2);color:var(--text3)"/></div>'+
-      '<button class="btn btn-primary btn-sm" onclick="salvarPerfil()">Salvar perfil</button>'+
-    '</div>'+
-    '<div class="settings-section">'+
-      '<div class="settings-title">🔌 Integrações</div>'+
-      '<div class="fg" style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">Google Calendar — Client ID</label><input class="finput" id="cfg-gcid" value="'+escapeHtml(p.gc_client_id||localStorage.getItem('cerc_gcClientId')||'')+'" placeholder="xxx.apps.googleusercontent.com"/></div>'+
-      '<div class="fg" style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">Autentique — API Key</label><input class="finput" id="cfg-autentique" type="password" value="'+escapeHtml(p.autentique_key||localStorage.getItem('cerc_autentique_key')||'')+'" placeholder="Token da API Autentique"/></div>'+
-      '<button class="btn btn-primary btn-sm" onclick="salvarIntegracoes()">Salvar integrações</button>'+
-    '</div>'+
-    '<div class="settings-section">'+
-      '<div class="settings-title">💼 Plano atual</div>'+
-      '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">'+
-        '<div><span class="plan-badge '+(p.plano==='pro'?'plan-pro':'plan-free')+'" style="font-size:14px;padding:6px 16px">'+(p.plano||'free').toUpperCase()+'</span></div>'+
-        '<div style="font-size:13px;color:var(--text2)">'+(p.plano==='pro'?'Acesso completo a todas as funcionalidades.':'Plano gratuito · Ideal para validação e uso interno.')+'</div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="settings-section">'+
-      '<div class="settings-title">🗄️ Dados</div>'+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-        '<button class="btn btn-ghost btn-sm" onclick="exportarDados()">💾 Exportar backup</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="importarDados()">📂 Importar backup</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="pushLocalToSupabase()">☁️ Sincronizar local → Supabase</button>'+
-      '</div>'+
-    '</div>'+
+    '<div style="max-width:780px;margin:0 auto">'+
+      tabNav+
+      content+
     '</div>';
 }
+
+// Helpers de campo
+function cfgField(label,id,value,placeholder,disabled){
+  return '<div class="fg">'+
+    '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">'+label+'</label>'+
+    '<input class="finput" id="'+id+'" value="'+escapeHtml(value)+'" placeholder="'+placeholder+'"'+(disabled?' disabled style="background:var(--surface2);color:var(--text3)"':'')+' />'+
+  '</div>';
+}
+function cfgFieldPassword(label,id,value,placeholder){
+  return '<div class="fg">'+
+    '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">'+label+'</label>'+
+    '<input class="finput" id="'+id+'" type="password" value="'+escapeHtml(value)+'" placeholder="'+placeholder+'" />'+
+  '</div>';
+}
+function cfgStat(label,value,color){
+  return '<div style="background:var(--surface2);border-radius:8px;padding:12px 14px;text-align:center">'+
+    '<div style="font-size:20px;font-weight:700;color:'+color+'">'+value+'</div>'+
+    '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+label+'</div>'+
+  '</div>';
+}
+
 async function salvarPerfil() {
   if(!_sbUser) return;
-  var nome = document.getElementById('cfg-nome').value.trim();
-  var empresa = document.getElementById('cfg-empresa').value.trim();
-  var {error} = await _sb.from('profiles').update({nome, empresa, updated_at: new Date().toISOString()}).eq('id', _sbUser.id);
+  var nome = (document.getElementById('cfg-nome')||{}).value||'';
+  var empresa = (document.getElementById('cfg-empresa')||{}).value||'';
+  nome = nome.trim(); empresa = empresa.trim();
+  // Salva no Supabase (nome + empresa)
+  var {error} = await _sb.from('profiles').update({nome:nome, empresa:empresa, updated_at: new Date().toISOString()}).eq('id', _sbUser.id);
   if(error) { toast('Erro ao salvar: '+error.message, 'danger'); return; }
   if(_sbProfile){ _sbProfile.nome=nome; _sbProfile.empresa=empresa; }
+  // Salva extras no localStorage
+  var ex = JSON.parse(localStorage.getItem('cerc_profile_extra')||'{}');
+  ex.cargo = (document.getElementById('cfg-cargo')||{}).value||'';
+  ex.crea  = (document.getElementById('cfg-crea')||{}).value||'';
+  ex.telefone = (document.getElementById('cfg-telefone')||{}).value||'';
+  ex.assinatura = (document.getElementById('cfg-assinatura')||{}).value||'';
+  localStorage.setItem('cerc_profile_extra', JSON.stringify(ex));
   updateSidebarUser(_sbUser, _sbProfile);
   toast('Perfil salvo!', 'success');
 }
+
+function salvarEmpresa() {
+  var ex = JSON.parse(localStorage.getItem('cerc_profile_extra')||'{}');
+  var get = function(id){ return ((document.getElementById(id)||{}).value||'').trim(); };
+  ex.cnpj=get('cfg-cnpj'); ex.cidade=get('cfg-cidade'); ex.estado=get('cfg-estado');
+  ex.endereco=get('cfg-endereco'); ex.telEmpresa=get('cfg-tel-empresa');
+  ex.site=get('cfg-site'); ex.emailEmpresa=get('cfg-email-empresa');
+  ex.banco=get('cfg-banco'); ex.conta=get('cfg-conta'); ex.pix=get('cfg-pix');
+  // também salva empresa principal no Supabase
+  var nomeEmpresa=get('cfg-empresa');
+  if(nomeEmpresa&&_sbUser){
+    _sb.from('profiles').update({empresa:nomeEmpresa,updated_at:new Date().toISOString()}).eq('id',_sbUser.id);
+    if(_sbProfile) _sbProfile.empresa=nomeEmpresa;
+    updateSidebarUser(_sbUser,_sbProfile);
+  }
+  localStorage.setItem('cerc_profile_extra', JSON.stringify(ex));
+  toast('Dados da empresa salvos!', 'success');
+}
+
 async function salvarIntegracoes() {
-  if(!_sbUser) return;
-  var gcid = document.getElementById('cfg-gcid').value.trim();
-  var autKey = document.getElementById('cfg-autentique').value.trim();
-  var {error} = await _sb.from('profiles').update({gc_client_id:gcid, autentique_key:autKey, updated_at: new Date().toISOString()}).eq('id', _sbUser.id);
-  if(error) { toast('Erro ao salvar: '+error.message, 'danger'); return; }
-  // Manter compatibilidade com código legado que lê do localStorage
+  var gcid = ((document.getElementById('cfg-gcid')||{}).value||'').trim();
+  var autKey = ((document.getElementById('cfg-autentique')||{}).value||'').trim();
+  if(_sbUser){
+    var {error} = await _sb.from('profiles').update({gc_client_id:gcid, autentique_key:autKey, updated_at: new Date().toISOString()}).eq('id', _sbUser.id);
+    if(error) { toast('Erro ao salvar: '+error.message, 'danger'); return; }
+    if(_sbProfile){ _sbProfile.gc_client_id=gcid; _sbProfile.autentique_key=autKey; }
+  }
   if(gcid) localStorage.setItem('cerc_gcClientId', gcid);
   if(autKey) localStorage.setItem('cerc_autentique_key', autKey);
-  if(_sbProfile){ _sbProfile.gc_client_id=gcid; _sbProfile.autentique_key=autKey; }
   toast('Integrações salvas!', 'success');
+  renderConfiguracoes();
 }
 
 // ══ INICIALIZAÇÃO ═════════════════════════════════════════════════════════════
