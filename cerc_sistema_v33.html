@@ -5209,7 +5209,7 @@ function renderCalendario() {
     var lbl='🗓 '+hora+(ev.titulo||'').slice(0,20);
     // data-gcid evita problemas com caracteres especiais no onclick inline
     return '<div class="cal-event" style="background:#E8F0FE;color:#1A73E8;border-left-color:#1A73E8;border-left-width:3px" '+
-      'data-gcid="'+ev.gcEventId.replace(/"/g,'&quot;')+'" onclick="event.stopPropagation();_openGcById(this,event)" title="'+ev.titulo+(hora?' · '+hora:'')+' (Google Calendar)">'+lbl+'</div>';
+      'data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" onclick="event.stopPropagation();_openGcById(this,event)" title="'+ev.titulo+(hora?' · '+hora:'')+' (Google Calendar)">'+lbl+'</div>';
   }
   // ── Mini calendário (sempre o mês de calAno/calMes) ──────────────
   var miniFirstDay=new Date(calAno,calMes,1).getDay();
