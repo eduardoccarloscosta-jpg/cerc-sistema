@@ -4861,10 +4861,12 @@ function gcFetchEvents() {
         var end   = ev.end.dateTime   || ev.end.date;
         return {
           id: ev.id,
+          gcEventId: ev.id,
           titulo: ev.summary || '(sem título)',
           inicio: start,
           fim: end,
           allDay: !ev.start.dateTime,
+          descricao: ev.description || '',
           link: ev.htmlLink || '',
           source: 'google'
         };
@@ -4991,7 +4993,7 @@ function calShowMore(ds, btn) {
         '<div style="font-size:12px;font-weight:600;color:#1A73E8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ev.titulo+'</div>'+
         '<div style="font-size:10px;color:var(--text3)">'+hora+' \u00b7 Google Calendar</div>'+
       '</div>';
-    (function(gcEv){el.onclick=function(){pop.remove(); openModalGcEvento(gcEv);};})(ev);
+    (function(gcEv){el.onclick=function(e2){pop.remove(); openGcEventPopover(gcEv.gcEventId||gcEv.id, e2);};})(ev);
     pop.appendChild(el);
   });
 
