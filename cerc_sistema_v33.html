@@ -5201,15 +5201,14 @@ function renderCalendario() {
     var bg=conc?'#D1FAE5':cfg.bg;
     var border=conc?'#10B981':cfg.border;
     var brL2=ev._multi&&!ev._isFirst?'0':'4px',brR2=ev._multi&&!ev._isLast?'0':'4px';
-    return '<div class="cal-event" style="background:'+bg+';color:'+cfg.c+';border-left-color:'+border+';border-radius:'+brL2+' '+brR2+' '+brR2+' '+brL2+'" onclick="event.stopPropagation();openModalEvento(\''+ev.id+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+lbl+'</div>';
+    return '<div class="cal-event" style="background:'+bg+';color:'+cfg.c+';border-left-color:'+border+';border-radius:'+brL2+' '+brR2+' '+brR2+' '+brL2+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+lbl+'</div>';
   }
 
   function evtGoogleHtml(ev){
     var hora=ev.allDay?'':(ev.inicio.slice(11,16)+' ');
     var lbl='🗓 '+hora+(ev.titulo||'').slice(0,20);
-    var evJson=JSON.stringify(ev).replace(/'/g,"\\'").replace(/"/g,'&quot;');
     return '<div class="cal-event" style="background:#E8F0FE;color:#1A73E8;border-left-color:#1A73E8;border-left-width:3px" '+
-      'onclick="event.stopPropagation();openModalGcEvento(gcEvents.find(function(e){return e.gcEventId===\''+ev.gcEventId+'\'}))" title="'+ev.titulo+(hora?' · '+hora:'')+' (Google Calendar)">'+lbl+'</div>';
+      'onclick="event.stopPropagation();openGcEventPopover(\''+ev.gcEventId+'\',event)" title="'+ev.titulo+(hora?' · '+hora:'')+' (Google Calendar)">'+lbl+'</div>';
   }
   // ── Mini calendário (sempre o mês de calAno/calMes) ──────────────
   var miniFirstDay=new Date(calAno,calMes,1).getDay();
@@ -5418,7 +5417,7 @@ function renderCalendario() {
         var bgW=concW?'#D1FAE5':cfg2.bg;
         var borderW=concW?'#10B981':cfg2.border;
         var checkSpanW=isTarefaW?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\')" style="cursor:pointer;margin-right:2px" title="'+(concW?'Reabrir':'Concluir')+'">'+icoW+'</span> ':''+icoW+' ';
-        return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;background:'+bgW+';color:'+cfg2.c+';border-left-color:'+borderW+'" onclick="event.stopPropagation();openModalEvento(\''+ev.id+'\')">' +
+        return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;background:'+bgW+';color:'+cfg2.c+';border-left-color:'+borderW+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)">' +
           '<div class="cal-week-event-title">'+checkSpanW+titleW+'</div>'+
           '<div class="cal-week-event-sub">'+(ev.horaInicio?ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):(ev.descricao||'').slice(0,20))+'</div></div>';
       }).join('');
@@ -6193,6 +6192,113 @@ function closeModalEvento() {
   var m = document.getElementById('modal-evento');
   if(m) m.remove();
   _gcPreFill = null;
+}
+
+function _closeEventPopover() {
+  var p = document.getElementById('ev-popover');
+  if(p) p.remove();
+}
+
+function openEventPopover(id, e) {
+  _closeEventPopover();
+  var ev = (state.eventos||[]).find(function(x){return x.id===id;});
+  if(!ev) return;
+  var TIPO_CFG2={'Evento':{bg:'#DBEAFE',c:'#1D4ED8',ico:'📅'},'Lembrete':{bg:'#FEF3C7',c:'#92400E',ico:'🔔'},'Prazo':{bg:'#FEE2E2',c:'#991B1B',ico:'⏰'},'Reunião':{bg:'#DCFCE7',c:'#14532D',ico:'🤝'},'Vistoria':{bg:'#EDE9FE',c:'#5B21B6',ico:'🔍'},'Tarefa':{bg:'#ECFDF5',c:'#065F46',ico:'☐'}};
+  var cfg=TIPO_CFG2[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌'};
+  var icoDisp=(ev.tipo==='Tarefa'?(ev.concluida?'☑':'☐'):cfg.ico);
+  var horaTxt=ev.horaInicio?(ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:'')):'Dia inteiro';
+  var dataTxt=fD(ev.data)+(ev.dataFim&&ev.dataFim!==ev.data?' → '+fD(ev.dataFim):'');
+  var demanda=ev.demandaId?(state.demandas||[]).find(function(d){return d.id===ev.demandaId;}):null;
+  var gcBtn=ev.gcEventId?'<a href="https://calendar.google.com/calendar/event?eid='+btoa(ev.gcEventId)+'" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#1A73E8;font-weight:600;text-decoration:none;padding:4px 8px;border:1px solid #1A73E8;border-radius:6px">🗓 Ver no Google</a>':'';
+  var tarefaBtn=ev.tipo==='Tarefa'?'<button onclick="_closeEventPopover();toggleTarefaConcluida(\''+id+'\')" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid #10B981;color:#065F46;background:#ECFDF5;cursor:pointer">'+(ev.concluida?'↩ Reabrir':'☑ Concluir')+'</button>':'';
+  var pop='<div id="ev-popover" style="position:fixed;z-index:2000;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);width:300px;font-family:inherit">'+
+    '<div style="background:'+cfg.bg+';border-radius:12px 12px 0 0;padding:14px 16px 12px;border-bottom:1px solid var(--border)">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+
+        '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">'+
+          '<span style="font-size:18px;flex-shrink:0">'+icoDisp+'</span>'+
+          '<div style="min-width:0">'+
+            '<div style="font-size:13px;font-weight:700;color:'+cfg.c+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(ev.concluida?';text-decoration:line-through;opacity:.7':'')+'">'+ev.titulo+'</div>'+
+            '<div style="font-size:11px;color:'+cfg.c+';opacity:.8;margin-top:1px">'+ev.tipo+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<button onclick="_closeEventPopover()" style="flex-shrink:0;background:none;border:none;font-size:16px;cursor:pointer;color:#6B7280;padding:0;line-height:1">✕</button>'+
+      '</div>'+
+    '</div>'+
+    '<div style="padding:14px 16px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text2)"><span>📅</span><span>'+dataTxt+'</span></div>'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(ev.descricao||demanda?'8px':'0')+'px;font-size:12px;color:var(--text2)"><span>⏰</span><span>'+horaTxt+'</span></div>'+
+      (ev.descricao?'<div style="font-size:12px;color:var(--text2);margin-bottom:8px;padding:8px;background:var(--bg);border-radius:6px;line-height:1.5">'+ev.descricao+'</div>':'')+
+      (demanda?'<div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:8px">📋 '+demanda.servico+(demanda.cliente?' — '+demanda.cliente:'')+'</div>':'')+
+      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">'+tarefaBtn+gcBtn+'</div>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:10px 16px;border-top:1px solid var(--border);border-radius:0 0 12px 12px;background:var(--bg)">'+
+      '<button onclick="_closeEventPopover();delEvento(\''+id+'\',false)" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid #FECACA;color:var(--red);background:#FEF2F2;cursor:pointer">🗑 Excluir</button>'+
+      '<button onclick="_closeEventPopover();openModalEvento(\''+id+'\')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:none;color:#fff;background:var(--accent);cursor:pointer">✏️ Editar</button>'+
+    '</div>'+
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend', pop);
+  // Posicionar próximo ao clique sem sair da tela
+  var el=document.getElementById('ev-popover');
+  var vw=window.innerWidth, vh=window.innerHeight;
+  var ex=e.clientX, ey=e.clientY;
+  var pw=300, ph=280;
+  var left=ex+8; if(left+pw>vw-8) left=ex-pw-8;
+  var top=ey+8; if(top+ph>vh-8) top=vh-ph-8;
+  el.style.left=Math.max(8,left)+'px';
+  el.style.top=Math.max(8,top)+'px';
+  // Fechar ao clicar fora
+  setTimeout(function(){
+    document.addEventListener('click',function _h(ev2){
+      var p2=document.getElementById('ev-popover');
+      if(p2&&!p2.contains(ev2.target)){p2.remove();document.removeEventListener('click',_h);}
+    });
+  },100);
+}
+
+function openGcEventPopover(gcEventId, e) {
+  _closeEventPopover();
+  var gcEv = gcEvents.find(function(x){return x.gcEventId===gcEventId;});
+  if(!gcEv) return;
+  var horaTxt=gcEv.allDay?'Dia inteiro':(gcEv.inicio?gcEv.inicio.slice(11,16)+(gcEv.fim?' – '+gcEv.fim.slice(11,16):''):'');
+  var dataTxt=gcEv.inicio?fD(gcEv.inicio.slice(0,10))+(gcEv.fim&&gcEv.fim.slice(0,10)!==gcEv.inicio.slice(0,10)?' → '+fD(gcEv.fim.slice(0,10)):''):'';
+  var pop='<div id="ev-popover" style="position:fixed;z-index:2000;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);width:300px;font-family:inherit">'+
+    '<div style="background:#E8F0FE;border-radius:12px 12px 0 0;padding:14px 16px 12px;border-bottom:1px solid #BDD5FB">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+
+        '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">'+
+          '<span style="font-size:18px;flex-shrink:0">🗓</span>'+
+          '<div style="min-width:0">'+
+            '<div style="font-size:13px;font-weight:700;color:#1A73E8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+gcEv.titulo+'</div>'+
+            '<div style="font-size:11px;color:#1A73E8;opacity:.8;margin-top:1px">Google Calendar</div>'+
+          '</div>'+
+        '</div>'+
+        '<button onclick="_closeEventPopover()" style="flex-shrink:0;background:none;border:none;font-size:16px;cursor:pointer;color:#6B7280;padding:0;line-height:1">✕</button>'+
+      '</div>'+
+    '</div>'+
+    '<div style="padding:14px 16px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text2)"><span>📅</span><span>'+dataTxt+'</span></div>'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text2)"><span>⏰</span><span>'+horaTxt+'</span></div>'+
+      (gcEv.descricao?'<div style="font-size:12px;color:var(--text2);margin-bottom:8px;padding:8px;background:var(--bg);border-radius:6px;line-height:1.5">'+gcEv.descricao.slice(0,120)+'</div>':'')+
+      '<div style="background:#FFF8E1;border:1px solid #FFE082;border-radius:6px;padding:8px 10px;font-size:11px;color:#92400E">💡 Este evento vem do Google Calendar. Importe-o para editar no sistema.</div>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:10px 16px;border-top:1px solid var(--border);border-radius:0 0 12px 12px;background:var(--bg)">'+
+      '<button onclick="_closeEventPopover();openModalGcEvento(gcEvents.find(function(x){return x.gcEventId===\''+gcEventId+'\';}))" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:none;color:#fff;background:#1A73E8;cursor:pointer">📥 Importar e Editar</button>'+
+    '</div>'+
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend', pop);
+  var el=document.getElementById('ev-popover');
+  var vw=window.innerWidth, vh=window.innerHeight;
+  var ex=e.clientX, ey=e.clientY;
+  var pw=300, ph=260;
+  var left=ex+8; if(left+pw>vw-8) left=ex-pw-8;
+  var top=ey+8; if(top+ph>vh-8) top=vh-ph-8;
+  el.style.left=Math.max(8,left)+'px';
+  el.style.top=Math.max(8,top)+'px';
+  setTimeout(function(){
+    document.addEventListener('click',function _h2(ev2){
+      var p2=document.getElementById('ev-popover');
+      if(p2&&!p2.contains(ev2.target)){p2.remove();document.removeEventListener('click',_h2);}
+    });
+  },100);
 }
 
 function evTipoChange() {
