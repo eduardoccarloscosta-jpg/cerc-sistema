@@ -5207,8 +5207,9 @@ function renderCalendario() {
   function evtGoogleHtml(ev){
     var hora=ev.allDay?'':(ev.inicio.slice(11,16)+' ');
     var lbl='🗓 '+hora+(ev.titulo||'').slice(0,20);
+    // data-gcid evita problemas com caracteres especiais no onclick inline
     return '<div class="cal-event" style="background:#E8F0FE;color:#1A73E8;border-left-color:#1A73E8;border-left-width:3px" '+
-      'onclick="event.stopPropagation();openGcEventPopover(\''+ev.gcEventId+'\',event)" title="'+ev.titulo+(hora?' · '+hora:'')+' (Google Calendar)">'+lbl+'</div>';
+      'data-gcid="'+ev.gcEventId.replace(/"/g,'&quot;')+'" onclick="event.stopPropagation();_openGcById(this,event)" title="'+ev.titulo+(hora?' · '+hora:'')+' (Google Calendar)">'+lbl+'</div>';
   }
   // ── Mini calendário (sempre o mês de calAno/calMes) ──────────────
   var miniFirstDay=new Date(calAno,calMes,1).getDay();
@@ -6256,12 +6257,20 @@ function openEventPopover(id, e) {
   },100);
 }
 
+// Helper: lê gcid do atributo data para evitar problema com caracteres especiais
+function _openGcById(el, e) {
+  var gcid = el.getAttribute('data-gcid');
+  if(gcid) openGcEventPopover(gcid, e);
+}
+
 function openGcEventPopover(gcEventId, e) {
   _closeEventPopover();
   var gcEv = gcEvents.find(function(x){return x.gcEventId===gcEventId;});
   if(!gcEv) return;
   var horaTxt=gcEv.allDay?'Dia inteiro':(gcEv.inicio?gcEv.inicio.slice(11,16)+(gcEv.fim?' – '+gcEv.fim.slice(11,16):''):'');
   var dataTxt=gcEv.inicio?fD(gcEv.inicio.slice(0,10))+(gcEv.fim&&gcEv.fim.slice(0,10)!==gcEv.inicio.slice(0,10)?' → '+fD(gcEv.fim.slice(0,10)):''):'';
+  // Guarda referência no window para os botões do rodapé acessarem sem interpolação
+  window._popGcEv = gcEv;
   var pop='<div id="ev-popover" style="position:fixed;z-index:2000;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);width:300px;font-family:inherit">'+
     '<div style="background:#E8F0FE;border-radius:12px 12px 0 0;padding:14px 16px 12px;border-bottom:1px solid #BDD5FB">'+
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+
@@ -6277,12 +6286,12 @@ function openGcEventPopover(gcEventId, e) {
     '</div>'+
     '<div style="padding:14px 16px">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text2)"><span>📅</span><span>'+dataTxt+'</span></div>'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text2)"><span>⏰</span><span>'+horaTxt+'</span></div>'+
-      (gcEv.descricao?'<div style="font-size:12px;color:var(--text2);margin-bottom:8px;padding:8px;background:var(--bg);border-radius:6px;line-height:1.5">'+gcEv.descricao.slice(0,120)+'</div>':'')+
-      '<div style="background:#FFF8E1;border:1px solid #FFE082;border-radius:6px;padding:8px 10px;font-size:11px;color:#92400E">💡 Este evento vem do Google Calendar. Importe-o para editar no sistema.</div>'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(gcEv.descricao?'8px':'0')+'px;font-size:12px;color:var(--text2)"><span>⏰</span><span>'+horaTxt+'</span></div>'+
+      (gcEv.descricao?'<div style="font-size:12px;color:var(--text2);padding:8px;background:var(--bg);border-radius:6px;line-height:1.5">'+gcEv.descricao.slice(0,120)+'</div>':'')+
     '</div>'+
-    '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:10px 16px;border-top:1px solid var(--border);border-radius:0 0 12px 12px;background:var(--bg)">'+
-      '<button onclick="_closeEventPopover();openModalGcEvento(gcEvents.find(function(x){return x.gcEventId===\''+gcEventId+'\';}))" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:none;color:#fff;background:#1A73E8;cursor:pointer">📥 Importar e Editar</button>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:10px 16px;border-top:1px solid var(--border);border-radius:0 0 12px 12px;background:var(--bg)">'+
+      '<button onclick="_gcPopDelete()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid #FECACA;color:var(--red);background:#FEF2F2;cursor:pointer">🗑 Excluir</button>'+
+      '<button onclick="_gcPopEdit()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:none;color:#fff;background:#1A73E8;cursor:pointer">✏️ Editar</button>'+
     '</div>'+
   '</div>';
   document.body.insertAdjacentHTML('beforeend', pop);
@@ -6301,6 +6310,33 @@ function openGcEventPopover(gcEventId, e) {
       if(p2&&!p2.contains(ev2.target)){p2.remove();document.removeEventListener('click',_h2);}
     });
   },100);
+}
+
+// Editar: importa o evento GC para o sistema (pré-preenche modal) e abre edição
+function _gcPopEdit() {
+  _closeEventPopover();
+  var gcEv = window._popGcEv;
+  if(!gcEv) return;
+  _gcPreFill = gcEv;
+  openModalEvento(null, gcEv.inicio ? gcEv.inicio.slice(0,10) : null);
+}
+
+// Excluir: remove do Google Calendar via API e atualiza a lista local
+function _gcPopDelete() {
+  var gcEv = window._popGcEv;
+  if(!gcEv) return;
+  if(!confirm('Excluir "'+gcEv.titulo+'" do Google Calendar?')) return;
+  _closeEventPopover();
+  if(gcIsConnected() && gcEv.gcEventId) {
+    gcDeleteGEvent(gcEv.gcEventId);
+    // Remove da lista local imediatamente
+    gcEvents = gcEvents.filter(function(x){return x.gcEventId !== gcEv.gcEventId;});
+    renderCalendario();
+    toast('Evento excluído do Google Calendar', 'success');
+  } else {
+    toast('Conecte o Google Calendar para excluir', 'warn');
+  }
+  window._popGcEv = null;
 }
 
 function evTipoChange() {
