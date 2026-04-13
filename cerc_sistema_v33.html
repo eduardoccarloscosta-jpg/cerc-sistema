@@ -4993,7 +4993,7 @@ function calShowMore(ds, btn) {
         '<div style="font-size:12px;font-weight:600;color:#1A73E8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ev.titulo+'</div>'+
         '<div style="font-size:10px;color:var(--text3)">'+hora+' \u00b7 Google Calendar</div>'+
       '</div>';
-    (function(gcEv){el.onclick=function(e2){pop.remove(); openGcEventPopover(gcEv.gcEventId||gcEv.id, e2);};})(ev);
+    (function(gcEv){el.onclick=function(e2){var x=e2.clientX,y=e2.clientY; pop.remove(); setTimeout(function(){openGcEventPopover(gcEv.gcEventId||gcEv.id,{clientX:x,clientY:y});},0);};})(ev);
     pop.appendChild(el);
   });
 
