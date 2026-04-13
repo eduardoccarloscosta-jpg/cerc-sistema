@@ -5150,9 +5150,13 @@ function renderCalendario() {
     if(d.dataFechamento){var k2=d.dataFechamento;if(!evtMap[k2])evtMap[k2]=[];evtMap[k2].push({_tipo:'fechamento',servico:d.servico,cliente:d.cliente,id:d.id,status:d.status});}
   });
   var evtCustomMap={};
-  // ── Mapear gcEvents por data ──────────────────────────────────────
+  // ── Set de gcEventIds já salvos localmente (para evitar duplicação) ─
+  var _localGcIds={};
+  (state.eventos||[]).forEach(function(e){ if(e.gcEventId) _localGcIds[e.gcEventId]=true; });
+  // ── Mapear gcEvents por data (excluindo os já existentes localmente) ─
   var gcEvtMap={};
   gcEvents.forEach(function(ev){
+    if(ev.gcEventId && _localGcIds[ev.gcEventId]) return; // já existe como evento local
     var ds=ev.inicio?ev.inicio.slice(0,10):'';
     if(!ds) return;
     if(!gcEvtMap[ds]) gcEvtMap[ds]=[];
@@ -5280,7 +5284,7 @@ function renderCalendario() {
     }).join(''):'<div style="font-size:11px;color:var(--text3);padding:6px 0">Nenhum retorno</div>')+
   '</div>';
 
-  var proxEvts=(state.eventos||[]).filter(function(ev){var d2=new Date(ev.data+'T12:00');d2.setHours(0,0,0,0);return d2>=agora;}).sort(function(a,b){return a.data<b.data?-1:1;}).slice(0,5);
+  var proxEvts=(state.eventos||[]).filter(function(ev){var d2=new Date(ev.data+'T12:00');d2.setHours(0,0,0,0);return d2>=agora&&!ev.concluida;}).sort(function(a,b){return a.data<b.data?-1:1;}).slice(0,5);
   var sideEvt='<div>'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
       '<span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">🗓 Eventos & Lembretes</span>'+
@@ -6282,12 +6286,13 @@ function getNotifs() {
       if(dias>7) notifs.push({tipo:'warn',msg:'Sem follow-up há '+dias+'d — '+d.servico,id:d.id,time:d.dataCriacao});
     }
   });
-  // Eventos e lembretes
+  // Eventos e lembretes (tarefas concluídas são ocultas)
   (state.eventos||[]).forEach(function(ev){
     if(!ev.data) return;
+    if(ev.concluida) return; // tarefa concluída não gera notificação
     var de=new Date(ev.data+'T12:00'); de.setHours(0,0,0,0);
     var diff=Math.round((today-de)/(1000*60*60*24));
-    var ico=ev.tipo==='Prazo'?'⏰':ev.tipo==='Lembrete'?'🔔':ev.tipo==='Reunião'?'🤝':ev.tipo==='Vistoria'?'🔍':'📅';
+    var ico=ev.tipo==='Tarefa'?'☑':ev.tipo==='Prazo'?'⏰':ev.tipo==='Lembrete'?'🔔':ev.tipo==='Reunião'?'🤝':ev.tipo==='Vistoria'?'🔍':'📅';
     if(diff>0&&diff<=2) notifs.push({tipo:'urgent',msg:ico+' '+ev.tipo+' vencido há '+diff+'d — '+ev.titulo,id:null,time:ev.data,evId:ev.id});
     else if(diff===0) notifs.push({tipo:'warn',msg:ico+' '+ev.tipo+' HOJE — '+ev.titulo,id:null,time:ev.data,evId:ev.id});
     else if(diff>=-3) notifs.push({tipo:'info',msg:ico+' '+ev.tipo+' em '+Math.abs(diff)+'d — '+ev.titulo,id:null,time:ev.data,evId:ev.id});
