@@ -6237,13 +6237,14 @@ function openEventPopover(id, e) {
     '</div>'+
   '</div>';
   document.body.insertAdjacentHTML('beforeend', pop);
-  // Posicionar próximo ao clique sem sair da tela
+  // Posicionar próximo ao clique sem sair da tela (usando dimensões reais)
   var el=document.getElementById('ev-popover');
+  var rect=el.getBoundingClientRect();
   var vw=window.innerWidth, vh=window.innerHeight;
   var ex=e.clientX, ey=e.clientY;
-  var pw=300, ph=280;
+  var pw=rect.width||300, ph=rect.height||300;
   var left=ex+8; if(left+pw>vw-8) left=ex-pw-8;
-  var top=ey+8; if(top+ph>vh-8) top=vh-ph-8;
+  var top=ey+8; if(top+ph>vh-8) top=ey-ph-8;
   el.style.left=Math.max(8,left)+'px';
   el.style.top=Math.max(8,top)+'px';
   // Fechar ao clicar fora
@@ -6286,11 +6287,12 @@ function openGcEventPopover(gcEventId, e) {
   '</div>';
   document.body.insertAdjacentHTML('beforeend', pop);
   var el=document.getElementById('ev-popover');
+  var rect2=el.getBoundingClientRect();
   var vw=window.innerWidth, vh=window.innerHeight;
   var ex=e.clientX, ey=e.clientY;
-  var pw=300, ph=260;
+  var pw=rect2.width||300, ph=rect2.height||260;
   var left=ex+8; if(left+pw>vw-8) left=ex-pw-8;
-  var top=ey+8; if(top+ph>vh-8) top=vh-ph-8;
+  var top=ey+8; if(top+ph>vh-8) top=ey-ph-8;
   el.style.left=Math.max(8,left)+'px';
   el.style.top=Math.max(8,top)+'px';
   setTimeout(function(){
