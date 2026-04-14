@@ -188,10 +188,10 @@ tbody tr:hover td{background:var(--bg)}
 .status-group-val{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text2)}
 .chevron{transition:transform .2s;color:var(--text3)}
 .chevron.open{transform:rotate(90deg)}
-.list-row{display:grid;grid-template-columns:22px 1fr 120px 100px 130px 110px 70px 90px;gap:10px;align-items:center;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;font-size:13px}
+.list-row{display:grid;grid-template-columns:22px 1fr 80px 100px 110px 90px 90px 70px 90px;gap:8px;align-items:center;padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;font-size:13px}
 .list-row:hover{background:var(--surface2)}
 .list-row:last-child{border-bottom:none}
-.list-row-hd{display:grid;grid-template-columns:22px 1fr 120px 100px 130px 110px 70px 90px;gap:10px;align-items:center;padding:6px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.list-row-hd{display:grid;grid-template-columns:22px 1fr 80px 100px 110px 90px 90px 70px 90px;gap:8px;align-items:center;padding:6px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
 .ln-svc{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prog-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
 .prog-mini{width:34px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
@@ -486,7 +486,7 @@ tbody tr:hover td{background:var(--bg)}
   .kpi-grid{grid-template-columns:repeat(2,1fr)!important}
   .content{padding:14px}
   .modal{max-width:680px}
-  .list-row{grid-template-columns:22px 1fr 110px 90px 120px 100px 60px 80px}
+  .list-row,.list-row-hd{grid-template-columns:22px 1fr 72px 90px 100px 80px 80px 60px 80px}
   .notif-panel{width:300px;right:12px}
   .dash-charts{grid-template-columns:1fr 1fr!important}
   .fgrid3{grid-template-columns:1fr 1fr!important}
@@ -2350,7 +2350,7 @@ function renderDashboard() {
       '<td>'+tBadge(dem.tipo)+'</td><td>'+sBadge(dem.status,dem)+'</td>' +
       '<td class="cn" style="color:var(--s-con);font-weight:600">'+fR(dem.valorBruto)+'</td>' +
       '<td><div class="prog-chip"><div class="prog-mini"><div class="prog-mini-fill" style="width:'+Math.round(done/total*100)+'%"></div></div>'+done+'/'+total+'</div></td>' +
-      '<td><div class="avatar avatar-sm" title="Carlos Eduardo">CE</div></td>' +
+      '<td><div class="avatar avatar-sm" title="Carlos Costa">CE</div></td>' +
       '</tr>';
   }).join('');
 
@@ -2552,7 +2552,7 @@ function renderDemandas() {
       var pag=dem.statusPagamento||'Pendente';
       var pagCls={Pago:'b-con',Inadimplente:'b-per',Parcial:'b-rev',Parcelado:'b-exe',Pendente:'b-neg'}[pag]||'b-neg';var pagExtra='';if(pag==='Parcial'&&dem.valorPago)pagExtra='<div style="font-size:10px;color:var(--amber)">'+fR(dem.valorPago)+'</div>';if(pag==='Parcelado'&&dem.parcelas&&dem.parcelas.length){var _pp=dem.parcelas.filter(function(x){return x.status==='Pago';}).length,_pt=dem.parcelas.length,_at=dem.parcelas.filter(function(x){return x.status==='Atrasada';}).length;pagExtra='<div style="font-size:10px;margin-top:3px"><span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;color:var(--s-exe)">'+_pp+'/'+_pt+'</span><span style="color:var(--text3)"> ('+Math.round(_pp/_pt*100)+'%)</span>'+(_at>0?'<span style="color:var(--red);font-weight:700"> ⚠️'+_at+'</span>':'')+'</div>';}
       return '<div class="list-row" onclick="openModalEdit(\''+dem.id+'\')">' +
-        '<div class="avatar avatar-sm" title="Carlos Eduardo">CE</div>' +
+        '<div class="avatar avatar-sm" title="Carlos Costa">CE</div>' +
         '<div class="ln-svc"><div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+dem.servico+'</div>' +
           '<div style="font-size:11px;color:var(--text3)">'+(dem.proposta||'')+(dem.cliente?' · '+dem.cliente:'')+'</div></div>' +
         '<div style="font-size:11px;color:var(--text2);white-space:nowrap">'+fD(dem.dataCriacao)+'</div>' +
@@ -4598,7 +4598,7 @@ function renderPropPreview() {
     '</div>';
   }
   function pageFooter() {
-    return '<div class="pft"><p>Carlos Eduardo Rodrigues da Costa<br>Eng. Mecânico — (44) 9 9959-2373</p></div>';
+    return '<div class="pft"><p>Carlos Costa Rodrigues da Costa<br>Eng. Mecânico — (44) 9 9959-2373</p></div>';
   }
   function wm() { return '<img class="pwm" src="'+LOGO+'"/>'; }
 
@@ -5821,7 +5821,7 @@ REPRESENTANTE CONTRATANTE: ${cli.contato||'representante legal'}
 CONTRATADA: CERC — Consultoria, Engenharia e Serviços de Inspeção
 CNPJ CONTRATADA: (a ser preenchido)
 ENDEREÇO CONTRATADA: Maringá — PR
-RESPONSÁVEL TÉCNICO: Carlos Eduardo — Engenheiro Mecânico — CREA-PR (a completar)
+RESPONSÁVEL TÉCNICO: Carlos Costa — Engenheiro Mecânico — CREA-PR (a completar)
 TIPO DE SERVIÇO: ${tipo}
 OBJETO: ${objeto}
 LOCAL: ${local}
@@ -5840,7 +5840,7 @@ CLÁUSULA 1ª. IDENTIFICAÇÃO DAS PARTES
 
 CONTRATANTE: [preencher com dados do CONTRATANTE acima], pessoa jurídica de direito privado, inscrita no CNPJ sob o nº [CNPJ], com endereço em [endereço].
 
-CONTRATADA: CERC — Consultoria, Engenharia e Serviços de Inspeção, pessoa jurídica de direito privado, com endereço em Maringá — PR, neste ato representada pelo Engenheiro Mecânico Carlos Eduardo, CREA-PR (a completar).
+CONTRATADA: CERC — Consultoria, Engenharia e Serviços de Inspeção, pessoa jurídica de direito privado, com endereço em Maringá — PR, neste ato representada pelo Engenheiro Mecânico Carlos Costa, CREA-PR (a completar).
 
 As partes acima identificadas têm, entre si, justo e acertado o presente Contrato de Prestação de Serviços que se regerá pelas cláusulas seguintes e pelas condições de pagamento descritas no presente.
 
@@ -5908,7 +5908,7 @@ Representante: ${cli.contato||'________________________'}
 ________________________________________
 CONTRATADA
 CERC — Consultoria, Engenharia e Serviços de Inspeção
-Carlos Eduardo — Engenheiro Mecânico
+Carlos Costa — Engenheiro Mecânico
 CREA-PR: (a completar)
 
 ________________________________________
@@ -6582,7 +6582,7 @@ function updateServicoValorComHistorico(id, val) {
   var i=state.servicos.findIndex(function(s){return s.id===id;}); if(i<0) return;
   var sv=state.servicos[i];
   if(!sv.historicoPrecos) sv.historicoPrecos=[];
-  sv.historicoPrecos.unshift({de:sv.valorBase,para:val,data:new Date().toISOString(),usuario:'Carlos Eduardo'});
+  sv.historicoPrecos.unshift({de:sv.valorBase,para:val,data:new Date().toISOString(),usuario:'Carlos Costa'});
   sv.valorBase=val;
   saveState();
   toast('Valor atualizado: '+fR(val),'success');
@@ -6766,7 +6766,7 @@ var _onbSteps = [
   {
     label: 'Passo 1 de 5', title: 'Bem-vindo ao CERC Gestão! 👋',
     desc: 'Vamos configurar sua conta em menos de 2 minutos.',
-    html: '<div class="onb-form"><div class="fg"><label>Seu nome completo</label><input id="onb-nome" placeholder="Ex: Carlos Eduardo"/></div><div class="fg"><label>Nome da empresa</label><input id="onb-empresa" placeholder="Ex: CERC Engenharia Ltda"/></div></div>',
+    html: '<div class="onb-form"><div class="fg"><label>Seu nome completo</label><input id="onb-nome" placeholder="Ex: Carlos Costa"/></div><div class="fg"><label>Nome da empresa</label><input id="onb-empresa" placeholder="Ex: CERC Engenharia Ltda"/></div></div>',
     save: function(){ _onbData.nome=document.getElementById('onb-nome').value; _onbData.empresa=document.getElementById('onb-empresa').value; }
   },
   {
@@ -6882,7 +6882,7 @@ function renderConfiguracoes() {
           cfgField('Telefone / WhatsApp','cfg-telefone',ex.telefone||'','(44) 9 9999-9999')+
         '</div>'+
         '<div style="margin-bottom:12px">'+cfgField('E-mail (conta)','cfg-email',(_sbUser&&_sbUser.email)||'','',true)+'</div>'+
-        '<div style="margin-bottom:16px">'+cfgField('Assinatura nos contratos','cfg-assinatura',ex.assinatura||'','Ex: Carlos Eduardo — Engenheiro Mecânico — CREA-PR ...')+'</div>'+
+        '<div style="margin-bottom:16px">'+cfgField('Assinatura nos contratos','cfg-assinatura',ex.assinatura||'','Ex: Carlos Costa — Engenheiro Mecânico — CREA-PR ...')+'</div>'+
         '<div style="display:flex;align-items:center;gap:8px">'+
           '<button class="btn btn-primary btn-sm" onclick="salvarPerfil()">💾 Salvar perfil</button>'+
           '<span style="font-size:11px;color:var(--text3)">Campos com * sincronizados na nuvem</span>'+
@@ -7337,7 +7337,7 @@ initAuth();
   <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
     <div class="avatar">CE</div>
     <div>
-      <div style="font-size:13px;font-weight:700">Carlos Eduardo</div>
+      <div style="font-size:13px;font-weight:700">Carlos Costa</div>
       <div style="font-size:11px;color:var(--text3)">Engenheiro Resp. · CERC</div>
     </div>
   </div>
