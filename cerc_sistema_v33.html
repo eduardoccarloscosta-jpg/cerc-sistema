@@ -3489,7 +3489,7 @@ function openClienteDetalhe(id) {
           '<div><div class="modal-title">'+c.empresa+'</div>'+(c.nomeFantasia?'<div style="font-size:12px;color:var(--text2);font-style:italic">'+c.nomeFantasia+'</div>':'')+(c.cnpj?'<div style="font-size:11px;color:var(--text3)">'+c.cnpj+'</div>':'')+
           '</div></div>' +
         '<div style="display:flex;gap:8px">' +
-          '<button class="btn btn-ghost btn-sm" onclick="openClienteModal(\''+c.id+'\')">✏️ Editar</button>' +
+          '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'cli-detalhe-overlay\').remove();openClienteModal(\''+c.id+'\')">✏️ Editar</button>' +
           '<button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById(\'cli-detalhe-overlay\').remove()">✕</button>' +
         '</div></div></div>' +
       '<div class="modal-body">' +
