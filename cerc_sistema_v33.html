@@ -2016,8 +2016,10 @@ async function loadStateFromSupabase() {
     // ── Merge: Supabase + itens locais que ainda não chegaram ao Supabase ──
     function mergeAndPush(sbData, localArr, mapFn, toDb, table) {
       var sbItems = Array.isArray(sbData) ? sbData.map(mapFn) : [];
-      var sbIds = {}; sbItems.forEach(function(x){ sbIds[x.id]=true; });
-      // Itens que existem local mas não no Supabase → push para Supabase
+      var sbIds   = {}; sbItems.forEach(function(x){ sbIds[x.id]=true; });
+      var localIds= {}; localArr.forEach(function(x){ if(x&&x.id) localIds[x.id]=true; });
+
+      // Itens que existem local mas NÃO no Supabase → push para Supabase
       var localOnly = localArr.filter(function(x){ return x && x.id && !sbIds[x.id]; });
       if(localOnly.length > 0) {
         var rows = localOnly.map(function(x){ var r=toDb(x); r.user_id=_sbUser.id; return r; });
@@ -2026,8 +2028,22 @@ async function loadStateFromSupabase() {
           else console.log('[SB] Sincronizados '+rows.length+' itens locais → '+table);
         });
       }
-      // Retorna Supabase + locais ainda não sincronizados
-      return sbItems.concat(localOnly);
+
+      // Itens que existem no Supabase mas NÃO local → trazer para local
+      var sbOnly = sbItems.filter(function(x){ return !localIds[x.id]; });
+
+      // LOCAL tem prioridade para itens em ambos (preserva edições recentes do usuário)
+      // Re-sincroniza local → Supabase para garantir que edições pendentes cheguem à nuvem
+      var inBoth = localArr.filter(function(x){ return x && x.id && sbIds[x.id]; });
+      if(inBoth.length > 0) {
+        var rowsSync = inBoth.map(function(x){ var r=toDb(x); r.user_id=_sbUser.id; return r; });
+        _sb.from(table).upsert(rowsSync, {onConflict:'id'}).then(function(res){
+          if(res.error) console.warn('[SB] re-sync '+table+':', res.error.message);
+        });
+      }
+
+      // Retorna: local (fonte de verdade) + itens que só existem no Supabase (outros dispositivos)
+      return localArr.concat(sbOnly);
     }
     state.demandas = mergeAndPush(rDem.data, state.demandas, dbToDemanda, demandaToDb, 'demandas');
     state.clientes = mergeAndPush(rCli.data, state.clientes, dbToCliente, clienteToDb, 'clientes');
