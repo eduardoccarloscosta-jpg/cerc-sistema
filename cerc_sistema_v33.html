@@ -315,6 +315,18 @@ tbody tr:hover td{background:var(--bg)}
 .prec-hd{padding:10px 15px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
 .prec-body{padding:12px 15px}
 .prec-right-col{position:sticky;top:20px}
+/* Grid pessoal precificacao desktop: 7 colunas */
+.prec-pes-hd,.prec-pes-row{display:grid;grid-template-columns:2.2fr 75px 75px 60px 100px 1fr 30px;gap:6px;align-items:center}
+.prec-pes-hd{margin-bottom:8px}
+.prec-pes-row{margin-bottom:7px}
+/* Layout operacional + margem desktop: lado a lado */
+.prec-ops-layout{display:grid;grid-template-columns:1.35fr 1fr;gap:10px;align-items:start}
+/* Financeiro KPI grid 5 colunas */
+.fin-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+/* Financeiro despesas layout */
+.fin-desp-layout{display:grid;grid-template-columns:240px 1fr;gap:14px}
+/* Grid clientes 3 colunas */
+.cli-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .result-panel{background:linear-gradient(135deg,#7C3AED11,#2563EB08);border:1.5px solid #C4B5FD;border-radius:var(--rl);padding:16px 18px;}
 .rp-title{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:11px}
 .rp-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px}
@@ -411,8 +423,24 @@ tbody tr:hover td{background:var(--bg)}
   .list-row>*:nth-child(6){display:none}
   .list-row>*:nth-child(7){grid-row:2;grid-column:2;text-align:right}
   .list-row>*:nth-child(8){display:none}
+  .list-row>*:nth-child(9){display:none}
 
-  /* ── Modais ── */
+  /* -- Precificacao mobile -- */
+  .prec-pes-hd{display:none!important}
+  .prec-pes-row{grid-template-columns:1fr 1fr auto!important;gap:4px 6px!important;margin-bottom:12px!important;padding-bottom:10px;border-bottom:1px solid var(--border)}
+  .prec-pes-row>*:nth-child(1){grid-column:1/-1}
+  .prec-pes-row>*:nth-child(6){grid-column:1/-1}
+  .prec-ops-layout{grid-template-columns:1fr!important}
+
+  /* -- Financeiro mobile -- */
+  .fin-kpi-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px}
+  .fin-desp-layout{grid-template-columns:1fr!important}
+  .cli-grid-3{grid-template-columns:1fr!important}
+
+  /* -- Cards clientes mobile -- */
+  .pclientes-grid{grid-template-columns:1fr!important}
+
+  /* -- Modais -- */
   .modal{width:96vw!important;max-width:96vw!important;max-height:88dvh!important;border-radius:16px!important}
   .modal-sm{max-width:96vw!important}
   .modal-body{padding:12px 14px}
@@ -490,6 +518,15 @@ tbody tr:hover td{background:var(--bg)}
   .notif-panel{width:300px;right:12px}
   .dash-charts{grid-template-columns:1fr 1fr!important}
   .fgrid3{grid-template-columns:1fr 1fr!important}
+  /* -- Precificacao tablet -- */
+  .prec-pes-hd,.prec-pes-row{grid-template-columns:1.8fr 70px 70px 55px 90px 1fr 28px}
+  .prec-ops-layout{grid-template-columns:1fr!important}
+  /* -- Financeiro tablet -- */
+  .fin-kpi-grid{grid-template-columns:repeat(3,1fr)!important}
+  .fin-desp-layout{grid-template-columns:200px 1fr!important}
+  /* -- Grid clientes tablet -- */
+  .cli-grid-3{grid-template-columns:repeat(2,1fr)!important}
+  .pclientes-grid{grid-template-columns:repeat(2,1fr)!important}
 }
 
 
@@ -977,7 +1014,7 @@ body::after{
 /* ── Página clientes/parceiros ── */
 .pclientes-hd{background:#2D1B69;padding:18px 24px;border-radius:6px;margin-bottom:24px}
 .pclientes-hd-text{font-size:26px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:-1px}
-.pclientes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;place-items:center;padding:0 4px}
+.pclientes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;place-items:start;padding:0 4px}
 .pcliente-item{padding:12px 18px;border:2px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:900;color:#2D1B69;text-align:center;width:100%;letter-spacing:.3px;background:#fff}
 
 /* ═══ PRINT ═══ */
@@ -3442,7 +3479,7 @@ function renderClientes(filtro) {
     return (c.empresa||'').toLowerCase().includes(q)||(c.nomeFantasia||'').toLowerCase().includes(q)||(c.contato||'').toLowerCase().includes(q)||(c.cnpj||'').replace(/\D/g,'').includes(q.replace(/\D/g,''))||(c.cnpj||'').toLowerCase().includes(q)||(c.email||'').toLowerCase().includes(q)||(c.telefone||'').toLowerCase().includes(q);
   });
   var html=(cs.length
-    ? '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">' +
+    ? '<div class="cli-grid-3">' +
         cs.map(function(c){
           var demCnt=state.demandas.filter(function(d){return d.cliente===c.empresa;}).length;
           var contrCnt=(state.contratos||[]).filter(function(ct){return ct.clienteId===c.id;}).length;
@@ -3743,14 +3780,14 @@ function renderFinanceiro() {
 
   document.getElementById('page-content').innerHTML=
     insightsHtml+
-    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 16px;box-shadow:var(--sh)">' +
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 16px;box-shadow:var(--sh);flex-wrap:wrap">' +
       '<span style="font-size:13px;font-weight:600;color:var(--text2)">📅 Período:</span>' +
       '<select class="fi" style="padding:5px 10px" onchange="finMes=parseInt(this.value);renderFinanceiro()">'+mesOpts+'</select>' +
       '<select class="fi" style="padding:5px 10px" onchange="finAno=parseInt(this.value);renderFinanceiro()">'+anoOpts+'</select>' +
       '<span style="font-size:11px;color:var(--text3)"><strong>'+MESES[finMes-1]+' '+finAno+'</strong></span>' +
       '<button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="finMes=new Date().getMonth()+1;finAno=new Date().getFullYear();renderFinanceiro()">Mês Atual</button>' +
     '</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px">' +
+    '<div class="fin-kpi-grid">' +
       '<div class="kpi"><div class="kpi-label">Resultado — '+MESES[finMes-1]+'</div><div class="kpi-value" style="color:'+(saldoMes>=0?'var(--s-con)':'var(--red)')+'">'+fR(saldoMes)+'</div><div class="kpi-sub">'+varHtml(varPct(saldoMes,recAnt-despAnt),false)+'</div></div>' +
       '<div class="kpi"><div class="kpi-label">Margem de Lucro</div><div class="kpi-value" style="color:'+(margemMes>=30?'var(--s-con)':margemMes>=10?'var(--amber)':'var(--red)')+'">'+margemMes.toFixed(1)+'%</div><div class="kpi-sub" style="color:'+(margemMes>=30?'var(--s-con)':margemMes>=10?'var(--amber)':'var(--red)')+'">'+( margemMes>=30?'Excelente':margemMes>=10?'Razoável':'Atenção')+'</div></div>' +
       '<div class="kpi"><div class="kpi-label">Receitas — '+MESES[finMes-1]+'</div><div class="kpi-value" style="color:var(--s-con)">'+fR(totalRecMes)+'</div><div class="kpi-sub">'+varHtml(varPct(totalRecMes,recAnt),false)+(recPendMes>0?'<br><span style="color:var(--amber)">+'+fR(recPendMes)+' a receber</span>':'')+'</div></div>' +
@@ -3765,7 +3802,7 @@ function renderFinanceiro() {
     if(!rows.length) rows=d.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0&&x.statusPagamento!=='Recorrente';}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);}).slice(0,20);
     var recAvulsaHtml='';
     if(recAvulsaRecMes.length){
-      recAvulsaHtml='<div class="card" style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px">🔄 Receitas Recorrentes — '+MESES[finMes-1]+' <span style="font-size:11px;font-weight:400;color:var(--text3)">Marque mês a mês conforme receber</span></div><table style="width:100%;border-collapse:collapse"><thead><tr style="font-size:11px;color:var(--text3)"><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Descrição</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Categoria</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Rec.</th><th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)">Valor/mês</th><th style="padding:6px 8px;border-bottom:1px solid var(--border)">'+MESES[finMes-1]+'</th></tr></thead><tbody>'+
+      recAvulsaHtml='<div class="card" style="margin-bottom:14px;overflow-x:auto"><div style="font-size:12px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px">🔄 Receitas Recorrentes — '+MESES[finMes-1]+' <span style="font-size:11px;font-weight:400;color:var(--text3)">Marque mês a mês conforme receber</span></div><table style="width:100%;border-collapse:collapse"><thead><tr style="font-size:11px;color:var(--text3)"><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Descrição</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Categoria</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Rec.</th><th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)">Valor/mês</th><th style="padding:6px 8px;border-bottom:1px solid var(--border)">'+MESES[finMes-1]+'</th></tr></thead><tbody>'+
         recAvulsaRecMes.map(function(x){var isRec=x.recebidoMeses&&x.recebidoMeses[mesKey];return '<tr><td style="padding:7px 8px;font-weight:500">'+x.servico+'</td><td style="padding:7px 8px;font-size:11px;color:var(--text2)">'+(x.categoriaReceita||'—')+'</td><td style="padding:7px 8px"><span class="badge b-fec">🔄 '+x.rec+'</span></td><td style="padding:7px 8px;text-align:right;font-family:\'JetBrains Mono\',monospace;color:var(--s-con);font-weight:600">'+fR(x.valorBruto)+'</td><td style="padding:7px 8px"><button class="btn btn-sm" style="font-size:11px;padding:3px 9px;border-radius:20px;border:1.5px solid;cursor:pointer;font-weight:600;background:'+(isRec?'var(--s-con-l)':'var(--s-per-l)')+';color:'+(isRec?'var(--s-con)':'var(--text3)')+';border-color:'+(isRec?'#86EFAC':'var(--border)')+'" onclick="toggleReceitaRecebido(\''+x.id+'\',\''+mesKey+'\',this)">'+(isRec?'✅ Recebido':'⏳ A Receber')+'</button></td><td style="padding:7px 8px"><button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openModalReceita(\''+x.id+'\')">✏️</button></td></tr>';}).join('')+
       '</tbody></table></div>';
     }
@@ -3777,14 +3814,14 @@ function renderFinanceiro() {
     despList=despList.slice().sort(function(a,b){return new Date(b.data)-new Date(a.data);});
     var bycat={};(esMes.length?esMes:e).forEach(function(x){bycat[x.cat]=(bycat[x.cat]||0)+x.valor;});
     var catRows=Object.keys(bycat).sort(function(a,b){return bycat[b]-bycat[a];}).map(function(c){return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px">'+c+'</span><span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--red)">'+fR(bycat[c])+'</span></div>';}).join('');
-    fc.innerHTML='<div style="display:grid;grid-template-columns:240px 1fr;gap:14px"><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:12px">'+MESES[finMes-1]+' — Por Categoria</div>'+(catRows||'<div style="font-size:12px;color:var(--text3)">Sem despesas.</div>')+'<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid var(--border);margin-top:6px;font-weight:700;font-size:13px"><span>Total</span><span style="font-family:\'JetBrains Mono\',monospace;color:var(--red)">'+fR(totDespMes||e.reduce(function(a,b){return a+(b.valor||0);},0))+'</span></div></div><div class="tw"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Proposta</th><th>Rec.</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody>'+despList.map(function(x){var dem=x.propostaId?state.demandas.find(function(d){return d.id===x.propostaId;}):null;return '<tr><td style="font-weight:500">'+x.desc+'</td><td style="font-size:11px;color:var(--text2)">'+x.cat+'</td><td>'+(dem?'<span class="badge b-neg" style="font-size:10px">'+dem.proposta+'</span>':'<span style="color:var(--text3);font-size:11px">—</span>')+'</td><td><span class="badge b-fec">'+x.rec+'</span></td><td style="font-size:12px;color:var(--text2)">'+fD(x.data)+'</td><td class="cn" style="color:var(--red);font-weight:600">'+fR(x.valor)+'</td><td><button class="btn btn-sm" style="font-size:11px;padding:3px 9px;border-radius:20px;border:1.5px solid;cursor:pointer;font-weight:600;background:'+(x.pago?'var(--s-con-l)':'var(--s-per-l)')+';color:'+(x.pago?'var(--s-con)':'var(--text3)')+';border-color:'+(x.pago?'#86EFAC':'var(--border)')+'" onclick="toggleDespPago(\''+x.id+'\',this,'+(x._mesKey?'\''+x._mesKey+'\'':'null')+')">'+(x.pago?'✅ Paga':'⏳ Pendente')+'</button></td><td style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openModalDespesa(\''+x.id+'\')">✏️</button><button class="btn btn-danger btn-sm btn-icon" onclick="delDesp(\''+x.id+'\')">🗑</button></td></tr>';}).join('')+'</tbody></table></div></div>';
+    fc.innerHTML='<div class="fin-desp-layout"><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:12px">'+MESES[finMes-1]+' — Por Categoria</div>'+(catRows||'<div style="font-size:12px;color:var(--text3)">Sem despesas.</div>')+'<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid var(--border);margin-top:6px;font-weight:700;font-size:13px"><span>Total</span><span style="font-family:\'JetBrains Mono\',monospace;color:var(--red)">'+fR(totDespMes||e.reduce(function(a,b){return a+(b.valor||0);},0))+'</span></div></div><div class="tw"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Proposta</th><th>Rec.</th><th>Data</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody>'+despList.map(function(x){var dem=x.propostaId?state.demandas.find(function(d){return d.id===x.propostaId;}):null;return '<tr><td style="font-weight:500">'+x.desc+'</td><td style="font-size:11px;color:var(--text2)">'+x.cat+'</td><td>'+(dem?'<span class="badge b-neg" style="font-size:10px">'+dem.proposta+'</span>':'<span style="color:var(--text3);font-size:11px">—</span>')+'</td><td><span class="badge b-fec">'+x.rec+'</span></td><td style="font-size:12px;color:var(--text2)">'+fD(x.data)+'</td><td class="cn" style="color:var(--red);font-weight:600">'+fR(x.valor)+'</td><td><button class="btn btn-sm" style="font-size:11px;padding:3px 9px;border-radius:20px;border:1.5px solid;cursor:pointer;font-weight:600;background:'+(x.pago?'var(--s-con-l)':'var(--s-per-l)')+';color:'+(x.pago?'var(--s-con)':'var(--text3)')+';border-color:'+(x.pago?'#86EFAC':'var(--border)')+'" onclick="toggleDespPago(\''+x.id+'\',this,'+(x._mesKey?'\''+x._mesKey+'\'':'null')+')">'+(x.pago?'✅ Paga':'⏳ Pendente')+'</button></td><td style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openModalDespesa(\''+x.id+'\')">✏️</button><button class="btn btn-danger btn-sm btn-icon" onclick="delDesp(\''+x.id+'\')">🗑</button></td></tr>';}).join('')+'</tbody></table></div></div>';
   } else {
     var totRecGeral=d.filter(function(x){return x.statusPagamento==='Pago';}).reduce(function(a,b){return a+(b.valorBruto||0);},0)+d.filter(function(x){return x.statusPagamento==='Parcial';}).reduce(function(a,b){return a+(b.valorPago||0);},0)+d.filter(function(x){return x.statusPagamento==='Parcelado';}).reduce(function(a,b){return a+(b.parcelas||[]).filter(function(p){return p.status==='Pago';}).reduce(function(s,p){return s+p.valor;},0);},0);
     var totDespGeral=e.reduce(function(a,b){return a+(b.valor||0);},0);
     var totDespGeralPago=e.filter(function(x){return x.pago;}).reduce(function(a,b){return a+(b.valor||0);},0);
     var saldoGeral=totRecGeral-totDespGeralPago;
     var recFutura=d.filter(function(x){return ['Lead','Negociação','Fechado','Em Revisão'].indexOf(x.status)>=0;}).reduce(function(a,b){return a+(b.valorLiquido||0);},0);
-    fc.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:14px">'+MESES[finMes-1]+' '+finAno+'</div>'+[['+ Recebido',totalRecMes,'var(--s-con)'],['+ A Receber',recPendMes,'var(--amber)'],['− Despesas (total)',totDespMes,'var(--red)'],['− Despesas (pagas)',totDespMesPago,'var(--red)']].map(function(r){return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2)">'+r[0]+'</span><span style="font-family:\'JetBrains Mono\',monospace;color:'+r[2]+';font-weight:500">'+fR(r[1])+'</span></div>';}).join('')+'<div style="display:flex;justify-content:space-between;padding:12px 0 4px;border-top:2px solid var(--border);margin-top:6px"><span style="font-weight:700">= Saldo do Mês</span><span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:16px;color:'+(saldoMes>=0?'var(--s-con)':'var(--red)')+'">'+fR(saldoMes)+'</span></div><div style="font-size:10px;color:var(--text3);margin-top:3px">Recebido − Despesas Pagas</div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:14px">Acumulado Geral</div>'+[['+ Total Recebido',totRecGeral,'var(--s-con)'],['~ Pipeline Previsto',recFutura,'var(--blue)'],['− Despesas (total)',totDespGeral,'var(--red)'],['− Despesas (pagas)',totDespGeralPago,'var(--red)']].map(function(r){return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2)">'+r[0]+'</span><span style="font-family:\'JetBrains Mono\',monospace;color:'+r[2]+';font-weight:500">'+fR(r[1])+'</span></div>';}).join('')+'<div style="display:flex;justify-content:space-between;padding:12px 0 4px;border-top:2px solid var(--border);margin-top:6px"><span style="font-weight:700">= Saldo Geral</span><span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:16px;color:'+(saldoGeral>=0?'var(--s-con)':'var(--red)')+'">'+fR(saldoGeral)+'</span></div><div style="font-size:10px;color:var(--text3);margin-top:3px">Recebido − Despesas Pagas</div></div></div>';
+    fc.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:14px">'+MESES[finMes-1]+' '+finAno+'</div>'+[['+ Recebido',totalRecMes,'var(--s-con)'],['+ A Receber',recPendMes,'var(--amber)'],['− Despesas (total)',totDespMes,'var(--red)'],['− Despesas (pagas)',totDespMesPago,'var(--red)']].map(function(r){return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2)">'+r[0]+'</span><span style="font-family:\'JetBrains Mono\',monospace;color:'+r[2]+';font-weight:500">'+fR(r[1])+'</span></div>';}).join('')+'<div style="display:flex;justify-content:space-between;padding:12px 0 4px;border-top:2px solid var(--border);margin-top:6px"><span style="font-weight:700">= Saldo do Mês</span><span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:16px;color:'+(saldoMes>=0?'var(--s-con)':'var(--red)')+'">'+fR(saldoMes)+'</span></div><div style="font-size:10px;color:var(--text3);margin-top:3px">Recebido − Despesas Pagas</div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:14px">Acumulado Geral</div>'+[['+ Total Recebido',totRecGeral,'var(--s-con)'],['~ Pipeline Previsto',recFutura,'var(--blue)'],['− Despesas (total)',totDespGeral,'var(--red)'],['− Despesas (pagas)',totDespGeralPago,'var(--red)']].map(function(r){return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text2)">'+r[0]+'</span><span style="font-family:\'JetBrains Mono\',monospace;color:'+r[2]+';font-weight:500">'+fR(r[1])+'</span></div>';}).join('')+'<div style="display:flex;justify-content:space-between;padding:12px 0 4px;border-top:2px solid var(--border);margin-top:6px"><span style="font-weight:700">= Saldo Geral</span><span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:16px;color:'+(saldoGeral>=0?'var(--s-con)':'var(--red)')+'">'+fR(saldoGeral)+'</span></div><div style="font-size:10px;color:var(--text3);margin-top:3px">Recebido − Despesas Pagas</div></div></div>';
   }
 }
 
@@ -3877,8 +3914,18 @@ function calcPrec() {
 
 function renderPrecificacao() {
   var res=calcPrec();
-  function profOpts(cur){var blank=cur?'':'<option value="" disabled selected>— Selecione o profissional —</option>';return blank+PROF_GROUPS.map(function(g){return '<optgroup label="'+g.label+'">'+g.items.map(function(it){return '<option'+(cur===it?' selected':'')+' value="'+it+'">'+it+' — '+fR(getProfRate(it))+'/'+(PROF_UNID[it]||'uni')+'</option>';}).join('')+'</optgroup>';}).join('');}
-  var pesHtml=precState.pessoal.map(function(p,i){return '<div style="display:grid;grid-template-columns:2.2fr 75px 75px 60px 100px 1fr 30px;gap:6px;align-items:center;margin-bottom:7px"><select class="finput" style="font-size:12px;padding:5px 7px" onchange="precState.pessoal['+i+'].prof=this.value;renderPrecificacao()">'+profOpts(p.prof)+'</select><input class="finput" type="number" min="0" step="0.5" style="font-size:12px;padding:5px;text-align:center" value="'+p.qtd+'" onfocus="this.select()" oninput="precState.pessoal['+i+'].qtd=parseFloat(this.value)||0" onchange="precState.pessoal['+i+'].qtd=parseFloat(this.value)||0;renderPrecificacao()"/><input class="finput" type="number" min="1" style="font-size:12px;padding:5px;text-align:center" value="'+(p.pessoas||1)+'" onfocus="this.select()" oninput="precState.pessoal['+i+'].pessoas=parseInt(this.value)||1" onchange="precState.pessoal['+i+'].pessoas=parseInt(this.value)||1;renderPrecificacao()"/><span style="font-size:11px;color:var(--text3);text-align:center">'+(PROF_UNID[p.prof]||'uni')+'</span><span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;text-align:right">'+fR((p.qtd||0)*(p.pessoas||1)*(PROF_HH[p.prof]||150))+'</span><input class="finput" type="text" placeholder="Referência..." style="font-size:12px;padding:5px 7px" value="'+(p.obs||'')+'" oninput="precState.pessoal['+i+'].obs=this.value"/><button class="btn btn-danger btn-sm btn-icon" onclick="precState.pessoal.splice('+i+',1);renderPrecificacao()">✕</button></div>';}).join('');
+  function profOpts(cur){
+    var blank=cur?'':'<option value="" disabled selected>— Selecione o profissional —</option>';
+    var stdNames=PROF_GROUPS.reduce(function(a,g){return a.concat(g.items);},[]);
+    var stdOpts=blank+PROF_GROUPS.map(function(g){return '<optgroup label="'+g.label+'">'+g.items.map(function(it){return '<option'+(cur===it?' selected':'')+' value="'+it+'">'+it+' — '+fR(getProfRate(it))+'/'+(PROF_UNID[it]||'uni')+'</option>';}).join('')+'</optgroup>';}).join('');
+    var customSvcs=(state.servicos||[]).filter(function(s){return s.nome&&stdNames.indexOf(s.nome)<0;});
+    if(!customSvcs.length) return stdOpts;
+    var cats={};
+    customSvcs.forEach(function(s){var c=s.categoria||'Meus Serviços';if(!cats[c])cats[c]=[];cats[c].push(s);});
+    var customOpts=Object.keys(cats).map(function(cat){return '<optgroup label="★ '+cat+'">'+cats[cat].map(function(s){return '<option'+(cur===s.nome?' selected':'')+' value="'+s.nome+'">'+s.nome+' — '+fR(s.valorBase)+'/'+(s.unidade||'uni')+'</option>';}).join('')+'</optgroup>';}).join('');
+    return stdOpts+customOpts;
+  }
+  var pesHtml=precState.pessoal.map(function(p,i){return '<div class="prec-pes-row"><select class="finput" style="font-size:12px;padding:5px 7px" onchange="precState.pessoal['+i+'].prof=this.value;renderPrecificacao()">'+profOpts(p.prof)+'</select><input class="finput" type="number" min="0" step="0.5" style="font-size:12px;padding:5px;text-align:center" value="'+p.qtd+'" onfocus="this.select()" oninput="precState.pessoal['+i+'].qtd=parseFloat(this.value)||0" onchange="precState.pessoal['+i+'].qtd=parseFloat(this.value)||0;renderPrecificacao()"/><input class="finput" type="number" min="1" style="font-size:12px;padding:5px;text-align:center" value="'+(p.pessoas||1)+'" onfocus="this.select()" oninput="precState.pessoal['+i+'].pessoas=parseInt(this.value)||1" onchange="precState.pessoal['+i+'].pessoas=parseInt(this.value)||1;renderPrecificacao()"/><span style="font-size:11px;color:var(--text3);text-align:center">'+(PROF_UNID[p.prof]||(state.servicos.find(function(s){return s.nome===p.prof;})||{}).unidade||'uni')+'</span><span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;text-align:right">'+fR((p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0))+'</span><input class="finput" type="text" placeholder="Referência..." style="font-size:12px;padding:5px 7px" value="'+(p.obs||'')+'" oninput="precState.pessoal['+i+'].obs=this.value"/><button class="btn btn-danger btn-sm btn-icon" onclick="precState.pessoal.splice('+i+',1);renderPrecificacao()">✕</button></div>';}).join('');
   var opsHtml=precState.ops.map(function(op,i){
     var isCustom=op.isCustom;
     return '<div style="margin-bottom:'+(op.hasObs?'3':'5')+'px"><div style="display:grid;grid-template-columns:'+(isCustom?'1.4fr 65px 72px 145px 90px 26px':'1.4fr 65px 72px 145px 90px')+';gap:5px;align-items:center">' +
@@ -3902,12 +3949,12 @@ function renderPrecificacao() {
     // 2. CUSTO PESSOAL
     '<div class="prec-sec"><div class="prec-hd">2. Custo de Pessoal / Serviço <button class="btn btn-ghost btn-sm" onclick="precState.pessoal.push({prof:\'\',qtd:0,pessoas:1,obs:\'\'});renderPrecificacao()">+ Linha</button></div>' +
     '<div class="prec-body">' +
-      '<div style="display:grid;grid-template-columns:2.2fr 75px 75px 60px 100px 1fr 30px;gap:6px;margin-bottom:8px"><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Profissional</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">QTD/HH</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">Pessoas</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">Und.</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:right">Total</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Referência</span><span></span></div>' +
+      '<div class="prec-pes-hd"><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Profissional</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">QTD/HH</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">Pessoas</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">Und.</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:right">Total</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Referência</span><span></span></div>' +
       pesHtml +
       '<div style="text-align:right;padding-top:7px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)">Subtotal: <strong style="font-family:\'JetBrains Mono\',monospace">'+fR(res.cp)+'</strong></div>' +
     '</div></div>' +
     // 3 e 4. CUSTO OPERACIONAL + MARGEM (lado a lado)
-    '<div style="display:grid;grid-template-columns:1.35fr 1fr;gap:10px;align-items:start">' +
+    '<div class="prec-ops-layout">' +
     // 3. CUSTO OPERACIONAL
     '<div class="prec-sec" style="margin-bottom:0"><div class="prec-hd" style="display:flex;align-items:center;justify-content:space-between">3. Custo Operacional <button class="btn btn-ghost btn-sm" onclick="addOpItem()" style="font-size:11px;padding:3px 8px">+ Item</button></div><div class="prec-body" style="padding:10px 12px">' +
       '<div style="display:grid;grid-template-columns:1.4fr 65px 72px 145px 90px;gap:6px;margin-bottom:6px"><span style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase">Item</span><span style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">Tipo</span><span style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">QTD</span><span style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">R$/uni</span><span style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:right">Total</span></div>' +
@@ -5631,7 +5678,7 @@ function renderContratos() {
   var gerados=cts.filter(function(c){return c.status==='Gerado'||c.status==='Rascunho';}).length;
 
   var html=
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px">'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:18px">'+
       '<div class="kpi"><div class="kpi-label">Total de Contratos</div><div class="kpi-value">'+total+'</div><div class="kpi-sub">Todos os períodos</div></div>'+
       '<div class="kpi"><div class="kpi-label">Assinados</div><div class="kpi-value" style="color:var(--s-con)">'+assinados+'</div><div class="kpi-sub">Contratos vigentes</div></div>'+
       '<div class="kpi"><div class="kpi-label">Aguardando Assinatura</div><div class="kpi-value" style="color:var(--accent)">'+enviados+'</div><div class="kpi-sub">Enviados para cliente</div></div>'+
