@@ -1937,12 +1937,28 @@ async function loadStateFromSupabase() {
       _sb.from('contratos').select('*')
     ]);
     if(rDem.error) throw new Error(rDem.error.message);
-    if(Array.isArray(rDem.data)&&rDem.data.length>0) state.demandas=rDem.data.map(dbToDemanda);
-    if(Array.isArray(rCli.data)&&rCli.data.length>0) state.clientes=rCli.data.map(dbToCliente);
-    if(Array.isArray(rDesp.data)&&rDesp.data.length>0) state.despesas=rDesp.data.map(dbToDespesa);
-    if(Array.isArray(rSvc.data)&&rSvc.data.length>0) state.servicos=rSvc.data.map(dbToServico);
-    if(Array.isArray(rEv.data)&&rEv.data.length>0) state.eventos=rEv.data.map(dbToEvento);
-    if(Array.isArray(rCt.data)&&rCt.data.length>0) state.contratos=rCt.data.map(dbToContrato);
+    // ── Merge: Supabase + itens locais que ainda não chegaram ao Supabase ──
+    function mergeAndPush(sbData, localArr, mapFn, toDb, table) {
+      var sbItems = Array.isArray(sbData) ? sbData.map(mapFn) : [];
+      var sbIds = {}; sbItems.forEach(function(x){ sbIds[x.id]=true; });
+      // Itens que existem local mas não no Supabase → push para Supabase
+      var localOnly = localArr.filter(function(x){ return x && x.id && !sbIds[x.id]; });
+      if(localOnly.length > 0) {
+        var rows = localOnly.map(function(x){ var r=toDb(x); r.user_id=_sbUser.id; return r; });
+        _sb.from(table).upsert(rows, {onConflict:'id'}).then(function(res){
+          if(res.error) console.warn('[SB] push local→cloud '+table+':', res.error.message);
+          else console.log('[SB] Sincronizados '+rows.length+' itens locais → '+table);
+        });
+      }
+      // Retorna Supabase + locais ainda não sincronizados
+      return sbItems.concat(localOnly);
+    }
+    state.demandas = mergeAndPush(rDem.data, state.demandas, dbToDemanda, demandaToDb, 'demandas');
+    state.clientes = mergeAndPush(rCli.data, state.clientes, dbToCliente, clienteToDb, 'clientes');
+    state.despesas = mergeAndPush(rDesp.data, state.despesas, dbToDespesa, despesaToDb, 'despesas');
+    state.servicos = mergeAndPush(rSvc.data, state.servicos, dbToServico, servicoToDb, 'servicos');
+    state.eventos  = mergeAndPush(rEv.data,  state.eventos,  dbToEvento,  eventoToDb,  'eventos');
+    state.contratos= mergeAndPush(rCt.data,  state.contratos,dbToContrato,contratoToDb,'contratos');
     sbOnline=true;
     try{ localStorage.setItem(SK,JSON.stringify({demandas:state.demandas,despesas:state.despesas,clientes:state.clientes,collapseStatus:state.collapseStatus,servicos:state.servicos,svCatCollapsed:state.svCatCollapsed||{},eventos:state.eventos||[],contratos:state.contratos||[]})); }catch(e){}
     setSbStatus('online');
@@ -3289,7 +3305,7 @@ function saveDemanda() {
   }
   saveState();
   var _demSyncSb=editingId?state.demandas.find(function(d){return d.id===editingId;}):state.demandas[0];
-  if(sbOnline&&_demSyncSb) sbUpsertDemanda(_demSyncSb);
+  if(_sbUser&&_demSyncSb) sbUpsertDemanda(_demSyncSb);
   closeModal();
   // Sync retorno com Google Calendar (silencioso)
   if(gcIsConnected()) {
@@ -3307,7 +3323,7 @@ function deleteDemanda(id) {
   if(!confirm('Excluir esta demanda?')) return;
   state.demandas=state.demandas.filter(function(d){return d.id!==id;});
   saveState(); toast('Excluída');
-  if(sbOnline) sbDeleteRecord('demandas',id);
+  if(_sbUser) sbDeleteRecord('demandas',id);
   var RENDER_MAP2={dashboard:renderDashboard,demandas:renderDemandas,clientes:renderClientes,financeiro:renderFinanceiro,calendario:renderCalendario};
   (RENDER_MAP2[currentPage]||renderDemandas)();
 }
@@ -3343,7 +3359,7 @@ function saveCliente() {
     state.clientes.push(Object.assign({id:uid()},c));
   }
   saveState();
-  if(sbOnline) sbUpsertCliente(state.clientes.find(function(x){return x.id===(editingClienteId||state.clientes[state.clientes.length-1].id);}));
+  if(_sbUser) sbUpsertCliente(state.clientes.find(function(x){return x.id===(editingClienteId||state.clientes[state.clientes.length-1].id);}));
   document.getElementById('modal-cliente').style.display='none';
   toast('Cliente salvo!','success');
   if(currentPage==='clientes') renderClientes();
@@ -3353,7 +3369,7 @@ function deleteCliente(id) {
   if(!confirm('Excluir este cliente?')) return;
   state.clientes=state.clientes.filter(function(c){return c.id!==id;});
   saveState(); toast('Cliente excluído'); renderClientes();
-  if(sbOnline) sbDeleteRecord('clientes',id);
+  if(_sbUser) sbDeleteRecord('clientes',id);
 }
 
 function renderClientes(filtro) {
