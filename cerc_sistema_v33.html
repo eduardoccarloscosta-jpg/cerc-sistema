@@ -2491,6 +2491,7 @@ function renderDashboard() {
 
 // ══ DEMANDAS ═════════════════════════════════════════════
 var fStatuses=[],fTipo='',fSearch='',fDataDe='',fDataAte='',searchTimer=null;
+var demSort='dataCriacao', demSortDir='desc'; // padrão: mais recente primeiro
 
 function renderDemandas() {
   var d=state.demandas.slice();
@@ -2515,8 +2516,33 @@ function renderDemandas() {
   }).join('');
   var limparChipsBtn=fStatuses.length?'<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="fStatuses=[];renderDemandas()">✕ Limpar status</button>':'';
 
+  // ── Ordenação ──────────────────────────────────────────────────────
+  function sortItems(items) {
+    return items.slice().sort(function(a,b){
+      var va, vb;
+      if(demSort==='dataCriacao'){
+        va=a.dataCriacao||''; vb=b.dataCriacao||'';
+      } else if(demSort==='proposta'){
+        va=a.proposta||''; vb=b.proposta||'';
+      } else if(demSort==='valorBruto'){
+        va=a.valorBruto||0; vb=b.valorBruto||0;
+      } else {
+        va=a[demSort]||''; vb=b[demSort]||'';
+      }
+      if(va<vb) return demSortDir==='asc'?-1:1;
+      if(va>vb) return demSortDir==='asc'?1:-1;
+      return 0;
+    });
+  }
+  function sortIcon(col){ return demSort===col?(demSortDir==='asc'?'↑':'↓'):'↕'; }
+  function sortHd(col,lbl){
+    var ico=sortIcon(col);
+    var active=demSort===col;
+    return '<span style="cursor:pointer;user-select:none;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;'+(active?'color:var(--accent);font-weight:700':'')+'" onclick="if(demSort===\''+col+'\'){demSortDir=demSortDir===\'asc\'?\'desc\':\'asc\';}else{demSort=\''+col+'\';demSortDir=\'asc\';}renderDemandas()">'+lbl+' <span style="font-size:10px;color:'+(active?'var(--accent)':'var(--text3)')+'">'+ico+'</span></span>';
+  }
+
   var groupsHtml=STATUSES.map(function(s) {
-    var items=d.filter(function(x){return x.status===s;});
+    var items=sortItems(d.filter(function(x){return x.status===s;}));
     if(!items.length) return '';
     var cfg=STATUS_CFG[s]||STATUS_CFG.Lead;
     var collapsed=state.collapseStatus[s];
@@ -2529,6 +2555,7 @@ function renderDemandas() {
         '<div class="avatar avatar-sm" title="Carlos Eduardo">CE</div>' +
         '<div class="ln-svc"><div style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+dem.servico+'</div>' +
           '<div style="font-size:11px;color:var(--text3)">'+(dem.proposta||'')+(dem.cliente?' · '+dem.cliente:'')+'</div></div>' +
+        '<div style="font-size:11px;color:var(--text2);white-space:nowrap">'+fD(dem.dataCriacao)+'</div>' +
         '<div>'+tBadge(dem.tipo)+(dem.status==="Perdido"&&dem.categoriaPerda?'<span style="font-size:10px;font-weight:700;background:#FEE2E2;color:#DC2626;border-radius:20px;padding:1px 7px;margin-left:4px;border:1px solid #FECACA">'+dem.categoriaPerda+'</span>':'')+'</div>' +
         '<div class="cn" style="color:var(--s-con);font-weight:600">'+fR(dem.valorBruto)+'</div>' +
         '<div class="cn" style="color:var(--accent);font-size:11px">'+fR(dem.valorLiquido)+'</div>' +
@@ -2549,7 +2576,7 @@ function renderDemandas() {
         '<span class="status-group-val">'+fR(totalV)+'</span>' +
         '<span class="chevron'+(collapsed?'':' open')+'">▶</span>' +
       '</div>' +
-      (collapsed?'':'<div class="list-row-hd"><span></span><span>Serviço</span><span>Tipo</span><span>Bruto</span><span>Líquido</span><span>Pagamento</span><span>Progresso</span><span>Ações</span></div>'+rows) +
+      (collapsed?'':'<div class="list-row-hd"><span></span><span>'+sortHd('servico','Serviço')+'</span><span>'+sortHd('dataCriacao','Data')+'</span><span>Tipo</span><span>'+sortHd('valorBruto','Bruto')+'</span><span>Líquido</span><span>Pagamento</span><span>Progresso</span><span>Ações</span></div>'+rows) +
     '</div>';
   }).join('');
 
