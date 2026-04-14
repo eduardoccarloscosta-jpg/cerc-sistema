@@ -1897,6 +1897,42 @@ async function sbUpsertCliente(cli) {
   } catch(e){ console.warn('[SB] upsert cliente offline:', e.message); }
 }
 
+async function sbUpsertDespesa(desp) {
+  if(!_sbUser) return;
+  try {
+    var body = despesaToDb(desp); body.user_id = _sbUser.id;
+    var {error} = await _sb.from('despesas').upsert(body, {onConflict:'id'});
+    if(error) console.warn('[SB] upsert despesa:', error.message);
+  } catch(e){ console.warn('[SB] upsert despesa offline:', e.message); }
+}
+
+async function sbUpsertServico(svc) {
+  if(!_sbUser) return;
+  try {
+    var body = servicoToDb(svc); body.user_id = _sbUser.id;
+    var {error} = await _sb.from('servicos').upsert(body, {onConflict:'id'});
+    if(error) console.warn('[SB] upsert servico:', error.message);
+  } catch(e){ console.warn('[SB] upsert servico offline:', e.message); }
+}
+
+async function sbUpsertEvento(ev) {
+  if(!_sbUser) return;
+  try {
+    var body = eventoToDb(ev); body.user_id = _sbUser.id;
+    var {error} = await _sb.from('eventos').upsert(body, {onConflict:'id'});
+    if(error) console.warn('[SB] upsert evento:', error.message);
+  } catch(e){ console.warn('[SB] upsert evento offline:', e.message); }
+}
+
+async function sbUpsertContrato(ct) {
+  if(!_sbUser) return;
+  try {
+    var body = contratoToDb(ct); body.user_id = _sbUser.id;
+    var {error} = await _sb.from('contratos').upsert(body, {onConflict:'id'});
+    if(error) console.warn('[SB] upsert contrato:', error.message);
+  } catch(e){ console.warn('[SB] upsert contrato offline:', e.message); }
+}
+
 async function sbDeleteRecord(table, id) {
   if(!_sbUser) return;
   try {
@@ -3540,6 +3576,7 @@ function saveReceita() {
     }
     editingReceitaId=null;
     saveState(); document.getElementById('modal-receita').remove(); toast('Receita atualizada!','success'); renderFinanceiro();
+    if(_sbUser&&idx>=0) sbUpsertDemanda(state.demandas[idx]);
     return;
   }
   var d={
@@ -3562,6 +3599,7 @@ function saveReceita() {
   saveState();
   document.getElementById('modal-receita').remove();
   toast(rec!=='Única'?'Receita recorrente registrada! Aparecerá todo mês automaticamente.':'Receita registrada!','success');
+  if(_sbUser) sbUpsertDemanda(d);
   renderFinanceiro();
 }
 
@@ -3745,16 +3783,19 @@ function saveDespesa() {
     }
     editingDespesaId=null;
     saveState(); document.getElementById('modal-despesa').style.display='none'; toast('Despesa atualizada!','success'); renderFinanceiro();
+    if(_sbUser&&idx>=0) sbUpsertDespesa(state.despesas[idx]);
     return;
   }
   var novaDesp={id:uid(),desc:desc,cat:document.getElementById('d-cat').value,valor:valor,data:document.getElementById('d-data').value,rec:rec,propostaId:document.getElementById('d-proposta').value,obs:document.getElementById('d-obs').value,pago:rec==='Única'&&document.getElementById('d-pago').value==='1'};
   if(rec!=='Única'){novaDesp.dataFim=document.getElementById('d-datafim').value||'';novaDesp.pagoMeses={};}
   state.despesas.unshift(novaDesp);
   saveState(); document.getElementById('modal-despesa').style.display='none'; toast(rec!=='Única'?'Despesa recorrente registrada! Aparecerá todo mês automaticamente.':'Despesa registrada!','success'); renderFinanceiro();
+  if(_sbUser) sbUpsertDespesa(novaDesp);
 }
 function delDesp(id) {
   if(!confirm('Excluir despesa?')) return;
   state.despesas=state.despesas.filter(function(e){return e.id!==id;}); saveState(); toast('Excluída'); renderFinanceiro();
+  if(_sbUser) sbDeleteRecord('despesas',id);
 }
 function toggleReceitaRecebido(id,mk,btn){
   var i=state.demandas.findIndex(function(x){return x.id===id;}); if(i<0) return;
@@ -3767,6 +3808,7 @@ function toggleReceitaRecebido(id,mk,btn){
   btn.style.color=isRec?'var(--s-con)':'var(--text3)';
   btn.style.borderColor=isRec?'#86EFAC':'var(--border)';
   saveState(); toast(isRec?'Receita marcada como recebida ✅':'Marcada como a receber');
+  if(_sbUser) sbUpsertDemanda(dem);
   renderFinanceiro();
 }
 function toggleDespPago(id,btn,mk) {
@@ -3784,6 +3826,7 @@ function toggleDespPago(id,btn,mk) {
   btn.style.color=isPago?'var(--s-con)':'var(--text3)';
   btn.style.borderColor=isPago?'#86EFAC':'var(--border)';
   saveState(); toast(isPago?'Despesa marcada como paga ✅':'Despesa marcada como pendente');
+  if(_sbUser) sbUpsertDespesa(desp);
   renderFinanceiro();
 }
 
@@ -4176,11 +4219,14 @@ function saveServico() {
   if(editServicoId){var i=state.servicos.findIndex(function(x){return x.id===editServicoId;});if(i>=0)state.servicos[i]=Object.assign({},state.servicos[i],s);}
   else state.servicos.push(Object.assign({id:uid()},s));
   saveState(); document.getElementById('sv-overlay').remove(); toast('Serviço salvo!','success'); renderServicos();
+  var _svcSaved=editServicoId?state.servicos.find(function(x){return x.id===editServicoId;}):state.servicos[state.servicos.length-1];
+  if(_sbUser&&_svcSaved) sbUpsertServico(_svcSaved);
 }
 function deleteServico(id) {
   if(!confirm('Excluir este serviço?')) return;
   state.servicos=state.servicos.filter(function(s){return s.id!==id;});
   saveState(); toast('Excluído'); renderServicos();
+  if(_sbUser) sbDeleteRecord('servicos',id);
 }
 
 
@@ -5892,6 +5938,7 @@ INSTRUÇÕES FINAIS:
     if(!state.contratos) state.contratos=[];
     state.contratos.push(ct);
     saveState();
+    if(_sbUser) sbUpsertContrato(ct);
     fecharNovoContrato();
     toast('Contrato gerado com sucesso! ✅','success');
     renderContratos();
@@ -6126,12 +6173,15 @@ function marcarAssinado(id) {
   var i=(state.contratos||[]).findIndex(function(c){return c.id===id;});
   if(i>=0){ state.contratos[i].status='Assinado'; state.contratos[i].dataAssinatura=new Date().toISOString(); }
   saveState(); toast('Contrato marcado como assinado ✅','success'); renderContratos();
+  var _ctSaved=(state.contratos||[]).find(function(c){return c.id===id;});
+  if(_sbUser&&_ctSaved) sbUpsertContrato(_ctSaved);
 }
 
 function delContrato(id) {
   if(!confirm('Excluir este contrato? Esta ação não pode ser desfeita.')) return;
   state.contratos=(state.contratos||[]).filter(function(c){return c.id!==id;});
   saveState(); toast('Contrato excluído'); renderContratos();
+  if(_sbUser) sbDeleteRecord('contratos',id);
 }
 
 // ══ EVENTOS & LEMBRETES ══════════════════════════════════
@@ -6368,6 +6418,7 @@ function toggleTarefaConcluida(id) {
   if(!ev) return;
   ev.concluida = !ev.concluida;
   saveState();
+  if(_sbUser) sbUpsertEvento(ev);
   renderCalendario();
   toast(ev.concluida ? '✅ Tarefa concluída!' : '↩ Tarefa reaberta', 'success');
 }
@@ -6402,6 +6453,8 @@ function saveEvento() {
     toast('Evento criado!','success');
   }
   saveState(); closeModalEvento(); renderCalendario();
+  var _evSaved=editingEventoId?state.eventos.find(function(e){return e.id===editingEventoId;}):state.eventos[state.eventos.length-1];
+  if(_sbUser&&_evSaved) sbUpsertEvento(_evSaved);
   // Sync automático com Google Calendar
   if(gcIsConnected()) {
     var _evId = editingEventoId || (state.eventos.length ? state.eventos[state.eventos.length-1].id : null);
@@ -6423,6 +6476,7 @@ function delEvento(id, fromModal) {
   if(ev && ev.gcEventId) gcDeleteGEvent(ev.gcEventId);
   state.eventos=(state.eventos||[]).filter(function(e){return e.id!==id;});
   saveState(); toast('Evento excluído');
+  if(_sbUser) sbDeleteRecord('eventos',id);
   if(fromModal) closeModalEvento();
   renderCalendario();
 }
