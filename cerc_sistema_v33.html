@@ -2050,12 +2050,13 @@ async function loadStateFromSupabase() {
         } else {
           var localT = _ts(loc.updatedAt);
           var sbT    = _ts(sb.updatedAt);
-          if(localT >= sbT) {
-            // Local é mais recente (ou igual) → usa local, sincroniza se diferente
+          if(localT > sbT) {
+            // Local é CLARAMENTE mais recente (edição offline não sincronizada) → usa local e sobe
             result.push(loc);
-            if(localT > sbT) toSync.push(loc);
+            toSync.push(loc);
           } else {
-            // Supabase é mais recente (editado em outro dispositivo) → usa Supabase
+            // Supabase é autoridade (igual ou mais recente) → usa Supabase
+            // Garante que tablet/celular sempre vê dados atualizados de outros dispositivos
             result.push(sb);
           }
         }
