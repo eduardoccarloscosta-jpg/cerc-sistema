@@ -1966,6 +1966,7 @@ function clienteToDb(c) {
     id: c.id, empresa: c.empresa||'', nome_fantasia: c.nomeFantasia||'',
     cnpj: c.cnpj||'', contato: c.contato||'', email: c.email||'',
     telefone: c.telefone||'', endereco: c.endereco||'', obs: c.obs||'',
+    logo: c.logo||null,
     updated_at: c.updatedAt||_now()
   };
 }
@@ -1975,6 +1976,7 @@ function dbToCliente(r) {
     id: r.id, empresa: r.empresa||'', nomeFantasia: r.nome_fantasia||'',
     cnpj: r.cnpj||'', contato: r.contato||'', email: r.email||'',
     telefone: r.telefone||'', endereco: r.endereco||'', obs: r.obs||'',
+    logo: r.logo||null,
     updatedAt: r.updated_at||''
   };
 }
@@ -7157,14 +7159,14 @@ function renderConfiguracoes() {
         '<div class="settings-title">👤 Dados Pessoais</div>'+
         '<div class="settings-row" style="margin-bottom:12px">'+
           cfgField('Nome completo *','cfg-nome',p.nome||'','Seu nome completo')+
-          cfgField('Cargo / Função','cfg-cargo',ex.cargo||'','Ex: Engenheiro Mecânico')+
+          cfgField('Cargo / Função','cfg-cargo',p.cargo||ex.cargo||'','Ex: Engenheiro Mecânico')+
         '</div>'+
         '<div class="settings-row" style="margin-bottom:12px">'+
-          cfgField('CREA / Registro profissional','cfg-crea',ex.crea||'','Ex: CREA-PR 12345/D')+
-          cfgField('Telefone / WhatsApp','cfg-telefone',ex.telefone||'','(44) 9 9999-9999')+
+          cfgField('CREA / Registro profissional','cfg-crea',p.crea||ex.crea||'','Ex: CREA-PR 12345/D')+
+          cfgField('Telefone / WhatsApp','cfg-telefone',p.telefone||ex.telefone||'','(44) 9 9999-9999')+
         '</div>'+
         '<div style="margin-bottom:12px">'+cfgField('E-mail (conta)','cfg-email',(_sbUser&&_sbUser.email)||'','',true)+'</div>'+
-        '<div style="margin-bottom:16px">'+cfgField('Assinatura nos contratos','cfg-assinatura',ex.assinatura||'','Ex: Carlos Costa — Engenheiro Mecânico — CREA-PR ...')+'</div>'+
+        '<div style="margin-bottom:16px">'+cfgField('Assinatura nos contratos','cfg-assinatura',p.assinatura||ex.assinatura||'','Ex: Carlos Costa — Engenheiro Mecânico — CREA-PR ...')+'</div>'+
         '<div style="display:flex;align-items:center;gap:8px">'+
           '<button class="btn btn-primary btn-sm" onclick="salvarPerfil()">💾 Salvar perfil</button>'+
           '<span style="font-size:11px;color:var(--text3)">Campos com * sincronizados na nuvem</span>'+
@@ -7430,20 +7432,17 @@ function cfgStat(label,value,color){
 
 async function salvarPerfil() {
   if(!_sbUser) return;
-  var nome = (document.getElementById('cfg-nome')||{}).value||'';
-  var empresa = (document.getElementById('cfg-empresa')||{}).value||'';
-  nome = nome.trim(); empresa = empresa.trim();
-  // Salva no Supabase (nome + empresa)
-  var {error} = await _sb.from('profiles').update({nome:nome, empresa:empresa, updated_at: new Date().toISOString()}).eq('id', _sbUser.id);
+  var get = function(id){ return ((document.getElementById(id)||{}).value||'').trim(); };
+  var nome = get('cfg-nome'), empresa = get('cfg-empresa');
+  var cargo = get('cfg-cargo'), crea = get('cfg-crea');
+  var telefone = get('cfg-telefone'), assinatura = get('cfg-assinatura');
+  var {error} = await _sb.from('profiles').update({
+    nome:nome, empresa:empresa,
+    cargo:cargo, crea:crea, telefone:telefone, assinatura:assinatura,
+    updated_at: new Date().toISOString()
+  }).eq('id', _sbUser.id);
   if(error) { toast('Erro ao salvar: '+error.message, 'danger'); return; }
-  if(_sbProfile){ _sbProfile.nome=nome; _sbProfile.empresa=empresa; }
-  // Salva extras no localStorage
-  var ex = JSON.parse(localStorage.getItem('cerc_profile_extra')||'{}');
-  ex.cargo = (document.getElementById('cfg-cargo')||{}).value||'';
-  ex.crea  = (document.getElementById('cfg-crea')||{}).value||'';
-  ex.telefone = (document.getElementById('cfg-telefone')||{}).value||'';
-  ex.assinatura = (document.getElementById('cfg-assinatura')||{}).value||'';
-  localStorage.setItem('cerc_profile_extra', JSON.stringify(ex));
+  if(_sbProfile){ _sbProfile.nome=nome; _sbProfile.empresa=empresa; _sbProfile.cargo=cargo; _sbProfile.crea=crea; _sbProfile.telefone=telefone; _sbProfile.assinatura=assinatura; }
   updateSidebarUser(_sbUser, _sbProfile);
   toast('Perfil salvo!', 'success');
 }
