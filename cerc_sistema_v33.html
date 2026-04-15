@@ -99,7 +99,7 @@ body>iframe,body>div[style*="position: fixed"][style*="opacity: 0"],body>div[sty
 .plan-free{background:#F3F4F6;color:#6B7280}
 .plan-pro{background:linear-gradient(135deg,#7C3AED,#2563EB);color:#fff}
 /* ── SETTINGS PAGE ── */
-.settings-section{background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:20px 24px;margin-bottom:14px;box-shadow:var(--sh)}
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:20px 24px;margin-bottom:14px;box-shadow:var(--sh)}
 .settings-title{font-size:14px;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
 .settings-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 @media(max-width:600px){.settings-row{grid-template-columns:1fr}.auth-card{padding:28px 22px}.onb-body{padding:28px 22px}.onb-foot{padding:16px 22px 24px}}
@@ -3211,12 +3211,22 @@ function openFileViewer(dados, nome, tipo) {
   var openBtn=document.getElementById('file-viewer-open-btn');
   ttl.textContent=nome||'Arquivo';
   openBtn.onclick=function(){ window.open(dados,'_blank'); };
-  if(tipo&&tipo.startsWith('image/')) {
+  // Se for URL externa (não base64), detectar e tratar
+  var isExternal = dados && (dados.startsWith('http://') || dados.startsWith('https://'));
+  if(isExternal) {
+    // Google Drive: converter para URL de preview embeddable
+    var driveMatch = dados.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if(driveMatch) {
+      ifr.srcdoc=''; ifr.src='https://drive.google.com/file/d/'+driveMatch[1]+'/preview';
+    } else {
+      // Outro URL externo: mostrar botão para abrir, não tentar iframe
+      ifr.src=''; ifr.srcdoc='<body style="margin:0;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;color:#fff;font-family:sans-serif;gap:16px"><div style="font-size:48px">📄</div><div style="font-size:15px;font-weight:600">'+escapeHtml(nome||'Arquivo')+'</div><div style="font-size:13px;opacity:.7">Este arquivo está hospedado externamente e não pode ser visualizado aqui.</div><button onclick="window.open(\''+dados.replace(/'/g,"\\'")+'\')" style="padding:10px 22px;border-radius:8px;border:none;background:#7C3AED;color:#fff;font-size:14px;cursor:pointer;margin-top:8px">↗ Abrir em nova aba</button></body>';
+    }
+  } else if(tipo&&tipo.startsWith('image/')) {
     ifr.src='';
     ifr.srcdoc='<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><img src="'+dados+'" style="max-width:100%;max-height:100%;object-fit:contain"/></body>';
   } else {
-    ifr.srcdoc='';
-    ifr.src=dados;
+    ifr.srcdoc=''; ifr.src=dados;
   }
   ov.style.display='flex';
 }
@@ -7079,7 +7089,7 @@ var cfgTab = 'perfil';
 function renderConfiguracoes() {
   var p = _sbProfile||{};
   var ex = JSON.parse(localStorage.getItem('cerc_profile_extra')||'{}');
-  var el = document.getElementById('content');
+  var el = document.getElementById('page-content');
   if(!el) return;
 
   // Dados de uso
