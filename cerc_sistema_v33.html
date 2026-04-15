@@ -6954,16 +6954,43 @@ async function loadProfile(user) {
   updateSidebarUser(user, data);
   return data;
 }
+function handleProfileFoto(input) {
+  var file = input.files[0]; if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    localStorage.setItem('cerc_profile_foto', e.target.result);
+    // Atualiza preview na tela de config
+    var prev = document.getElementById('cfg-avatar-preview');
+    if(prev) prev.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover"/>';
+    // Atualiza sidebar
+    updateSidebarUser(_sbUser, _sbProfile);
+  };
+  reader.readAsDataURL(file);
+}
+function removeProfileFoto() {
+  localStorage.removeItem('cerc_profile_foto');
+  var prev = document.getElementById('cfg-avatar-preview');
+  if(prev) {
+    var p=_sbProfile||{}; var nome=(p.nome||(_sbUser&&_sbUser.email)||'?');
+    var initials=nome.trim().split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase()||'?';
+    prev.innerHTML=initials;
+  }
+  updateSidebarUser(_sbUser, _sbProfile);
+}
 function updateSidebarUser(user, profile) {
   var nome = (profile&&profile.nome) || user.email.split('@')[0];
   var empresa = (profile&&profile.empresa) || '';
   var plano = (profile&&profile.plano) || 'free';
   var initials = nome.trim().split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase()||'?';
+  var foto = localStorage.getItem('cerc_profile_foto');
   var av = document.getElementById('sb-avatar');
   var un = document.getElementById('sb-username');
   var pb = document.getElementById('sb-plan-badge');
   var el = document.getElementById('sb-empresa-label');
-  if(av) av.textContent = initials;
+  if(av) {
+    if(foto) { av.innerHTML='<img src="'+foto+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>'; av.style.padding='0'; }
+    else { av.textContent=initials; av.style.padding=''; }
+  }
   if(un) un.textContent = nome;
   if(pb) { pb.textContent = plano.toUpperCase(); pb.className = 'plan-badge '+(plano==='pro'?'plan-pro':'plan-free'); }
   if(el) el.textContent = empresa;
@@ -7139,12 +7166,21 @@ function renderConfiguracoes() {
       '</div>'+
 
       '<div class="settings-section">'+
-        '<div class="settings-title">🖼️ Avatar / Iniciais</div>'+
-        '<div style="display:flex;align-items:center;gap:16px">'+
-          '<div style="width:64px;height:64px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff" id="cfg-avatar-preview">'+
-            (function(){var n=(p.nome||(_sbUser&&_sbUser.email)||'?').trim().split(' ');return n.slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();})() +
+        '<div class="settings-title">🖼️ Foto do Perfil</div>'+
+        '<div style="display:flex;align-items:center;gap:20px">'+
+          (function(){
+            var foto=localStorage.getItem('cerc_profile_foto');
+            var initials=(function(){var n=(p.nome||(_sbUser&&_sbUser.email)||'?').trim().split(' ');return n.slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();})();
+            return '<div id="cfg-avatar-preview" onclick="document.getElementById(\'cfg-foto-input\').click()" style="width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#fff;cursor:pointer;overflow:hidden;flex-shrink:0;border:3px solid var(--border);transition:opacity .15s" title="Clique para alterar foto">'+
+              (foto?'<img src="'+foto+'" style="width:100%;height:100%;object-fit:cover"/>':initials)+
+            '</div>';
+          })()+
+          '<div>'+
+            '<input type="file" id="cfg-foto-input" accept="image/*" style="display:none" onchange="handleProfileFoto(this)"/>'+
+            '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'cfg-foto-input\').click()" style="display:block;margin-bottom:8px">📷 Carregar foto</button>'+
+            '<button class="btn btn-ghost btn-sm" onclick="removeProfileFoto()" style="display:block;color:var(--text3)">✕ Remover foto</button>'+
+            '<div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">JPG, PNG ou WebP.<br>Aparece na sidebar e no perfil.</div>'+
           '</div>'+
-          '<div style="font-size:12px;color:var(--text3);line-height:1.6">As iniciais são geradas automaticamente a partir do seu nome.<br>Altere o nome acima e salve para atualizar.</div>'+
         '</div>'+
       '</div>'+
 
