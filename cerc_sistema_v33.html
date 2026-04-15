@@ -1801,13 +1801,16 @@ var sbOnline = false;
 var sbSyncTimer = null;
 
 // ── Converters extras ────────────────────────────────────────────────────────
+function _now(){ return new Date().toISOString(); }
+function _ts(v){ return v ? new Date(v).getTime() : 0; }
+
 function despesaToDb(e) {
   return {
     id: e.id, descricao: e.desc||'', cat: e.cat||'', rec: e.rec||'',
     proposta_id: e.propostaId||'', valor: parseFloat(e.valor)||0,
     data: e.data||'', obs: e.obs||'', pago: !!e.pago,
-    // campo legado 'descricao_app' para busca futura
-    descricao_app: e.desc||'', observacoes: e.obs||''
+    descricao_app: e.desc||'', observacoes: e.obs||'',
+    updated_at: e.updatedAt||_now()
   };
 }
 function dbToDespesa(r) {
@@ -1815,45 +1818,52 @@ function dbToDespesa(r) {
     id: r.id, desc: r.descricao||r.descricao_app||'', cat: r.cat||'',
     rec: r.rec||'', propostaId: r.proposta_id||'',
     valor: parseFloat(r.valor)||0, data: r.data||'',
-    obs: r.obs||r.observacoes||'', pago: !!r.pago
+    obs: r.obs||r.observacoes||'', pago: !!r.pago,
+    updatedAt: r.updated_at||''
   };
 }
 function servicoToDb(s) {
   return {
     id: s.id, nome: s.nome||'', categoria: s.categoria||'',
     valor_base: parseFloat(s.valorBase)||0, unidade: s.unidade||'',
-    obs: s.obs||'', valor: parseFloat(s.valorBase)||0
+    obs: s.obs||'', valor: parseFloat(s.valorBase)||0,
+    updated_at: s.updatedAt||_now()
   };
 }
 function dbToServico(r) {
   return {
     id: r.id, nome: r.nome||'', categoria: r.categoria||'',
     valorBase: parseFloat(r.valor_base||r.valor)||0,
-    unidade: r.unidade||'', obs: r.obs||''
+    unidade: r.unidade||'', obs: r.obs||'',
+    updatedAt: r.updated_at||''
   };
 }
 function eventoToDb(e) {
   return {
     id: e.id, titulo: e.titulo||'', data: e.data||'', hora: e.hora||'',
-    tipo: e.tipo||'', demanda_id: e.demandaId||'', obs: e.obs||''
+    tipo: e.tipo||'', demanda_id: e.demandaId||'', obs: e.obs||'',
+    updated_at: e.updatedAt||_now()
   };
 }
 function dbToEvento(r) {
   return {
     id: r.id, titulo: r.titulo||'', data: r.data||'', hora: r.hora||'',
-    tipo: r.tipo||'', demandaId: r.demanda_id||'', obs: r.obs||''
+    tipo: r.tipo||'', demandaId: r.demanda_id||'', obs: r.obs||'',
+    updatedAt: r.updated_at||''
   };
 }
 function contratoToDb(c) {
   return {
     id: c.id, demanda_id: c.demandaId||'', proposta: c.proposta||'',
-    cliente: c.cliente||'', texto: c.texto||'', status: c.status||''
+    cliente: c.cliente||'', texto: c.texto||'', status: c.status||'',
+    updated_at: c.updatedAt||_now()
   };
 }
 function dbToContrato(r) {
   return {
     id: r.id, demandaId: r.demanda_id||'', proposta: r.proposta||'',
-    cliente: r.cliente||'', texto: r.texto||'', status: r.status||''
+    cliente: r.cliente||'', texto: r.texto||'', status: r.status||'',
+    updatedAt: r.updated_at||''
   };
 }
 
@@ -1876,7 +1886,8 @@ function demandaToDb(d) {
     docs_fiscais: d.docsFiscais||{nf:null,boleto:null},
     link_files_pdf_prop: d.linkFilesPdfProp||null, link_files_art: d.linkFilesArt||null,
     link_files_contrato: d.linkFilesContrato||null, prec_dados: d.precDados||null,
-    historico_prec: d.historicoPrec||[]
+    historico_prec: d.historicoPrec||[],
+    updated_at: d.updatedAt||_now()
   };
 }
 
@@ -1899,7 +1910,8 @@ function dbToDemanda(r) {
     docsFiscais: r.docs_fiscais||{nf:null,boleto:null},
     linkFilesPdfProp: r.link_files_pdf_prop||null, linkFilesArt: r.link_files_art||null,
     linkFilesContrato: r.link_files_contrato||null, precDados: r.prec_dados||null,
-    historicoPrec: r.historico_prec||[]
+    historicoPrec: r.historico_prec||[],
+    updatedAt: r.updated_at||''
   };
 }
 
@@ -1907,7 +1919,8 @@ function clienteToDb(c) {
   return {
     id: c.id, empresa: c.empresa||'', nome_fantasia: c.nomeFantasia||'',
     cnpj: c.cnpj||'', contato: c.contato||'', email: c.email||'',
-    telefone: c.telefone||'', endereco: c.endereco||'', obs: c.obs||''
+    telefone: c.telefone||'', endereco: c.endereco||'', obs: c.obs||'',
+    updated_at: c.updatedAt||_now()
   };
 }
 
@@ -1915,7 +1928,8 @@ function dbToCliente(r) {
   return {
     id: r.id, empresa: r.empresa||'', nomeFantasia: r.nome_fantasia||'',
     cnpj: r.cnpj||'', contato: r.contato||'', email: r.email||'',
-    telefone: r.telefone||'', endereco: r.endereco||'', obs: r.obs||''
+    telefone: r.telefone||'', endereco: r.endereco||'', obs: r.obs||'',
+    updatedAt: r.updated_at||''
   };
 }
 
@@ -2016,34 +2030,46 @@ async function loadStateFromSupabase() {
     // ── Merge: Supabase + itens locais que ainda não chegaram ao Supabase ──
     function mergeAndPush(sbData, localArr, mapFn, toDb, table) {
       var sbItems = Array.isArray(sbData) ? sbData.map(mapFn) : [];
-      var sbIds   = {}; sbItems.forEach(function(x){ sbIds[x.id]=true; });
-      var localIds= {}; localArr.forEach(function(x){ if(x&&x.id) localIds[x.id]=true; });
+      var sbMap   = {}; sbItems.forEach(function(x){ sbMap[x.id]=x; });
+      var localMap= {}; localArr.forEach(function(x){ if(x&&x.id) localMap[x.id]=x; });
 
-      // Itens que existem local mas NÃO no Supabase → push para Supabase
-      var localOnly = localArr.filter(function(x){ return x && x.id && !sbIds[x.id]; });
-      if(localOnly.length > 0) {
-        var rows = localOnly.map(function(x){ var r=toDb(x); r.user_id=_sbUser.id; return r; });
+      var result  = [];
+      var toSync  = []; // itens locais que precisam subir para o Supabase
+
+      // 1. Itens só no Supabase → trazer para local (criados em outro dispositivo)
+      sbItems.forEach(function(sb){ if(!localMap[sb.id]) result.push(sb); });
+
+      // 2. Itens locais → decidir por timestamp qual versão é mais recente
+      localArr.forEach(function(loc){
+        if(!loc||!loc.id) return;
+        var sb = sbMap[loc.id];
+        if(!sb) {
+          // Só existe local → push para Supabase
+          toSync.push(loc);
+          result.push(loc);
+        } else {
+          var localT = _ts(loc.updatedAt);
+          var sbT    = _ts(sb.updatedAt);
+          if(localT >= sbT) {
+            // Local é mais recente (ou igual) → usa local, sincroniza se diferente
+            result.push(loc);
+            if(localT > sbT) toSync.push(loc);
+          } else {
+            // Supabase é mais recente (editado em outro dispositivo) → usa Supabase
+            result.push(sb);
+          }
+        }
+      });
+
+      if(toSync.length > 0) {
+        var rows = toSync.map(function(x){ var r=toDb(x); r.user_id=_sbUser.id; return r; });
         _sb.from(table).upsert(rows, {onConflict:'id'}).then(function(res){
-          if(res.error) console.warn('[SB] push local→cloud '+table+':', res.error.message);
-          else console.log('[SB] Sincronizados '+rows.length+' itens locais → '+table);
+          if(res.error) console.warn('[SB] sync '+table+':', res.error.message);
+          else console.log('[SB] Sincronizados '+rows.length+' → '+table);
         });
       }
 
-      // Itens que existem no Supabase mas NÃO local → trazer para local
-      var sbOnly = sbItems.filter(function(x){ return !localIds[x.id]; });
-
-      // LOCAL tem prioridade para itens em ambos (preserva edições recentes do usuário)
-      // Re-sincroniza local → Supabase para garantir que edições pendentes cheguem à nuvem
-      var inBoth = localArr.filter(function(x){ return x && x.id && sbIds[x.id]; });
-      if(inBoth.length > 0) {
-        var rowsSync = inBoth.map(function(x){ var r=toDb(x); r.user_id=_sbUser.id; return r; });
-        _sb.from(table).upsert(rowsSync, {onConflict:'id'}).then(function(res){
-          if(res.error) console.warn('[SB] re-sync '+table+':', res.error.message);
-        });
-      }
-
-      // Retorna: local (fonte de verdade) + itens que só existem no Supabase (outros dispositivos)
-      return localArr.concat(sbOnly);
+      return result;
     }
     state.demandas = mergeAndPush(rDem.data, state.demandas, dbToDemanda, demandaToDb, 'demandas');
     state.clientes = mergeAndPush(rCli.data, state.clientes, dbToCliente, clienteToDb, 'clientes');
@@ -3164,7 +3190,7 @@ function autoSaveSub(idx,checked) {
 function quickSaveSub() {
   if(!editingId) return;
   var i=state.demandas.findIndex(function(d){return d.id===editingId;});
-  if(i>=0) { state.demandas[i].subtarefas=modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos,dataRetorno:s.dataRetorno};}); saveState(); }
+  if(i>=0) { state.demandas[i].subtarefas=modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos,dataRetorno:s.dataRetorno};}); state.demandas[i].updatedAt=_now(); saveState(); if(_sbUser) sbUpsertDemanda(state.demandas[i]); }
 }
 
 function addAnexoSub(idx) {
@@ -3375,7 +3401,8 @@ function saveDemanda() {
     categoriaPerda:fStatus==='Perdido'?(old2?old2.categoriaPerda||'':(_perdaTempData?_perdaTempData.categoriaPerda||'':'')):''  ,
     planoAcaoPerda:fStatus==='Perdido'?(old2?old2.planoAcaoPerda||'':(_perdaTempData?_perdaTempData.planoAcaoPerda||'':'')):'' ,
     dataResgate:   fStatus==='Perdido'?(old2?old2.dataResgate||'':(_perdaTempData?_perdaTempData.dataResgate||'':'')):''       ,
-    dataLembrete:  fStatus==='Perdido'?(old2?old2.dataLembrete||'':(_perdaTempData?_perdaTempData.dataLembrete||'':'')):''
+    dataLembrete:  fStatus==='Perdido'?(old2?old2.dataLembrete||'':(_perdaTempData?_perdaTempData.dataLembrete||'':'')):''  ,
+    updatedAt: _now()
   };
 
   if(editingId) {
@@ -3468,7 +3495,7 @@ function openClienteModal(id) {
 function saveCliente() {
   var empresa=document.getElementById('c-empresa').value;
   if(!empresa){toast('Informe o nome da empresa');return;}
-  var c={empresa:empresa,nomeFantasia:document.getElementById('c-fantasia').value,cnpj:document.getElementById('c-cnpj').value,contato:document.getElementById('c-contato').value,email:document.getElementById('c-email').value,telefone:document.getElementById('c-telefone').value,endereco:document.getElementById('c-endereco').value,obs:document.getElementById('c-obs').value};
+  var c={empresa:empresa,nomeFantasia:document.getElementById('c-fantasia').value,cnpj:document.getElementById('c-cnpj').value,contato:document.getElementById('c-contato').value,email:document.getElementById('c-email').value,telefone:document.getElementById('c-telefone').value,endereco:document.getElementById('c-endereco').value,obs:document.getElementById('c-obs').value,updatedAt:_now()};
   if(editingClienteId){
     var i=state.clientes.findIndex(function(x){return x.id===editingClienteId;});
     if(i>=0) state.clientes[i]=Object.assign({},state.clientes[i],c);
@@ -3862,14 +3889,14 @@ function saveDespesa() {
     var idx=state.despesas.findIndex(function(e){return e.id===editingDespesaId;});
     if(idx>=0){
       var ex=state.despesas[idx];
-      state.despesas[idx]=Object.assign({},ex,{desc:desc,cat:document.getElementById('d-cat').value,valor:valor,data:document.getElementById('d-data').value,rec:rec,propostaId:document.getElementById('d-proposta').value,obs:document.getElementById('d-obs').value,pago:rec==='Única'&&document.getElementById('d-pago').value==='1',dataFim:rec!=='Única'?(document.getElementById('d-datafim').value||''):ex.dataFim});
+      state.despesas[idx]=Object.assign({},ex,{desc:desc,cat:document.getElementById('d-cat').value,valor:valor,data:document.getElementById('d-data').value,rec:rec,propostaId:document.getElementById('d-proposta').value,obs:document.getElementById('d-obs').value,pago:rec==='Única'&&document.getElementById('d-pago').value==='1',dataFim:rec!=='Única'?(document.getElementById('d-datafim').value||''):ex.dataFim,updatedAt:_now()});
     }
     editingDespesaId=null;
     saveState(); document.getElementById('modal-despesa').style.display='none'; toast('Despesa atualizada!','success'); renderFinanceiro();
     if(_sbUser&&idx>=0) sbUpsertDespesa(state.despesas[idx]);
     return;
   }
-  var novaDesp={id:uid(),desc:desc,cat:document.getElementById('d-cat').value,valor:valor,data:document.getElementById('d-data').value,rec:rec,propostaId:document.getElementById('d-proposta').value,obs:document.getElementById('d-obs').value,pago:rec==='Única'&&document.getElementById('d-pago').value==='1'};
+  var novaDesp={id:uid(),desc:desc,cat:document.getElementById('d-cat').value,valor:valor,data:document.getElementById('d-data').value,rec:rec,propostaId:document.getElementById('d-proposta').value,obs:document.getElementById('d-obs').value,pago:rec==='Única'&&document.getElementById('d-pago').value==='1',updatedAt:_now()};
   if(rec!=='Única'){novaDesp.dataFim=document.getElementById('d-datafim').value||'';novaDesp.pagoMeses={};}
   state.despesas.unshift(novaDesp);
   saveState(); document.getElementById('modal-despesa').style.display='none'; toast(rec!=='Única'?'Despesa recorrente registrada! Aparecerá todo mês automaticamente.':'Despesa registrada!','success'); renderFinanceiro();
@@ -4308,7 +4335,7 @@ function openServicoModal(id) {
 function saveServico() {
   var nome=document.getElementById('sv-nome').value;
   if(!nome){toast('Informe o nome do serviço');return;}
-  var s={nome:nome,categoria:document.getElementById('sv-cat').value,unidade:document.getElementById('sv-unid').value||'uni.',valorBase:parseFloat(document.getElementById('sv-valor').value)||0,obs:document.getElementById('sv-obs').value};
+  var s={nome:nome,categoria:document.getElementById('sv-cat').value,unidade:document.getElementById('sv-unid').value||'uni.',valorBase:parseFloat(document.getElementById('sv-valor').value)||0,obs:document.getElementById('sv-obs').value,updatedAt:_now()};
   if(editServicoId){var i=state.servicos.findIndex(function(x){return x.id===editServicoId;});if(i>=0)state.servicos[i]=Object.assign({},state.servicos[i],s);}
   else state.servicos.push(Object.assign({id:uid()},s));
   saveState(); document.getElementById('sv-overlay').remove(); toast('Serviço salvo!','success'); renderServicos();
@@ -6533,7 +6560,8 @@ function saveEvento() {
     tipo: tipo,
     descricao: document.getElementById('ev-desc').value.trim(),
     demandaId: document.getElementById('ev-demanda').value,
-    concluida: tipo==='Tarefa' && concluidaEl ? concluidaEl.checked : false
+    concluida: tipo==='Tarefa' && concluidaEl ? concluidaEl.checked : false,
+    updatedAt: _now()
   };
   if(editingEventoId) {
     var i=state.eventos.findIndex(function(e){return e.id===editingEventoId;});
