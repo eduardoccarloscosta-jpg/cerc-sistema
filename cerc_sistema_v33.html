@@ -1053,6 +1053,20 @@ body::after{
   @page{margin:0;size:A4}
 }
 
+/* ─── Chat de comentários ─── */
+.chat-msgs{overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:10px;max-height:240px;min-height:80px}
+.chat-msg{display:flex;gap:8px;align-items:flex-start}
+.chat-msg-body{flex:1;min-width:0}
+.chat-msg-header{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.chat-msg-autor{font-size:12px;font-weight:600;color:var(--text)}
+.chat-msg-time{font-size:10px;color:var(--text3)}
+.chat-msg-del{font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;padding:0 3px;opacity:0;transition:opacity .15s;margin-left:auto;line-height:1}
+.chat-msg:hover .chat-msg-del{opacity:1}
+.chat-msg-del:hover{color:var(--red)}
+.chat-msg-text{font-size:13px;color:var(--text);background:var(--surface2);border-radius:0 8px 8px 8px;padding:7px 10px;line-height:1.5;word-break:break-word}
+.chat-input-row{display:flex;gap:8px;align-items:flex-end;padding:10px 14px;border-top:1px solid var(--border)}
+.chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 0;color:var(--text3);font-size:12px;gap:6px;opacity:.7}
+
 /* ═══════════════════════════════════════════════════════
    RESPONSIVE / MOBILE — CERC Sistema
    Breakpoint: ≤768px → mobile layout
@@ -1285,9 +1299,13 @@ body::after{
           <div class="fg"><label>Último Contato</label><input class="finput" type="date" id="f-ultimo-contato"/></div>
         </div>
       </div>
-      <div class="fsec">
-        <div class="fsec-title">Observações</div>
-        <div class="fg"><textarea class="finput" id="f-obs" rows="3" placeholder="Notas, escopo, pendências..."></textarea></div>
+      <div class="fsec" style="padding-bottom:0">
+        <div class="fsec-title" style="padding-bottom:8px">💬 Comentários</div>
+        <div class="chat-msgs" id="chat-msgs-list"></div>
+        <div class="chat-input-row">
+          <textarea class="finput" id="chat-input" rows="2" placeholder="Escreva um comentário... (Enter para enviar)" style="resize:none;flex:1;font-size:13px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendComment();}"></textarea>
+          <button onclick="sendComment()" class="btn btn-primary btn-sm" style="flex-shrink:0;padding:8px 14px">Enviar</button>
+        </div>
       </div>
 
       <!-- DIAGNÓSTICO DE PERDA — visível apenas quando status=Perdido -->
@@ -1936,7 +1954,7 @@ function demandaToDb(d) {
     link_sheets: d.linkSheets||'', link_extra_link: d.linkExtraLink||'', link_extra_desc: d.linkExtraDesc||'',
     motivo_perda: d.motivoPerda||'', categoria_perda: String(d.categoriaPerda||''),
     plano_acao_perda: d.planoAcaoPerda||'', data_resgate: d.dataResgate||'',
-    log: d.log||[], subtarefas: d.subtarefas||[],
+    log: d.log||[], subtarefas: d.subtarefas||[], comentarios: d.comentarios||[],
     docs_fiscais: d.docsFiscais||{nf:null,boleto:null},
     link_files_pdf_prop: d.linkFilesPdfProp||null, link_files_art: d.linkFilesArt||null,
     link_files_contrato: d.linkFilesContrato||null, prec_dados: d.precDados||null,
@@ -1960,7 +1978,7 @@ function dbToDemanda(r) {
     linkSheets: r.link_sheets||'', linkExtraLink: r.link_extra_link||'', linkExtraDesc: r.link_extra_desc||'',
     motivoPerda: r.motivo_perda||'', categoriaPerda: r.categoria_perda||'',
     planoAcaoPerda: r.plano_acao_perda||'', dataResgate: r.data_resgate||'',
-    log: r.log||[], subtarefas: r.subtarefas||[],
+    log: r.log||[], subtarefas: r.subtarefas||[], comentarios: r.comentarios||[],
     docsFiscais: r.docs_fiscais||{nf:null,boleto:null},
     linkFilesPdfProp: r.link_files_pdf_prop||null, linkFilesArt: r.link_files_art||null,
     linkFilesContrato: r.link_files_contrato||null, precDados: r.prec_dados||null,
@@ -2842,7 +2860,7 @@ function toggleGroup(s) {
 }
 
 // ══ MODAL STATE ═══════════════════════════════════════════
-var editingId=null,modalSubs=[],modalDocsFiscais={nf:null,boleto:null},modalLinkFiles={'pdf-prop':null,art:null,contrato:null};
+var editingId=null,modalSubs=[],modalComentarios=[],modalDocsFiscais={nf:null,boleto:null},modalLinkFiles={'pdf-prop':null,art:null,contrato:null};
 var MTABS=['geral','financeiro','progresso','historico','links'];
 
 function switchTab(tab) {
@@ -3147,9 +3165,11 @@ function openModalNew() {
   editingId=null;
   var today=new Date().toISOString().slice(0,10);
   modalSubs=SUBTAREFAS_PADRAO.map(function(n,i){return {nome:n,concluido:false,obs:'',anexos:[],dataRetorno:i===IDX_FECHAMENTO?addDays(today,15):''};});
+  modalComentarios=[];
+  renderChat();
   modalDocsFiscais={nf:null,boleto:null}; modalLinkFiles={'pdf-prop':null,art:null,contrato:null};
   document.getElementById('modal-title').textContent='Nova Demanda';
-  ['f-servico','f-tipo','f-cliente','f-contato','f-email','f-telefone','f-ultimo-contato','f-fechamento','f-retorno','f-bruto','f-desconto-r','f-desconto-pct','f-imposto','f-custo-op','f-liquido','f-obs','f-pdf-prop','f-art','f-canva','f-sheets','f-extra-link','f-extra-desc','f-data-pagamento','f-data-pagamento-parcial'].forEach(function(id){setF(id,'');});
+  ['f-servico','f-tipo','f-cliente','f-contato','f-email','f-telefone','f-ultimo-contato','f-fechamento','f-retorno','f-bruto','f-desconto-r','f-desconto-pct','f-imposto','f-custo-op','f-liquido','f-pdf-prop','f-art','f-canva','f-sheets','f-extra-link','f-extra-desc','f-data-pagamento','f-data-pagamento-parcial'].forEach(function(id){setF(id,'');});
   setF('f-status','Negociação'); setF('f-proposta',nextPR()); setF('f-pagamento','Pendente');
   // Lock proposta field for new demandas
   var fpNew=document.getElementById('f-proposta');
@@ -3190,7 +3210,8 @@ function openModalEdit(id) {
   document.getElementById('parcelado-box').style.display=dem.statusPagamento==='Parcelado'?'block':'none';
   if(dem.statusPagamento==='Parcelado') renderParcelasBox();
   setF('f-pdf-prop',dem.linkPdfProp||'');setF('f-art',dem.linkArt||'');setF('f-canva',dem.linkCanva||'');setF('f-sheets',dem.linkSheets||'');setF('f-extra-link',dem.linkExtraLink||'');setF('f-extra-desc',dem.linkExtraDesc||'');
-  setF('f-obs',dem.observacoes||'');
+  modalComentarios=(dem.comentarios||[]).slice();
+  renderChat();
   switchTab('geral'); document.getElementById('modal-demanda').style.display='flex';
 }
 
@@ -3300,13 +3321,79 @@ function renderSubList() {
       '<div class="sub-r1">' +
         '<input class="sub-ck" type="checkbox"'+(s.concluido?' checked':'')+' onchange="autoSaveSub('+i+',this.checked)"/>' +
         '<span class="sub-lbl'+(s.concluido?' done':'')+'" style="flex:1">'+s.nome+(isFec?' <span style="font-size:10px;background:var(--amber-l);color:var(--amber);padding:1px 6px;border-radius:10px;font-weight:600">15 dias fixo</span>':'')+'</span>' +
-        '<input class="sub-obs" type="text" placeholder="Observação..." value="'+(s.obs||'')+'" oninput="modalSubs['+i+'].obs=this.value"'+(editingId?' onblur="quickSaveSub()"':'')+'/>' +
         '<input type="date" class="sub-date'+(isFec?' fixed':'')+'" value="'+(s.dataRetorno||'')+'"'+(isFec?' title="Data fixada: 15 dias após criação" ':'')+' onchange="modalSubs['+i+'].dataRetorno=this.value'+(editingId?';quickSaveSub()':'')+'" style="width:130px"/>' +
         '<button class="btn btn-ghost btn-sm btn-icon" onclick="addAnexoSub('+i+')" title="Anexar arquivo" style="color:var(--text3);flex-shrink:0">📎</button>' +
       '</div>' +
       ((s.anexos&&s.anexos.length)?'<div class="sub-r2">'+anxHtml+'</div>':'') +
     '</div>';
   }).join('');
+}
+
+// ══ CHAT DE COMENTÁRIOS ══════════════════════════════
+function renderChat() {
+  var el = document.getElementById('chat-msgs-list');
+  if(!el) return;
+  if(!modalComentarios.length) {
+    el.innerHTML='<div class="chat-empty"><span style="font-size:24px">💬</span><span>Nenhum comentário ainda</span></div>';
+    return;
+  }
+  el.innerHTML = modalComentarios.map(function(c,i) {
+    var foto = c.avatarB64 || '';
+    var nome = c.autor || 'Usuário';
+    var ini = nome.trim().split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase()||'?';
+    var avatarHtml = foto
+      ? '<div class="avatar avatar-sm" style="overflow:hidden;padding:0;flex-shrink:0"><img src="'+foto+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>'
+      : '<div class="avatar avatar-sm" style="flex-shrink:0">'+ini+'</div>';
+    var dt = c.data ? new Date(c.data) : null;
+    var dtStr = dt ? (dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})) : '';
+    return '<div class="chat-msg">'+avatarHtml+
+      '<div class="chat-msg-body">'+
+        '<div class="chat-msg-header">'+
+          '<span class="chat-msg-autor">'+escapeHtml(nome)+'</span>'+
+          '<span class="chat-msg-time">'+dtStr+'</span>'+
+          '<button class="chat-msg-del" onclick="deleteComment('+i+')" title="Excluir">✕</button>'+
+        '</div>'+
+        '<div class="chat-msg-text">'+escapeHtml(c.texto).replace(/\n/g,'<br>')+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+function sendComment() {
+  var inp = document.getElementById('chat-input');
+  if(!inp) return;
+  var texto = (inp.value||'').trim();
+  if(!texto) { inp.focus(); return; }
+  var nome = (_sbProfile&&_sbProfile.nome) || (_sbUser&&_sbUser.email.split('@')[0]) || 'Usuário';
+  var foto = (_sbProfile&&_sbProfile.avatar_base64) || localStorage.getItem('cerc_profile_foto') || '';
+  var c = { id: uid(), autor: nome, avatarB64: foto, texto: texto, data: new Date().toISOString() };
+  modalComentarios.push(c);
+  inp.value = '';
+  renderChat();
+  // Salvar imediatamente se for edição
+  if(editingId) {
+    var i = state.demandas.findIndex(function(d){return d.id===editingId;});
+    if(i>=0) {
+      state.demandas[i].comentarios = modalComentarios.slice();
+      state.demandas[i].updatedAt = _now();
+      saveState();
+      if(_sbUser) sbUpsertDemanda(state.demandas[i]);
+    }
+  }
+}
+function deleteComment(idx) {
+  if(!confirm('Excluir este comentário?')) return;
+  modalComentarios.splice(idx,1);
+  renderChat();
+  if(editingId) {
+    var i = state.demandas.findIndex(function(d){return d.id===editingId;});
+    if(i>=0) {
+      state.demandas[i].comentarios = modalComentarios.slice();
+      state.demandas[i].updatedAt = _now();
+      saveState();
+      if(_sbUser) sbUpsertDemanda(state.demandas[i]);
+    }
+  }
 }
 
 function autoSaveSub(idx,checked) {
@@ -3539,7 +3626,7 @@ function saveDemanda() {
   var fStatus=document.getElementById('f-status').value;
   // Se status mudou de Perdido para outro, limpar campos de perda
   var old2=editingId?state.demandas.find(function(x){return x.id===editingId;}):null;
-  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:document.getElementById('f-data-pagamento-parcial').value||'',parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:document.getElementById('f-pdf-prop').value,linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkSheets:document.getElementById('f-sheets').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:document.getElementById('f-obs').value,linkFilesPdfProp:modalLinkFiles['pdf-prop'],linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nf:modalDocsFiscais.nf,boleto:modalDocsFiscais.boleto},
+  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:document.getElementById('f-data-pagamento-parcial').value||'',parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:document.getElementById('f-pdf-prop').value,linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkSheets:document.getElementById('f-sheets').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkFilesPdfProp:modalLinkFiles['pdf-prop'],linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nf:modalDocsFiscais.nf,boleto:modalDocsFiscais.boleto},
     motivoPerda:   fStatus==='Perdido'?(old2?old2.motivoPerda||'':(_perdaTempData?_perdaTempData.motivoPerda||'':'')):''   ,
     categoriaPerda:fStatus==='Perdido'?(old2?old2.categoriaPerda||'':(_perdaTempData?_perdaTempData.categoriaPerda||'':'')):''  ,
     planoAcaoPerda:fStatus==='Perdido'?(old2?old2.planoAcaoPerda||'':(_perdaTempData?_perdaTempData.planoAcaoPerda||'':'')):'' ,
