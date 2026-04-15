@@ -2761,7 +2761,9 @@ function darBaixaAlerta(demId) {
     data:hoje,
     user:'CE'
   });
+  dem.updatedAt=_now();
   saveState();
+  if(_sbUser) sbUpsertDemanda(dem);
   toast('Follow-up atualizado ✓');
   // Re-renderiza a página atual
   var pg=document.querySelector('.nav-item.active');
@@ -2985,7 +2987,9 @@ function savePerda(){
         if(resgate) logMsg += ' | 📅 Resgate: '+fD(resgate);
         addLog(dem,'perda',logMsg);
       }
+      dem.updatedAt=_now();
       saveState();
+      if(_sbUser) sbUpsertDemanda(dem);
       // Atualiza a seção de diagnóstico no modal principal
       updatePerdaSection(dem);
       // Adiciona evento no calendário se houver lembrete
@@ -3016,7 +3020,7 @@ function criarLembretePerda(dem, dataLemb, dataResgate){
   var titulo = '💔 Resgatar: '+(dem.cliente||dem.servico||dem.proposta||'Cliente');
   var descEv = 'Lembrete de resgate — '+dem.proposta+' ('+dem.categoriaPerda+')';
   if(dataResgate) descEv += ' | Data de resgate original: '+fD(dataResgate);
-  state.eventos.push({
+  var novoEvLemb = {
     id: uid(),
     titulo: titulo,
     data: dataLemb,
@@ -3025,9 +3029,12 @@ function criarLembretePerda(dem, dataLemb, dataResgate){
     descricao: descEv,
     demandaId: dem.id,
     _tipoPerda: true,
-    criado: new Date().toISOString()
-  });
+    criado: new Date().toISOString(),
+    updatedAt: _now()
+  };
+  state.eventos.push(novoEvLemb);
   saveState();
+  if(_sbUser) sbUpsertEvento(novoEvLemb);
   // Atualiza calendário se estiver aberto
   if(currentPage==='calendario') renderCalendario();
 }
@@ -3182,7 +3189,10 @@ function autoSaveSub(idx,checked) {
       var prefix=checked?'✓ Etapa concluída: ':'↩ Etapa reaberta: ';
       addLog(state.demandas[i],'sub',prefix+'"'+modalSubs[idx].nome+'"');
       state.demandas[i].subtarefas=modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos,dataRetorno:s.dataRetorno};});
-      saveState(); toast('Etapa salva automaticamente ✓','success');
+      state.demandas[i].updatedAt=_now();
+      saveState();
+      if(_sbUser) sbUpsertDemanda(state.demandas[i]);
+      toast('Etapa salva automaticamente ✓','success');
     }
   }
   renderSubList();
@@ -3203,7 +3213,7 @@ function addAnexoSub(idx) {
     rd.onload=function(ev){
       if(!modalSubs[idx].anexos) modalSubs[idx].anexos=[];
       modalSubs[idx].anexos.push({id:uid(),nome:file.name,tipo:file.type,tamanho:file.size,dados:ev.target.result,data:new Date().toISOString()});
-      if(editingId){var i=state.demandas.findIndex(function(d){return d.id===editingId;});if(i>=0){addLog(state.demandas[i],'anx','Anexo em "'+modalSubs[idx].nome+'": '+file.name);state.demandas[i].subtarefas=modalSubs.slice();saveState();}}
+      if(editingId){var i=state.demandas.findIndex(function(d){return d.id===editingId;});if(i>=0){addLog(state.demandas[i],'anx','Anexo em "'+modalSubs[idx].nome+'": '+file.name);state.demandas[i].subtarefas=modalSubs.slice();state.demandas[i].updatedAt=_now();saveState();if(_sbUser) sbUpsertDemanda(state.demandas[i]);}}
       renderSubList(); toast('Arquivo anexado!');
     };
     rd.readAsDataURL(file);
@@ -3309,7 +3319,9 @@ function restaurarPrec(snapId){
   precState.tamanho     = snap.tamanho||'';
   precState.fixo        = snap.fixo||5;
   dem.precDados = JSON.parse(JSON.stringify(precState));
+  dem.updatedAt=_now();
   saveState();
+  if(_sbUser) sbUpsertDemanda(dem);
   _precEditingDemandaId = editingId;
   showPage('precificacao');
   renderPrecificacao();
@@ -3333,7 +3345,9 @@ function deletarPrecHist(snapId){
   if(!dem||!dem.historicoPrec) return;
   if(!confirm('Excluir esta versão do histórico?')) return;
   dem.historicoPrec=dem.historicoPrec.filter(function(h){return h.id!==snapId;});
+  dem.updatedAt=_now();
   saveState();
+  if(_sbUser) sbUpsertDemanda(dem);
   renderHistorico();
   toast('Versão removida do histórico');
 }
@@ -3880,7 +3894,10 @@ function updatePag(id,val) {
   if(val==='Pendente'||val==='Inadimplente') state.demandas[i].valorPago=0;
   if(!state.demandas[i].log) state.demandas[i].log=[];
   addLog(state.demandas[i],'fin','Pagamento: '+old+' → '+val);
-  saveState(); toast('Atualizado'); renderFinanceiro();
+  state.demandas[i].updatedAt=_now();
+  saveState();
+  if(_sbUser) sbUpsertDemanda(state.demandas[i]);
+  toast('Atualizado'); renderFinanceiro();
 }
 function saveDespesa() {
   var desc=document.getElementById('d-desc').value,valor=parseFloat(document.getElementById('d-valor').value)||0;
@@ -4127,7 +4144,9 @@ function usarNaDemanda(bruto,imp,custo,liq) {
       dem.historicoPrec.unshift(snap);
       // Também registra no log de atividades
       addLog(dem,'prec','🧮 Precificação aplicada — Bruto: '+fR(bruto)+' | Líquido: '+fR(liq));
+      dem.updatedAt=_now();
       saveState();
+      if(_sbUser) sbUpsertDemanda(dem);
     }
     showPage('demandas');
     setTimeout(function(){
@@ -4310,7 +4329,10 @@ function toggleSvCat(cat) {
 function updateServicoValor(id,val) {
   var i=state.servicos.findIndex(function(s){return s.id===id;}); if(i<0) return;
   state.servicos[i].valorBase=val;
-  saveState(); toast('Valor atualizado: '+fR(val),'success');
+  state.servicos[i].updatedAt=_now();
+  saveState();
+  if(_sbUser) sbUpsertServico(state.servicos[i]);
+  toast('Valor atualizado: '+fR(val),'success');
 }
 
 function openServicoModal(id) {
@@ -4942,8 +4964,10 @@ function duplicarDemanda(id) {
   nova.linkFilesPdfProp=null; nova.linkFilesArt=null; nova.linkFilesContrato=null;
   nova.subtarefas=nova.subtarefas.map(function(s){return Object.assign({},s,{concluido:false,obs:'',anexos:[]});});
   nova.log=[{id:uid(),data:new Date().toISOString(),tipo:'criacao',desc:'Demanda duplicada de '+orig.proposta+' — '+orig.servico}];
+  nova.updatedAt=_now();
   state.demandas.unshift(nova);
   saveState();
+  if(_sbUser) sbUpsertDemanda(nova);
   toast('Demanda duplicada: '+nova.proposta,'success');
   setTimeout(function(){openModalEdit(nova.id);},200);
   renderDemandas();
@@ -5241,7 +5265,9 @@ function gcSyncEvent(evId) {
       var idx = (state.eventos||[]).findIndex(function(e){ return e.id === evId; });
       if (idx >= 0) {
         state.eventos[idx].gcEventId = data.id;
+        state.eventos[idx].updatedAt = _now();
         saveState();
+        if(_sbUser) sbUpsertEvento(state.eventos[idx]);
       }
       toast('✅ Sincronizado com Google Calendar!', 'success');
     } else if (data.error && data.error.code === 404 && gcId) {
@@ -5286,7 +5312,7 @@ function gcSyncRetornoDemanda(dem) {
   }).then(function(r){ return r.json(); }).then(function(data){
     if (data.id) {
       var idx = state.demandas.findIndex(function(d){ return d.id === dem.id; });
-      if (idx >= 0) { state.demandas[idx].gcRetornoId = data.id; saveState(); }
+      if (idx >= 0) { state.demandas[idx].gcRetornoId = data.id; state.demandas[idx].updatedAt=_now(); saveState(); if(_sbUser) sbUpsertDemanda(state.demandas[idx]); }
     } else if (data.error && data.error.code === 401) { gcToken = null; }
   }).catch(function(){});
 }
@@ -6269,8 +6295,10 @@ function enviarAutentique(id) {
       state.contratos[i].autentiqueDocId=doc?doc.id:'';
       state.contratos[i].autentiqueLink=link;
       state.contratos[i].autentiqueSigner=email;
+      state.contratos[i].updatedAt=_now();
     }
     saveState();
+    if(_sbUser&&i>=0) sbUpsertContrato(state.contratos[i]);
     document.getElementById('autentique-modal').remove();
     toast('Contrato enviado para assinatura! 🎉','success');
     renderContratos();
@@ -6279,8 +6307,9 @@ function enviarAutentique(id) {
     // Fallback: mark as sent with manual link
     if(confirm('Não foi possível conectar à API do Autentique automaticamente.\n\nDeseja registrar como "Enviado" manualmente e abrir o Autentique para upload?')){
       var i=(state.contratos||[]).findIndex(function(c){return c.id===id;});
-      if(i>=0){ state.contratos[i].status='Enviado'; state.contratos[i].autentiqueLink='https://app.autentique.com.br'; }
+      if(i>=0){ state.contratos[i].status='Enviado'; state.contratos[i].autentiqueLink='https://app.autentique.com.br'; state.contratos[i].updatedAt=_now(); }
       saveState();
+      if(_sbUser&&i>=0) sbUpsertContrato(state.contratos[i]);
       document.getElementById('autentique-modal').remove();
       window.open('https://app.autentique.com.br','_blank');
       toast('Status atualizado. Faça o upload manual no Autentique.','success');
@@ -6679,7 +6708,9 @@ function updateServicoValorComHistorico(id, val) {
   if(!sv.historicoPrecos) sv.historicoPrecos=[];
   sv.historicoPrecos.unshift({de:sv.valorBase,para:val,data:new Date().toISOString(),usuario:'Carlos Costa'});
   sv.valorBase=val;
+  sv.updatedAt=_now();
   saveState();
+  if(_sbUser) sbUpsertServico(sv);
   toast('Valor atualizado: '+fR(val),'success');
 }
 
