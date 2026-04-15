@@ -39,7 +39,7 @@
   --r:6px;--rl:10px;--rxl:14px;
   --sh:0 1px 3px rgba(0,0,0,.08);--shm:0 8px 30px rgba(0,0,0,.14);
 }
-html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;overflow-x:hidden;max-width:100vw}
+html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;overflow:hidden;max-width:100vw}
 /* Prevent Google-injected iframes/divs from expanding page width */
 body>iframe,body>div[style*="position: fixed"][style*="opacity: 0"],body>div[style*="position:fixed"][style*="opacity:0"]{width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}
 /* ── AUTH SCREEN ── */
@@ -95,7 +95,7 @@ body>iframe,body>div[style*="position: fixed"][style*="opacity: 0"],body>div[sty
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,select,textarea{font-family:inherit;font-size:13px}
 a{text-decoration:none}
-.app{display:flex;height:100vh;overflow:hidden;width:100%;max-width:100vw;position:relative}
+.app{display:flex;height:100vh;overflow:hidden;width:100vw;max-width:100vw;position:fixed;top:0;left:0;right:0;bottom:0}
 .prec-main-grid{display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
 
 /* SIDEBAR */
