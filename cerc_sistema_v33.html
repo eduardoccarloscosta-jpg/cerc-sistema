@@ -3215,18 +3215,29 @@ function openFileViewer(dados, nome, tipo) {
   openBtn.onclick=function(){ window.open(dados,'_blank'); };
   // Se for URL externa (não base64), detectar e tratar
   var isExternal = dados && (dados.startsWith('http://') || dados.startsWith('https://'));
+  // Revoga blob URL anterior se existir
+  if(window._fileViewerBlobUrl){ try{URL.revokeObjectURL(window._fileViewerBlobUrl);}catch(e){} window._fileViewerBlobUrl=null; }
+
   if(isExternal) {
     // Google Drive: converter para URL de preview embeddable
     var driveMatch = dados.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if(driveMatch) {
       ifr.srcdoc=''; ifr.src='https://drive.google.com/file/d/'+driveMatch[1]+'/preview';
     } else {
-      // Outro URL externo: mostrar botão para abrir, não tentar iframe
-      ifr.src=''; ifr.srcdoc='<body style="margin:0;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;color:#fff;font-family:sans-serif;gap:16px"><div style="font-size:48px">📄</div><div style="font-size:15px;font-weight:600">'+escapeHtml(nome||'Arquivo')+'</div><div style="font-size:13px;opacity:.7">Este arquivo está hospedado externamente e não pode ser visualizado aqui.</div><button onclick="window.open(\''+dados.replace(/'/g,"\\'")+'\')" style="padding:10px 22px;border-radius:8px;border:none;background:#7C3AED;color:#fff;font-size:14px;cursor:pointer;margin-top:8px">↗ Abrir em nova aba</button></body>';
+      ifr.src=''; ifr.srcdoc='<body style="margin:0;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;color:#fff;font-family:sans-serif;gap:16px"><div style="font-size:48px">📄</div><div style="font-size:15px;font-weight:600">'+escapeHtml(nome||'Arquivo')+'</div><div style="font-size:13px;opacity:.7">Este arquivo está hospedado externamente.</div><button onclick="window.open(\''+dados.replace(/'/g,"\\'")+'\')" style="padding:10px 22px;border-radius:8px;border:none;background:#7C3AED;color:#fff;font-size:14px;cursor:pointer;margin-top:8px">↗ Abrir em nova aba</button></body>';
     }
   } else if(tipo&&tipo.startsWith('image/')) {
-    ifr.src='';
-    ifr.srcdoc='<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><img src="'+dados+'" style="max-width:100%;max-height:100%;object-fit:contain"/></body>';
+    ifr.srcdoc=''; ifr.src=dados;
+  } else if(dados&&dados.startsWith('data:')) {
+    // Base64 → Blob URL (necessário para PDFs no navegador)
+    try {
+      var parts=dados.split(','), mime=parts[0].match(/:(.*?);/)[1], bin=atob(parts[1]);
+      var arr=new Uint8Array(bin.length);
+      for(var i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+      var blobUrl=URL.createObjectURL(new Blob([arr],{type:mime}));
+      window._fileViewerBlobUrl=blobUrl;
+      ifr.srcdoc=''; ifr.src=blobUrl;
+    } catch(e){ ifr.srcdoc=''; ifr.src=dados; }
   } else {
     ifr.srcdoc=''; ifr.src=dados;
   }
@@ -3236,7 +3247,8 @@ function closeFileViewer() {
   var ov=document.getElementById('file-viewer-overlay');
   var ifr=document.getElementById('file-viewer-iframe');
   ov.style.display='none';
-  ifr.src=''; ifr.srcdoc='';
+  ifr.src='about:blank'; ifr.srcdoc='';
+  if(window._fileViewerBlobUrl){ try{URL.revokeObjectURL(window._fileViewerBlobUrl);}catch(e){} window._fileViewerBlobUrl=null; }
 }
 function viewLinkFile(tipo) {
   var f=modalLinkFiles[tipo]; if(!f) return;
