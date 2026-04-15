@@ -3600,9 +3600,7 @@ function openClienteModal(id) {
 var _editingClienteLogo = null;
 function handleClienteLogo(input) {
   var file=input.files[0]; if(!file) return;
-  var reader=new FileReader();
-  reader.onload=function(e){ _editingClienteLogo=e.target.result; updateCliLogoPreview(); };
-  reader.readAsDataURL(file);
+  compressImageToBase64(file, 256, 0.85, function(b64){ _editingClienteLogo=b64; updateCliLogoPreview(); });
 }
 function clearClienteLogo() { _editingClienteLogo=null; updateCliLogoPreview(); }
 function updateCliLogoPreview() {
@@ -6956,19 +6954,32 @@ async function loadProfile(user) {
   updateSidebarUser(user, data);
   return data;
 }
-function handleProfileFoto(input) {
-  var file = input.files[0]; if(!file) return;
+function compressImageToBase64(file, maxSize, quality, cb) {
   var reader = new FileReader();
   reader.onload = function(e) {
-    var b64 = e.target.result;
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      cb(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function handleProfileFoto(input) {
+  var file = input.files[0]; if(!file) return;
+  compressImageToBase64(file, 256, 0.85, function(b64) {
     localStorage.setItem('cerc_profile_foto', b64);
     if(_sbProfile) _sbProfile.avatar_base64 = b64;
-    if(_sbUser) _sb.from('profiles').update({avatar_base64: b64, updated_at: new Date().toISOString()}).eq('id', _sbUser.id);
+    if(_sbUser) _sb.from('profiles').update({avatar_base64: b64, updated_at: new Date().toISOString()}).eq('id', _sbUser.id).then(function(r){ if(r.error) toast('Erro ao salvar foto: '+r.error.message,'danger'); });
     var prev = document.getElementById('cfg-avatar-preview');
     if(prev) prev.innerHTML='<img src="'+b64+'" style="width:100%;height:100%;object-fit:cover"/>';
     updateSidebarUser(_sbUser, _sbProfile);
-  };
-  reader.readAsDataURL(file);
+  });
 }
 function removeProfileFoto() {
   localStorage.removeItem('cerc_profile_foto');
