@@ -1888,6 +1888,10 @@ function eventoToDb(e) {
   return {
     id: e.id, titulo: e.titulo||'', data: e.data||'', hora: e.hora||'',
     tipo: e.tipo||'', demanda_id: e.demandaId||'', obs: e.obs||'',
+    hora_inicio: e.horaInicio||'', hora_fim: e.horaFim||'',
+    data_fim: e.dataFim||'', descricao: e.descricao||'',
+    concluida: e.concluida||false,
+    gc_event_id: e.gcEventId||'',
     updated_at: e.updatedAt||_now()
   };
 }
@@ -1895,6 +1899,10 @@ function dbToEvento(r) {
   return {
     id: r.id, titulo: r.titulo||'', data: r.data||'', hora: r.hora||'',
     tipo: r.tipo||'', demandaId: r.demanda_id||'', obs: r.obs||'',
+    horaInicio: r.hora_inicio||'', horaFim: r.hora_fim||'',
+    dataFim: r.data_fim||null, descricao: r.descricao||'',
+    concluida: r.concluida||false,
+    gcEventId: r.gc_event_id||'',
     updatedAt: r.updated_at||''
   };
 }
@@ -5518,13 +5526,21 @@ function renderCalendario() {
   var evtCustomMap={};
   // ── Set de gcEventIds já salvos localmente (para evitar duplicação) ─
   var _localGcIds={};
-  (state.eventos||[]).forEach(function(e){ if(e.gcEventId) _localGcIds[e.gcEventId]=true; });
+  var _localTitleDates={};
+  (state.eventos||[]).forEach(function(e){
+    if(e.gcEventId) _localGcIds[e.gcEventId]=true;
+    // Fallback: deduplicar por título+data quando gcEventId não foi salvo no BD ainda
+    if(e.titulo && e.data) _localTitleDates[(e.titulo.trim().toLowerCase())+'|'+e.data]=true;
+  });
   // ── Mapear gcEvents por data (excluindo os já existentes localmente) ─
   var gcEvtMap={};
   gcEvents.forEach(function(ev){
-    if(ev.gcEventId && _localGcIds[ev.gcEventId]) return; // já existe como evento local
+    if(ev.gcEventId && _localGcIds[ev.gcEventId]) return; // já existe como evento local (por ID)
     var ds=ev.inicio?ev.inicio.slice(0,10):'';
     if(!ds) return;
+    // Fallback: se título+data já existe localmente, não duplicar
+    var titleKey=(ev.titulo||'').trim().toLowerCase()+'|'+ds;
+    if(_localTitleDates[titleKey]) return;
     if(!gcEvtMap[ds]) gcEvtMap[ds]=[];
     gcEvtMap[ds].push(ev);
   });
