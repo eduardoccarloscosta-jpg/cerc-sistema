@@ -3206,36 +3206,60 @@ function renderLinkChip(tipo) {
   if(!f){el.innerHTML='';return;}
   var safeId=tipo; el.innerHTML='<span class="anx-chip" style="display:inline-flex;cursor:pointer"><span onclick="viewLinkFile(\''+safeId+'\')">📎 '+escapeHtml(f.nome)+'</span> <span class="anx-x" onclick="removeLinkFile(\''+safeId+'\')">×</span></span>';
 }
+function dataUrlToBlobUrl(dataUrl) {
+  try {
+    var parts=dataUrl.split(',');
+    var mime=parts[0].match(/:(.*?);/)[1];
+    var bin=atob(parts[1]);
+    var ab=new ArrayBuffer(bin.length);
+    var ia=new Uint8Array(ab);
+    for(var i=0;i<bin.length;i++) ia[i]=bin.charCodeAt(i);
+    return URL.createObjectURL(new Blob([ab],{type:mime}));
+  } catch(e){ return null; }
+}
 function openFileViewer(dados, nome, tipo) {
   var ov=document.getElementById('file-viewer-overlay');
   var ifr=document.getElementById('file-viewer-iframe');
   var ttl=document.getElementById('file-viewer-title');
   var openBtn=document.getElementById('file-viewer-open-btn');
   if(!ov||!ifr) return;
-  ttl.textContent=nome||'Arquivo';
-  openBtn.onclick=function(){ window.open(dados,'_blank'); };
   if(window._fileViewerBlobUrl){ try{URL.revokeObjectURL(window._fileViewerBlobUrl);}catch(e){} window._fileViewerBlobUrl=null; }
-  ifr.src='about:blank'; ifr.srcdoc='';
+  ttl.textContent=nome||'Arquivo';
+  // Reset iframe completamente — srcdoc tem precedência sobre src, então remover o atributo primeiro
+  ifr.removeAttribute('srcdoc');
+  ifr.src='about:blank';
   ov.style.display='flex';
 
   var isExternal = dados&&(dados.startsWith('http://')||dados.startsWith('https://'));
   if(isExternal) {
+    openBtn.onclick=function(){ window.open(dados,'_blank'); };
     var driveMatch=dados.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if(driveMatch) {
+      ifr.removeAttribute('srcdoc');
       ifr.src='https://drive.google.com/file/d/'+driveMatch[1]+'/preview';
     } else {
       ifr.srcdoc='<body style="margin:0;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;color:#fff;font-family:sans-serif;gap:16px"><div style="font-size:48px">📄</div><div style="font-size:15px;font-weight:600">'+escapeHtml(nome||'Arquivo')+'</div><div style="font-size:13px;opacity:.7;text-align:center">Arquivo hospedado externamente.<br>Use o botão acima para abrir.</div></body>';
     }
-  } else if(tipo&&tipo.startsWith('image/')) {
-    ifr.srcdoc='<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><img src="'+dados+'" style="max-width:100%;max-height:100%;object-fit:contain"/></body>';
   } else if(dados&&dados.startsWith('data:')) {
-    // Usa fetch para converter data URL → Blob URL de forma assíncrona (não bloqueia UI)
-    fetch(dados).then(function(r){return r.blob();}).then(function(blob){
-      var url=URL.createObjectURL(blob);
-      window._fileViewerBlobUrl=url;
-      ifr.src=url;
-    }).catch(function(){ ifr.src=dados; });
+    // Converte para blob URL — funciona em iframe E em nova aba no Chrome
+    var blobUrl = dataUrlToBlobUrl(dados);
+    if(blobUrl) {
+      window._fileViewerBlobUrl = blobUrl;
+      openBtn.onclick=function(){ window.open(blobUrl,'_blank'); };
+      if(tipo&&tipo.startsWith('image/')) {
+        ifr.srcdoc='<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh"><img src="'+blobUrl+'" style="max-width:100%;max-height:100%;object-fit:contain"/></body>';
+      } else {
+        // CRÍTICO: remover srcdoc antes de setar src, senão srcdoc tem precedência
+        ifr.removeAttribute('srcdoc');
+        ifr.src=blobUrl;
+      }
+    } else {
+      openBtn.onclick=function(){ window.open(dados,'_blank'); };
+      ifr.srcdoc='<body style="margin:0;background:#1a1a2e;display:flex;align-items:center;justify-content:center;height:100vh;color:#fff;font-family:sans-serif">Erro ao carregar arquivo.</body>';
+    }
   } else {
+    openBtn.onclick=function(){ window.open(dados,'_blank'); };
+    ifr.removeAttribute('srcdoc');
     ifr.src=dados;
   }
 }
