@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window._sbFailed=true"></script>
+<!-- Relatórios: carregados sob demanda via _loadScript() -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -4042,6 +4043,302 @@ function saveReceita() {
   renderFinanceiro();
 }
 
+// ══ RELATÓRIOS FINANCEIROS ════════════════════════════════════════════════════
+function _loadScript(src,cb){
+  if(document.querySelector('script[src="'+src+'"]')){if(cb)cb();return;}
+  var s=document.createElement('script');s.src=src;
+  s.onload=function(){if(cb)cb();};
+  s.onerror=function(){toast('Erro ao carregar biblioteca de relatório','danger');};
+  document.head.appendChild(s);
+}
+
+function openModalRelatorio(){
+  var old=document.getElementById('modal-relatorio');if(old)old.remove();
+  var snap=window._finSnap;
+  if(!snap){toast('Abra o Financeiro para gerar o relatório','danger');return;}
+  var ex=JSON.parse(localStorage.getItem('cerc_profile_extra')||'{}');
+  var empresa=(_sbProfile&&_sbProfile.empresa)||ex.empresa||'CERC';
+  var html=
+    '<div id="modal-relatorio" class="overlay" onclick="if(event.target===this)this.remove()">'+
+    '<div class="modal" style="max-width:440px">'+
+    '<div class="modal-hd"><div class="modal-hd-row">'+
+      '<div class="modal-title">📊 Relatório Financeiro</div>'+
+      '<button class="btn btn-ghost btn-icon" onclick="document.getElementById(\'modal-relatorio\').remove()">✕</button>'+
+    '</div></div>'+
+    '<div class="modal-body" style="padding:20px">'+
+      '<div style="background:var(--accent-l);border:1.5px solid var(--accent);border-radius:10px;padding:14px 16px;margin-bottom:20px">'+
+        '<div style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:6px">📅 '+snap.periodoLabel+'</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">'+
+          '<div style="text-align:center"><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Receitas</div><div style="font-size:13px;font-weight:700;color:var(--s-con)">'+fR(snap.totalRecMes)+'</div></div>'+
+          '<div style="text-align:center"><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Despesas</div><div style="font-size:13px;font-weight:700;color:var(--red)">'+fR(snap.totDespMes)+'</div></div>'+
+          '<div style="text-align:center"><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Resultado</div><div style="font-size:13px;font-weight:700;color:'+(snap.saldoMes>=0?'var(--s-con)':'var(--red)')+'">'+fR(snap.saldoMes)+'</div></div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:12px">'+
+        '<button class="btn btn-primary" style="width:100%;padding:14px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px" onclick="gerarRelatorioPDF()">'+
+          '<span style="font-size:20px">📄</span><span>Gerar PDF<br><span style="font-size:11px;font-weight:400;opacity:.85">Relatório completo formatado</span></span>'+
+        '</button>'+
+        '<button class="btn btn-ghost" style="width:100%;padding:14px;font-size:14px;font-weight:700;border:2px solid var(--s-con);color:var(--s-con);display:flex;align-items:center;justify-content:center;gap:10px" onclick="gerarRelatorioExcel()">'+
+          '<span style="font-size:20px">📊</span><span>Exportar Excel (.xlsx)<br><span style="font-size:11px;font-weight:400;opacity:.8">Receitas, Despesas, Parcelas em abas separadas</span></span>'+
+        '</button>'+
+      '</div>'+
+      '<div style="margin-top:16px;padding:10px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--text3)">'+
+        '📋 <strong>'+snap.receitas.length+'</strong> receitas · <strong>'+snap.despesas.length+'</strong> despesas · <strong>'+snap.parcelas.length+'</strong> parcela(s) no período'+
+      '</div>'+
+    '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function gerarRelatorioPDF(){
+  var snap=window._finSnap;if(!snap){toast('Dados não disponíveis','danger');return;}
+  toast('Gerando PDF...','success');
+  _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',function(){
+    _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js',function(){
+      _buildPDF(snap);
+    });
+  });
+}
+
+function _buildPDF(snap){
+  try{
+    var jsPDF=window.jspdf.jsPDF;
+    var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var ex=JSON.parse(localStorage.getItem('cerc_profile_extra')||'{}');
+    var empresa=(_sbProfile&&_sbProfile.empresa)||ex.empresa||'CERC';
+    var cnpj=ex.cnpj||''; var cidade=ex.cidade||''; var estado=ex.estado||'';
+    var endereco=ex.endereco||''; var emailEmp=ex.emailEmpresa||''; var tel=ex.telEmpresa||'';
+    var today=new Date().toLocaleDateString('pt-BR');
+    var PU=[124,58,237],DK=[17,24,39],GY=[107,114,128],GN=[22,163,74],RD=[220,38,38],AM=[217,119,6];
+
+    // ── CABEÇALHO ──────────────────────────────────────
+    doc.setFillColor(PU[0],PU[1],PU[2]);
+    doc.rect(0,0,210,30,'F');
+    doc.setFontSize(18);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+    doc.text(empresa,14,13);
+    doc.setFontSize(9);doc.setFont('helvetica','normal');
+    if(cnpj) doc.text('CNPJ: '+cnpj,14,20);
+    if(cidade||estado) doc.text((cidade||'')+(estado?' — '+estado:''),14,25);
+    doc.setFontSize(11);doc.setFont('helvetica','bold');
+    doc.text('RELATÓRIO FINANCEIRO — '+snap.periodoLabel.toUpperCase(),210-14,14,{align:'right'});
+    doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.text('Gerado em: '+today,210-14,21,{align:'right'});
+    if(emailEmp||tel) doc.text((emailEmp||'')+(tel?' · '+tel:''),210-14,26,{align:'right'});
+
+    // ── KPIs ───────────────────────────────────────────
+    var y=38;
+    var kpis=[
+      {l:'Receitas Recebidas',v:fR(snap.totalRecMes),c:GN},
+      {l:'Despesas (Total)',v:fR(snap.totDespMes),c:RD},
+      {l:'Despesas Pagas',v:fR(snap.totDespMesPago),c:RD},
+      {l:'Despesas Pendentes',v:fR(snap.totDespMesPend),c:AM},
+      {l:'Resultado',v:fR(snap.saldoMes),c:snap.saldoMes>=0?GN:RD},
+      {l:'Margem de Lucro',v:snap.margemMes.toFixed(1)+'%',c:snap.margemMes>=30?GN:snap.margemMes>=10?AM:RD},
+      {l:'A Receber',v:fR(snap.recPendMes),c:AM},
+    ];
+    var bw=(210-28-6*3)/7;
+    kpis.forEach(function(k,idx){
+      var x=14+idx*(bw+3);
+      doc.setFillColor(248,249,250);doc.roundedRect(x,y,bw,18,2,2,'F');
+      doc.setDrawColor(230,232,235);doc.roundedRect(x,y,bw,18,2,2,'S');
+      doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(GY[0],GY[1],GY[2]);
+      doc.text(k.l,x+bw/2,y+5.5,{align:'center'});
+      doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(k.c[0],k.c[1],k.c[2]);
+      doc.text(k.v,x+bw/2,y+13,{align:'center'});
+    });
+    y+=24;
+
+    // ── RECEITAS ───────────────────────────────────────
+    if(snap.receitas.length){
+      doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(DK[0],DK[1],DK[2]);
+      doc.text('RECEITAS DO PERÍODO',14,y);y+=2;
+      doc.autoTable({
+        startY:y,
+        head:[['Proposta','Serviço / Cliente','Status','Pagamento','Bruto','Líquido','Recebido']],
+        body:snap.receitas.map(function(r){
+          return [r.proposta||'—',(r.servico||'').slice(0,28)+'\n'+(r.cliente||'').slice(0,28),r.status||'—',r.statusPagamento||'—',fR(r.valorBruto||0),fR(r.valorLiquido||0),r.statusPagamento==='Pago'?fR(r.valorBruto||0):r.valorPago?fR(r.valorPago):'—'];
+        }),
+        styles:{fontSize:7.5,cellPadding:2.5,overflow:'linebreak'},
+        headStyles:{fillColor:PU,textColor:255,fontStyle:'bold',fontSize:8},
+        alternateRowStyles:{fillColor:[248,249,252]},
+        columnStyles:{0:{cellWidth:18},1:{cellWidth:52},2:{cellWidth:20},3:{cellWidth:22},4:{cellWidth:22,halign:'right'},5:{cellWidth:22,halign:'right'},6:{cellWidth:22,halign:'right'}},
+        margin:{left:14,right:14},
+        didDrawCell:function(data){
+          if(data.section==='body'&&data.column.index===3){
+            var v=data.cell.raw;
+            if(v==='Pago'){doc.setTextColor(GN[0],GN[1],GN[2]);}
+            else if(v==='Pendente'||v==='Inadimplente'){doc.setTextColor(RD[0],RD[1],RD[2]);}
+            else if(v==='Parcelado'||v==='Parcial'){doc.setTextColor(AM[0],AM[1],AM[2]);}
+          }
+        }
+      });
+      y=doc.lastAutoTable.finalY+8;
+    }
+
+    // ── DESPESAS ───────────────────────────────────────
+    if(snap.despesas.length){
+      if(y>230){doc.addPage();y=14;}
+      doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(DK[0],DK[1],DK[2]);
+      doc.text('DESPESAS DO PERÍODO',14,y);y+=2;
+      doc.autoTable({
+        startY:y,
+        head:[['Descrição','Categoria','Recorrência','Valor','Status','Data Pag.']],
+        body:snap.despesas.map(function(x){
+          return [(x.desc||'').slice(0,38),x.cat||'—',x.rec||'—',fR(x.valor||0),x.pago?'Paga':'Pendente',x.dataPagamento?fD(x.dataPagamento):'—'];
+        }),
+        styles:{fontSize:7.5,cellPadding:2.5},
+        headStyles:{fillColor:RD,textColor:255,fontStyle:'bold',fontSize:8},
+        alternateRowStyles:{fillColor:[255,249,249]},
+        columnStyles:{0:{cellWidth:50},1:{cellWidth:32},2:{cellWidth:22},3:{cellWidth:22,halign:'right'},4:{cellWidth:20},5:{cellWidth:22}},
+        margin:{left:14,right:14},
+      });
+      y=doc.lastAutoTable.finalY+8;
+
+      // Totalizador por categoria
+      var byCat={};snap.despesas.forEach(function(x){if(!byCat[x.cat])byCat[x.cat]={total:0,pago:0};byCat[x.cat].total+=x.valor||0;if(x.pago)byCat[x.cat].pago+=x.valor||0;});
+      if(y>240){doc.addPage();y=14;}
+      doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(DK[0],DK[1],DK[2]);
+      doc.text('Despesas por Categoria',14,y);y+=2;
+      doc.autoTable({
+        startY:y,
+        head:[['Categoria','Total','Pago','Pendente']],
+        body:Object.keys(byCat).map(function(c){return [c,fR(byCat[c].total),fR(byCat[c].pago),fR(byCat[c].total-byCat[c].pago)];}).concat([['TOTAL',fR(snap.totDespMes),fR(snap.totDespMesPago),fR(snap.totDespMesPend)]]),
+        styles:{fontSize:8,cellPadding:2.5},
+        headStyles:{fillColor:[100,100,100],textColor:255,fontStyle:'bold'},
+        columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}},
+        margin:{left:14,right:14},
+        willDrawCell:function(data){if(data.section==='body'&&data.row.index===Object.keys(byCat).length){doc.setFont('helvetica','bold');}},
+      });
+      y=doc.lastAutoTable.finalY+8;
+    }
+
+    // ── PARCELAS ───────────────────────────────────────
+    if(snap.parcelas.length){
+      if(y>230){doc.addPage();y=14;}
+      doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(DK[0],DK[1],DK[2]);
+      doc.text('PARCELAS NO PERÍODO',14,y);y+=2;
+      doc.autoTable({
+        startY:y,
+        head:[['Proposta','Serviço','Cliente','Parc.','Valor','Vencimento','Status']],
+        body:snap.parcelas.map(function(p){
+          return [p.proposta||'—',(p.servico||'').slice(0,28),(p.cliente||'').slice(0,18),p.num+'/'+p.total,fR(p.valor||0),p.dataPrev?fD(p.dataPrev):'—',p.status||'—'];
+        }),
+        styles:{fontSize:7.5,cellPadding:2.5},
+        headStyles:{fillColor:AM,textColor:255,fontStyle:'bold',fontSize:8},
+        alternateRowStyles:{fillColor:[255,253,244]},
+        columnStyles:{0:{cellWidth:18},1:{cellWidth:46},2:{cellWidth:30},3:{cellWidth:10,halign:'center'},4:{cellWidth:22,halign:'right'},5:{cellWidth:20},6:{cellWidth:18}},
+        margin:{left:14,right:14},
+      });
+    }
+
+    // ── RODAPÉ ─────────────────────────────────────────
+    var pc=doc.internal.getNumberOfPages();
+    for(var i=1;i<=pc;i++){
+      doc.setPage(i);
+      doc.setFillColor(248,249,250);doc.rect(0,285,210,12,'F');
+      doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(GY[0],GY[1],GY[2]);
+      doc.text(empresa+' — Relatório Financeiro: '+snap.periodoLabel,14,292);
+      doc.text('Pág. '+i+' / '+pc,210-14,292,{align:'right'});
+    }
+
+    var fn='relatorio-'+snap.periodoLabel.replace(/\s/g,'-').toLowerCase()+'.pdf';
+    doc.save(fn);
+    toast('PDF gerado: '+fn+' 📄','success');
+    var mr=document.getElementById('modal-relatorio');if(mr)mr.remove();
+  }catch(e){console.error('[PDF]',e);toast('Erro ao gerar PDF: '+e.message,'danger');}
+}
+
+function gerarRelatorioExcel(){
+  var snap=window._finSnap;if(!snap){toast('Dados não disponíveis','danger');return;}
+  toast('Gerando Excel...','success');
+  _loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',function(){
+    _buildExcel(snap);
+  });
+}
+
+function _buildExcel(snap){
+  try{
+    var XLSX=window.XLSX;
+    var wb=XLSX.utils.book_new();
+    var ex=JSON.parse(localStorage.getItem('cerc_profile_extra')||'{}');
+    var empresa=(_sbProfile&&_sbProfile.empresa)||ex.empresa||'CERC';
+
+    // ── ABA RESUMO ─────────────────────────────────────
+    var wsRed=[
+      [empresa+' — Relatório Financeiro'],
+      ['Período: '+snap.periodoLabel],
+      ['Gerado em: '+new Date().toLocaleDateString('pt-BR')],
+      [],
+      ['INDICADOR','VALOR (R$)'],
+      ['Receitas Recebidas',snap.totalRecMes],
+      ['Despesas (Total)',snap.totDespMes],
+      ['Despesas Pagas',snap.totDespMesPago],
+      ['Despesas Pendentes',snap.totDespMesPend],
+      ['Resultado (Recebido − Despesas Pagas)',snap.saldoMes],
+      ['Margem de Lucro (%)',parseFloat(snap.margemMes.toFixed(2))],
+      ['A Receber no Período',snap.recPendMes],
+      [],
+      ['RECEITAS',''],
+      ['Qtd. de demandas no período',snap.receitas.length],
+      [],
+      ['DESPESAS',''],
+      ['Qtd. de despesas no período',snap.despesas.length],
+    ];
+    var wsR=XLSX.utils.aoa_to_sheet(wsRed);
+    wsR['!cols']=[{wch:38},{wch:20}];
+    wsR['!merges']=[{s:{r:0,c:0},e:{r:0,c:1}},{s:{r:1,c:0},e:{r:1,c:1}},{s:{r:2,c:0},e:{r:2,c:1}}];
+    XLSX.utils.book_append_sheet(wb,wsR,'Resumo');
+
+    // ── ABA RECEITAS ───────────────────────────────────
+    var recHead=['Proposta','Serviço','Tipo','Cliente','Status Demanda','Status Pagamento','Valor Bruto (R$)','Desconto (R$)','ISS Estimado (R$)','Custo Operacional (R$)','Valor Líquido (R$)','Valor Pago (R$)','Data Criação','Data Pagamento'];
+    var recBody=snap.receitas.map(function(r){
+      return [r.proposta||'',r.servico||'',r.tipo||'',r.cliente||'',r.status||'',r.statusPagamento||'',r.valorBruto||0,r.desconto||0,r.impostoEstimado||0,r.custoOperacional||0,r.valorLiquido||0,r.valorPago||0,r.dataCriacao||'',r.dataPagamento||''];
+    });
+    var wsRec=XLSX.utils.aoa_to_sheet([recHead].concat(recBody));
+    wsRec['!cols']=[{wch:12},{wch:35},{wch:18},{wch:28},{wch:16},{wch:16},{wch:15},{wch:12},{wch:14},{wch:18},{wch:14},{wch:13},{wch:13},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,wsRec,'Receitas');
+
+    // ── ABA DESPESAS ───────────────────────────────────
+    var despHead=['Descrição','Categoria','Recorrência','Valor (R$)','Status','Data','Data Pagamento','Proposta Vinculada'];
+    var despBody=snap.despesas.map(function(x){
+      return [x.desc||'',x.cat||'',x.rec||'',x.valor||0,x.pago?'Paga':'Pendente',x.data||'',x.dataPagamento||'',x._proposta||''];
+    });
+    // Totalizadores no fim
+    despBody.push([]);
+    despBody.push(['TOTAL DESPESAS','','',snap.totDespMes,'','','','']);
+    despBody.push(['TOTAL PAGAS','','',snap.totDespMesPago,'','','','']);
+    despBody.push(['TOTAL PENDENTES','','',snap.totDespMesPend,'','','','']);
+    var wsDesp=XLSX.utils.aoa_to_sheet([despHead].concat(despBody));
+    wsDesp['!cols']=[{wch:32},{wch:22},{wch:12},{wch:14},{wch:10},{wch:12},{wch:15},{wch:18}];
+    XLSX.utils.book_append_sheet(wb,wsDesp,'Despesas');
+
+    // ── ABA DESPESAS POR CATEGORIA ─────────────────────
+    var byCat2={};snap.despesas.forEach(function(x){if(!byCat2[x.cat])byCat2[x.cat]={total:0,pago:0,pend:0,qtd:0};byCat2[x.cat].total+=x.valor||0;if(x.pago)byCat2[x.cat].pago+=x.valor||0;else byCat2[x.cat].pend+=x.valor||0;byCat2[x.cat].qtd++;});
+    var catHead=['Categoria','Qtd.','Total (R$)','Pagas (R$)','Pendentes (R$)'];
+    var catBody=Object.keys(byCat2).sort().map(function(c){return [c,byCat2[c].qtd,byCat2[c].total,byCat2[c].pago,byCat2[c].pend];});
+    catBody.push(['TOTAL',snap.despesas.length,snap.totDespMes,snap.totDespMesPago,snap.totDespMesPend]);
+    var wsCat=XLSX.utils.aoa_to_sheet([catHead].concat(catBody));
+    wsCat['!cols']=[{wch:28},{wch:6},{wch:14},{wch:14},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,wsCat,'Despesas por Categoria');
+
+    // ── ABA PARCELAS ───────────────────────────────────
+    if(snap.parcelas.length){
+      var parcHead=['Proposta','Serviço','Cliente','Parcela Nº','Total Parcelas','Valor (R$)','Vencimento','Status','Data Pagamento'];
+      var parcBody=snap.parcelas.map(function(p){
+        return [p.proposta||'',p.servico||'',p.cliente||'',p.num,p.total,p.valor||0,p.dataPrev||'',p.status||'',p.dataPagamento||''];
+      });
+      var wsParc=XLSX.utils.aoa_to_sheet([parcHead].concat(parcBody));
+      wsParc['!cols']=[{wch:12},{wch:32},{wch:24},{wch:10},{wch:14},{wch:14},{wch:12},{wch:10},{wch:15}];
+      XLSX.utils.book_append_sheet(wb,wsParc,'Parcelas');
+    }
+
+    var fn='relatorio-'+snap.periodoLabel.replace(/\s/g,'-').toLowerCase()+'.xlsx';
+    XLSX.writeFile(wb,fn);
+    toast('Excel exportado: '+fn+' 📊','success');
+    var mr=document.getElementById('modal-relatorio');if(mr)mr.remove();
+  }catch(e){console.error('[Excel]',e);toast('Erro ao gerar Excel: '+e.message,'danger');}
+}
+// ══════════════════════════════════════════════════════════════════════════════
+
 function renderFinanceiro() {
   var d=state.demandas, e=state.despesas;
   var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -4143,6 +4440,19 @@ function renderFinanceiro() {
   }).reduce(function(a,b){return a+(b.valorBruto||0);},0);
   var inadimplentes=d.filter(function(x){return x.statusPagamento==='Inadimplente';}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
 
+  // ── Snap para relatórios ─────────────────────────────
+  var _snapRec=d.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0&&x.tipo!=='Receita Avulsa'&&(inMes(x.dataCriacao,finMes,finAno)||inMes(x.dataPagamento||'',finMes,finAno)||(x.statusPagamento==='Parcelado'&&(x.parcelas||[]).some(function(p){return inMes(p.dataPrev||'',finMes,finAno)||inMes(p.dataPagamento||'',finMes,finAno);})));}).concat(recAvulsaRecMes);
+  var _snapParc=[];
+  d.filter(function(x){return x.statusPagamento==='Parcelado'&&(x.parcelas||[]).length;}).forEach(function(dem){
+    (dem.parcelas||[]).forEach(function(p,idx){
+      if(inMes(p.dataPrev||'',finMes,finAno)||inMes(p.dataPagamento||'',finMes,finAno)){
+        _snapParc.push({proposta:dem.proposta,servico:dem.servico,cliente:dem.cliente,num:idx+1,total:dem.parcelas.length,valor:p.valor||0,dataPrev:p.dataPrev||'',status:p.status||'Pendente',dataPagamento:p.dataPagamento||''});
+      }
+    });
+  });
+  var _snapDesp=esMes.map(function(x){var dem=x.propostaId?state.demandas.find(function(d){return d.id===x.propostaId;}):null;return Object.assign({},x,{_proposta:dem?dem.proposta:''});});
+  window._finSnap={mes:finMes,ano:finAno,periodoLabel:MESES[finMes-1]+' '+finAno,totalRecMes:totalRecMes,totDespMes:totDespMes,totDespMesPago:totDespMesPago,totDespMesPend:totDespMesPend,saldoMes:saldoMes,margemMes:margemMes,recPendMes:recPendMes,receitas:_snapRec,despesas:_snapDesp,parcelas:_snapParc};
+  // ─────────────────────────────────────────────────────
   var mesOpts=MESES.map(function(m,i){return '<option value="'+(i+1)+'"'+(finMes===i+1?' selected':'')+'>'+m+'</option>';}).join('');
   var anoOpts=anos.map(function(y){return '<option'+(finAno===y?' selected':'')+'>'+y+'</option>';}).join('');
 
@@ -4163,6 +4473,7 @@ function renderFinanceiro() {
       '<select class="fi" style="padding:5px 10px" onchange="finAno=parseInt(this.value);renderFinanceiro()">'+anoOpts+'</select>' +
       '<span style="font-size:11px;color:var(--text3)"><strong>'+MESES[finMes-1]+' '+finAno+'</strong></span>' +
       '<button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="finMes=new Date().getMonth()+1;finAno=new Date().getFullYear();renderFinanceiro()">Mês Atual</button>' +
+      '<button class="btn btn-primary btn-sm" style="margin-left:8px;display:flex;align-items:center;gap:5px" onclick="openModalRelatorio()">📊 Relatório</button>' +
     '</div>' +
     '<div class="fin-kpi-grid">' +
       '<div class="kpi"><div class="kpi-label">Resultado — '+MESES[finMes-1]+'</div><div class="kpi-value" style="color:'+(saldoMes>=0?'var(--s-con)':'var(--red)')+'">'+fR(saldoMes)+'</div><div class="kpi-sub">'+varHtml(varPct(saldoMes,recAnt-despAnt),false)+'</div></div>' +
