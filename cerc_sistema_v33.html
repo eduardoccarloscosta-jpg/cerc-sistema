@@ -4186,7 +4186,8 @@ function renderFinanceiro() {
       '</tbody></table></div>';
     }
     // Arquivadas — card visível no topo
-    var arqRows=d.filter(function(x){return isArquivada(x);}).sort(function(a,b){return new Date(b.dataPagamento||b.dataCriacao)-new Date(a.dataPagamento||a.dataCriacao);}).slice(0,50);
+    // Arquivados do período selecionado (pago no mês/ano escolhido)
+    var arqRows=d.filter(function(x){return isArquivada(x)&&inMes(x.dataPagamento||x.dataCriacao,finMes,finAno);}).sort(function(a,b){return new Date(b.dataPagamento||b.dataCriacao)-new Date(a.dataPagamento||a.dataCriacao);});
     var arqHtml=arqRows.length?'<div class="card" style="margin-bottom:14px;border:1.5px solid var(--s-con);background:var(--s-con-l)">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 0 10px" onclick="var s=document.getElementById(\'arq-rows\');var ic=document.getElementById(\'arq-ic\');s.style.display=s.style.display===\'none\'?\'block\':\'none\';ic.textContent=s.style.display===\'none\'?\'▼\':\'▲\'">'+
         '<div style="font-size:13px;font-weight:700;color:var(--s-con)">📦 Arquivados — Concluídos + Pagos <span style="background:var(--s-con);color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;margin-left:4px">'+arqRows.length+'</span></div>'+
@@ -4290,26 +4291,66 @@ function toggleReceitaRecebido(id,mk,btn){
 }
 function toggleDespPago(id,btn,mk) {
   var i=state.despesas.findIndex(function(e){return e.id===id;}); if(i<0) return;
+  var desp=state.despesas[i];
+  // Verificar estado atual
+  var jaEhPago=mk&&desp.rec&&desp.rec!=='Única'?(desp.pagoMeses&&desp.pagoMeses[mk]):desp.pago;
+  if(!jaEhPago){
+    // Marcar como PAGO → pedir data antes
+    _confirmDespPago(id,btn,mk);
+    return;
+  }
+  // Desmarcar como pago → imediato, sem precisar de data
+  _applyDespPago(id,btn,mk,'');
+}
+function _confirmDespPago(id,btn,mk){
+  // Remove popup anterior se houver
+  var old=document.getElementById('desp-pago-pop'); if(old) old.remove();
+  var hoje=new Date().toISOString().slice(0,10);
+  var rect=btn.getBoundingClientRect();
+  var pop=document.createElement('div');
+  pop.id='desp-pago-pop';
+  pop.style.cssText='position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:14px 16px;width:230px';
+  pop.style.top=Math.min(rect.bottom+6, window.innerHeight-160)+'px';
+  pop.style.left=Math.max(0,Math.min(rect.left, window.innerWidth-240))+'px';
+  pop.innerHTML=
+    '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px">📅 Data do Pagamento</div>'+
+    '<input type="date" id="desp-pago-date" value="'+hoje+'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);margin-bottom:10px"/>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button onclick="document.getElementById(\'desp-pago-pop\').remove()" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:12px">Cancelar</button>'+
+      '<button id="desp-pago-ok" style="flex:1;padding:7px;border:none;border-radius:6px;background:var(--accent);color:#fff;cursor:pointer;font-size:12px;font-weight:700">✅ Confirmar</button>'+
+    '</div>';
+  document.body.appendChild(pop);
+  var okBtn=document.getElementById('desp-pago-ok');
+  okBtn.onclick=function(){
+    var data=document.getElementById('desp-pago-date').value||hoje;
+    pop.remove();
+    _applyDespPago(id,btn,mk,data);
+  };
+  // Fechar ao clicar fora
+  setTimeout(function(){
+    document.addEventListener('click',function h(e){if(!pop.contains(e.target)&&e.target!==btn){pop.remove();document.removeEventListener('click',h);}});
+  },50);
+}
+function _applyDespPago(id,btn,mk,dataPag){
+  var i=state.despesas.findIndex(function(e){return e.id===id;}); if(i<0) return;
   var desp=state.despesas[i]; var isPago;
   if(mk&&desp.rec&&desp.rec!=='Única'){
     if(!desp.pagoMeses) desp.pagoMeses={};
     desp.pagoMeses[mk]=!desp.pagoMeses[mk];
     isPago=desp.pagoMeses[mk];
-    // Registrar data de pagamento do mês se marcando como pago
     if(!desp.pagoMesesDatas) desp.pagoMesesDatas={};
-    if(isPago) desp.pagoMesesDatas[mk]=new Date().toISOString().slice(0,10);
+    if(isPago&&dataPag) desp.pagoMesesDatas[mk]=dataPag;
     else delete desp.pagoMesesDatas[mk];
   } else {
     desp.pago=!desp.pago; isPago=desp.pago;
-    if(isPago&&!desp.dataPagamento) desp.dataPagamento=new Date().toISOString().slice(0,10);
-    else if(!isPago) desp.dataPagamento='';
+    desp.dataPagamento=isPago?dataPag:'';
   }
-  desp.updatedAt=_now(); // CRÍTICO: garante que local vence no mergeAndPush
+  desp.updatedAt=_now();
   btn.textContent=isPago?'✅ Paga':'⏳ Pendente';
   btn.style.background=isPago?'var(--s-con-l)':'var(--s-per-l)';
   btn.style.color=isPago?'var(--s-con)':'var(--text3)';
   btn.style.borderColor=isPago?'#86EFAC':'var(--border)';
-  saveState(); toast(isPago?'Despesa marcada como paga ✅':'Despesa marcada como pendente');
+  saveState(); toast(isPago?'Despesa paga em '+(dataPag||'—')+' ✅':'Despesa marcada como pendente');
   if(_sbUser) sbUpsertDespesa(desp);
   renderFinanceiro();
 }
