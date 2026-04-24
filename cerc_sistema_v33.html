@@ -604,7 +604,7 @@ body::after{
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));flex:1;align-content:stretch}
 .cal-day-hd{text-align:center;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:10px 4px;background:var(--bg);border-right:1px solid var(--border);border-bottom:2px solid var(--border)}
 .cal-day-hd:last-child{border-right:none}
-.cal-day{min-height:130px;height:100%;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 7px;background:var(--surface);cursor:pointer;transition:background .1s;position:relative}
+.cal-day{min-height:130px;height:100%;overflow:hidden;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 7px;background:var(--surface);cursor:pointer;transition:background .1s;position:relative}
 .cal-day:nth-child(7n){border-right:none}
 .cal-day:hover{background:var(--bg)}
 .cal-day.today .cal-day-num{background:var(--accent);color:#fff;border-radius:50%}
@@ -1874,6 +1874,7 @@ function despesaToDb(e) {
     proposta_id: e.propostaId||'', valor: parseFloat(e.valor)||0,
     data: e.data||'', obs: e.obs||'', pago: !!e.pago,
     descricao_app: e.desc||'', observacoes: e.obs||'',
+    pago_meses: e.pagoMeses||{}, data_fim: e.dataFim||'',
     updated_at: e.updatedAt||_now()
   };
 }
@@ -1883,6 +1884,7 @@ function dbToDespesa(r) {
     rec: r.rec||'', propostaId: r.proposta_id||'',
     valor: parseFloat(r.valor)||0, data: r.data||'',
     obs: r.obs||r.observacoes||'', pago: !!r.pago,
+    pagoMeses: r.pago_meses||{}, dataFim: r.data_fim||'',
     updatedAt: r.updated_at||''
   };
 }
@@ -1955,7 +1957,7 @@ function demandaToDb(d) {
     motivo_perda: d.motivoPerda||'', categoria_perda: String(d.categoriaPerda||''),
     plano_acao_perda: d.planoAcaoPerda||'', data_resgate: d.dataResgate||'',
     log: d.log||[], subtarefas: d.subtarefas||[], comentarios: d.comentarios||[],
-    docs_fiscais: d.docsFiscais||{nf:null,boleto:null},
+    docs_fiscais: d.docsFiscais||{nfs:[],boletos:[]},
     link_files_pdf_prop: d.linkFilesPdfProp||null, link_files_art: d.linkFilesArt||null,
     link_files_contrato: d.linkFilesContrato||null, prec_dados: d.precDados||null,
     historico_prec: d.historicoPrec||[],
@@ -1979,7 +1981,12 @@ function dbToDemanda(r) {
     motivoPerda: r.motivo_perda||'', categoriaPerda: r.categoria_perda||'',
     planoAcaoPerda: r.plano_acao_perda||'', dataResgate: r.data_resgate||'',
     log: r.log||[], subtarefas: r.subtarefas||[], comentarios: r.comentarios||[],
-    docsFiscais: r.docs_fiscais||{nf:null,boleto:null},
+    docsFiscais: (function(df){
+      // Migrar formato antigo {nf,boleto} → {nfs,boletos}
+      if(!df) return {nfs:[],boletos:[]};
+      if(df.nfs||df.boletos) return df;
+      return {nfs:df.nf?[df.nf]:[],boletos:df.boleto?[df.boleto]:[]};
+    })(r.docs_fiscais),
     linkFilesPdfProp: r.link_files_pdf_prop||null, linkFilesArt: r.link_files_art||null,
     linkFilesContrato: r.link_files_contrato||null, precDados: r.prec_dados||null,
     historicoPrec: r.historico_prec||[],
@@ -2860,7 +2867,7 @@ function toggleGroup(s) {
 }
 
 // ══ MODAL STATE ═══════════════════════════════════════════
-var editingId=null,modalSubs=[],modalComentarios=[],modalDocsFiscais={nf:null,boleto:null},modalLinkFiles={'pdf-prop':null,art:null,contrato:null};
+var editingId=null,modalSubs=[],modalComentarios=[],modalDocsFiscais={nfs:[],boletos:[]},modalLinkFiles={'pdf-prop':null,art:null,contrato:null};
 var MTABS=['geral','financeiro','progresso','historico','links'];
 
 function switchTab(tab) {
@@ -3167,7 +3174,7 @@ function openModalNew() {
   modalSubs=SUBTAREFAS_PADRAO.map(function(n,i){return {nome:n,concluido:false,obs:'',anexos:[],dataRetorno:i===IDX_FECHAMENTO?addDays(today,15):''};});
   modalComentarios=[];
   renderChat();
-  modalDocsFiscais={nf:null,boleto:null}; modalLinkFiles={'pdf-prop':null,art:null,contrato:null};
+  modalDocsFiscais={nfs:[],boletos:[]}; modalLinkFiles={'pdf-prop':null,art:null,contrato:null};
   document.getElementById('modal-title').textContent='Nova Demanda';
   ['f-servico','f-tipo','f-cliente','f-contato','f-email','f-telefone','f-ultimo-contato','f-fechamento','f-retorno','f-bruto','f-desconto-r','f-desconto-pct','f-imposto','f-custo-op','f-liquido','f-pdf-prop','f-art','f-canva','f-sheets','f-extra-link','f-extra-desc','f-data-pagamento','f-data-pagamento-parcial'].forEach(function(id){setF(id,'');});
   setF('f-status','Negociação'); setF('f-proposta',nextPR()); setF('f-pagamento','Pendente');
@@ -3188,7 +3195,8 @@ function openModalEdit(id) {
   if(!dem) return;
   editingId=id;
   modalSubs=(dem.subtarefas||[]).map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs||'',anexos:(s.anexos||[]).slice(),dataRetorno:s.dataRetorno||''};});
-  modalDocsFiscais={nf:dem.docsFiscais&&dem.docsFiscais.nf?Object.assign({},dem.docsFiscais.nf):null,boleto:dem.docsFiscais&&dem.docsFiscais.boleto?Object.assign({},dem.docsFiscais.boleto):null};
+  var _df=dem.docsFiscais||{nfs:[],boletos:[]};
+  modalDocsFiscais={nfs:(_df.nfs||(_df.nf?[_df.nf]:[])).slice(),boletos:(_df.boletos||(_df.boleto?[_df.boleto]:[])).slice()};
   modalLinkFiles={'pdf-prop':dem.linkFilesPdfProp||null,art:dem.linkFilesArt||null,contrato:dem.linkFilesContrato||null};
   document.getElementById('modal-title').textContent='Editar — '+dem.proposta;
   setF('f-servico',dem.servico);setF('f-tipo',dem.tipo);setF('f-status',dem.status);setF('f-proposta',dem.proposta);
@@ -3438,19 +3446,57 @@ function addAnexoSub(idx) {
 function viewAnexo(si,ai){var a=modalSubs[si].anexos[ai];if(!a) return;openFileViewer(a.dados,a.nome,a.tipo);}
 function removeAnexo(si,ai){modalSubs[si].anexos.splice(ai,1);renderSubList();}
 
-// ══ DOCS FISCAIS ══════════════════════════════════════════
+// ══ DOCS FISCAIS (múltiplos NFs e boletos) ══════════════════
 function renderDocsFiscais() {
   var el=document.getElementById('docs-fiscais-render'); if(!el) return;
   var html='';
-  [{k:'nf',label:'Nota Fiscal',bg:'var(--red-l)',fg:'var(--red)'},{k:'boleto',label:'Boleto',bg:'var(--blue-l)',fg:'var(--blue)'}].forEach(function(t){
-    var doc=modalDocsFiscais[t.k];
-    if(doc) html+='<div class="df-item"><div class="df-ico" style="background:'+t.bg+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="'+t.fg+'" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.label+': '+doc.nome+'</div><div style="font-size:10px;color:var(--text3)">'+fDT(doc.data)+'</div></div><button class="btn btn-ghost btn-sm" onclick="viewDoc(\''+t.k+'\')">Abrir</button><button class="btn btn-danger btn-sm btn-icon" onclick="removeDoc(\''+t.k+'\')">✕</button></div>';
+  var PRAZO_OPTS=['À vista','7 dias','14 dias','21 dias','28 dias','30 dias','45 dias','60 dias','90 dias','120 dias'];
+  // NFs
+  (modalDocsFiscais.nfs||[]).forEach(function(doc,i){
+    html+='<div class="df-item"><div class="df-ico" style="background:var(--red-l)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">NF '+(i+1)+': '+escapeHtml(doc.nome)+'</div><div style="font-size:10px;color:var(--text3)">'+fDT(doc.data)+'</div></div>'+
+      '<button class="btn btn-ghost btn-sm" onclick="viewDocIdx(\'nfs\','+i+')">Abrir</button>'+
+      '<button class="btn btn-danger btn-sm btn-icon" onclick="removeDocIdx(\'nfs\','+i+')">✕</button></div>';
+  });
+  // Boletos
+  (modalDocsFiscais.boletos||[]).forEach(function(doc,i){
+    html+='<div class="df-item"><div class="df-ico" style="background:var(--blue-l)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Boleto '+(i+1)+': '+escapeHtml(doc.nome)+'</div>'+
+      '<div style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:6px">'+fDT(doc.data)+
+        (doc.prazo?'<span style="background:var(--blue-l);color:var(--blue);border-radius:10px;padding:1px 7px;font-weight:600">⏱ '+doc.prazo+'</span>':'')+
+      '</div></div>'+
+      '<select style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:2px 5px;background:var(--surface);color:var(--text2);flex-shrink:0" onchange="modalDocsFiscais.boletos['+i+'].prazo=this.value;renderDocsFiscais()">'+
+        PRAZO_OPTS.map(function(p){return '<option'+(doc.prazo===p?' selected':'')+'>'+p+'</option>';}).join('')+
+      '</select>'+
+      '<button class="btn btn-ghost btn-sm" onclick="viewDocIdx(\'boletos\','+i+')">Abrir</button>'+
+      '<button class="btn btn-danger btn-sm btn-icon" onclick="removeDocIdx(\'boletos\','+i+')">✕</button></div>';
   });
   el.innerHTML=html||'<div style="font-size:12px;color:var(--text3);padding:6px 0">Nenhum documento fiscal.</div>';
 }
-function addDocFiscal(tipo){var input=document.createElement('input');input.type='file';input.accept='image/*,application/pdf';input.onchange=function(e){var file=e.target.files[0];if(!file) return;if(file.size>2*1024*1024){toast('Limite: 2MB por arquivo. Este arquivo tem '+Math.round(file.size/1024)+'KB.','danger');return;}var rd=new FileReader();rd.onload=function(ev){modalDocsFiscais[tipo]={nome:file.name,tipo:file.type,tamanho:file.size,dados:ev.target.result,data:new Date().toISOString()};renderDocsFiscais();toast(tipo==='nf'?'Nota Fiscal anexada!':'Boleto anexado!');};rd.readAsDataURL(file);};input.click();}
-function viewDoc(tipo){var doc=modalDocsFiscais[tipo];if(!doc) return;openFileViewer(doc.dados,doc.nome,doc.tipo);}
-function removeDoc(tipo){modalDocsFiscais[tipo]=null;renderDocsFiscais();}
+function addDocFiscal(tipo){
+  var input=document.createElement('input');input.type='file';input.accept='image/*,application/pdf';
+  input.onchange=function(e){
+    var file=e.target.files[0];if(!file) return;
+    if(file.size>5*1024*1024){toast('Limite: 5MB por arquivo.','danger');return;}
+    var rd=new FileReader();
+    rd.onload=function(ev){
+      var arr=tipo==='nf'?'nfs':'boletos';
+      if(!modalDocsFiscais[arr]) modalDocsFiscais[arr]=[];
+      var doc={nome:file.name,tipo:file.type,tamanho:file.size,dados:ev.target.result,data:new Date().toISOString()};
+      if(tipo==='boleto') doc.prazo='30 dias';
+      modalDocsFiscais[arr].push(doc);
+      renderDocsFiscais();
+      toast(tipo==='nf'?'Nota Fiscal anexada!':'Boleto anexado!');
+    };
+    rd.readAsDataURL(file);
+  };
+  input.click();
+}
+function viewDocIdx(arr,i){var doc=(modalDocsFiscais[arr]||[])[i];if(!doc) return;openFileViewer(doc.dados,doc.nome,doc.tipo);}
+function removeDocIdx(arr,i){if(modalDocsFiscais[arr]) modalDocsFiscais[arr].splice(i,1);renderDocsFiscais();}
+// Compat
+function viewDoc(tipo){viewDocIdx(tipo==='nf'?'nfs':'boletos',0);}
+function removeDoc(tipo){removeDocIdx(tipo==='nf'?'nfs':'boletos',0);}
 
 // ══ HISTÓRICO ════════════════════════════════════════════
 function renderHistorico() {
@@ -3626,7 +3672,7 @@ function saveDemanda() {
   var fStatus=document.getElementById('f-status').value;
   // Se status mudou de Perdido para outro, limpar campos de perda
   var old2=editingId?state.demandas.find(function(x){return x.id===editingId;}):null;
-  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:document.getElementById('f-data-pagamento-parcial').value||'',parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:document.getElementById('f-pdf-prop').value,linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkSheets:document.getElementById('f-sheets').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkFilesPdfProp:modalLinkFiles['pdf-prop'],linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nf:modalDocsFiscais.nf,boleto:modalDocsFiscais.boleto},
+  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:document.getElementById('f-data-pagamento-parcial').value||'',parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:document.getElementById('f-pdf-prop').value,linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkSheets:document.getElementById('f-sheets').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkFilesPdfProp:modalLinkFiles['pdf-prop'],linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nfs:(modalDocsFiscais.nfs||[]).slice(),boletos:(modalDocsFiscais.boletos||[]).slice()},
     motivoPerda:   fStatus==='Perdido'?(old2?old2.motivoPerda||'':(_perdaTempData?_perdaTempData.motivoPerda||'':'')):''   ,
     categoriaPerda:fStatus==='Perdido'?(old2?old2.categoriaPerda||'':(_perdaTempData?_perdaTempData.categoriaPerda||'':'')):''  ,
     planoAcaoPerda:fStatus==='Perdido'?(old2?old2.planoAcaoPerda||'':(_perdaTempData?_perdaTempData.planoAcaoPerda||'':'')):'' ,
@@ -3652,8 +3698,9 @@ function saveDemanda() {
       }
       if(pag==='Parcelado'&&old.statusPagamento!=='Parcelado'){var ntp=parseInt(document.getElementById('f-total-parcelas').value)||0,nvp=parseFloat(document.getElementById('f-valor-parcela').value)||0;addLog(old,'fin','\u{1F4B3} Parcelamento configurado: '+ntp+'x de '+fR(nvp));}
       if(pag==='Parcelado'&&old.statusPagamento==='Parcelado'){var op=(old.parcelas||[]).filter(function(p){return p.status==='Pago';}).length,np=modalParcelas.filter(function(p){return p.status==='Pago';}).length;if(np>op)addLog(old,'fin','\u{1F4B3} Parcelas pagas: '+np+'/'+modalParcelas.length+' ('+fR(vpago)+' recebido)');}
-      if(modalDocsFiscais.nf&&!(old.docsFiscais&&old.docsFiscais.nf)) addLog(old,'anx','Nota Fiscal anexada: '+modalDocsFiscais.nf.nome);
-      if(modalDocsFiscais.boleto&&!(old.docsFiscais&&old.docsFiscais.boleto)) addLog(old,'anx','Boleto anexado: '+modalDocsFiscais.boleto.nome);
+      var _oldNfs=(old.docsFiscais&&old.docsFiscais.nfs)||[],_oldBols=(old.docsFiscais&&old.docsFiscais.boletos)||[];
+      if((modalDocsFiscais.nfs||[]).length>_oldNfs.length) addLog(old,'anx','Nota Fiscal anexada: '+(modalDocsFiscais.nfs[modalDocsFiscais.nfs.length-1]||{}).nome);
+      if((modalDocsFiscais.boletos||[]).length>_oldBols.length) addLog(old,'anx','Boleto anexado: '+(modalDocsFiscais.boletos[modalDocsFiscais.boletos.length-1]||{}).nome);
       // Auto-financeiro: inserir no fluxo quando concluído pela primeira vez
       if(nw.status==='Concluído'&&old.status!=='Concluído') {
         addLog(old,'fin','Serviço Concluído — inserido automaticamente no fluxo financeiro');
@@ -4031,7 +4078,9 @@ function renderFinanceiro() {
     return inMes(x.dataPagamentoParcial||x.dataPagamento||x.dataCriacao,finMes,finAno);
   }).reduce(function(a,b){return a+(b.valorPago||0);},0);
   var recParceladoMes=d.filter(function(x){if(x.statusPagamento!=='Parcelado')return false;return(x.parcelas||[]).some(function(p){return p.status==='Pago'&&p.dataPagamento&&inMes(p.dataPagamento,finMes,finAno);});}).reduce(function(a,b){return a+(b.parcelas||[]).filter(function(p){return p.status==='Pago'&&p.dataPagamento&&inMes(p.dataPagamento,finMes,finAno);}).reduce(function(s,p){return s+p.valor;},0);},0);
-  var recPendMes=dMes.filter(function(x){return ['Pendente','Parcial','Parcelado'].indexOf(x.statusPagamento)>=0&&['Em Execução','Concluído'].indexOf(x.status)>=0;}).reduce(function(a,b){return a+(b.valorBruto||0);},0)
+  // A Receber: para Parcelado usa valor das parcelas pendentes com vencimento no mês; para outros usa valorBruto
+  var recPendMes=dMes.filter(function(x){return ['Pendente','Parcial'].indexOf(x.statusPagamento)>=0&&['Em Execução','Concluído'].indexOf(x.status)>=0;}).reduce(function(a,b){return a+(b.valorBruto||0);},0)
+  +d.filter(function(x){if(x.statusPagamento!=='Parcelado'||['Em Execução','Concluído'].indexOf(x.status)<0) return false;return(x.parcelas||[]).some(function(p){return p.status!=='Pago'&&p.dataPrev&&inMes(p.dataPrev,finMes,finAno);});}).reduce(function(a,b){return a+(b.parcelas||[]).filter(function(p){return p.status!=='Pago'&&p.dataPrev&&inMes(p.dataPrev,finMes,finAno);}).reduce(function(s,p){return s+p.valor;},0);},0)
   +recAvulsaRecMes.filter(function(x){return !x.recebidoMeses||!x.recebidoMeses[mesKey];}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
   var totDespMes=esMes.reduce(function(a,b){return a+(b.valor||0);},0);
   var totDespMesPago=esMes.filter(function(x){return x.pago;}).reduce(function(a,b){return a+(b.valor||0);},0);
@@ -4107,17 +4156,38 @@ function renderFinanceiro() {
     '<div id="fin-content"></div>';
   var fc=document.getElementById('fin-content');
   if(finTab==='receitas') {
-    var rows=dMes.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0&&x.statusPagamento!=='Recorrente';}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);});
-    if(!rows.length) rows=d.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0&&x.statusPagamento!=='Recorrente';}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);}).slice(0,20);
+    // Arquivadas = Concluído + Pago (sai do fluxo ativo)
+    var isArquivada=function(x){return x.status==='Concluído'&&x.statusPagamento==='Pago';};
+    var rows=dMes.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0&&x.statusPagamento!=='Recorrente'&&!isArquivada(x);}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);});
+    if(!rows.length) rows=d.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0&&x.statusPagamento!=='Recorrente'&&!isArquivada(x);}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);}).slice(0,20);
     var recAvulsaHtml='';
     if(recAvulsaRecMes.length){
       recAvulsaHtml='<div class="card" style="margin-bottom:14px;overflow-x:auto"><div style="font-size:12px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px">🔄 Receitas Recorrentes — '+MESES[finMes-1]+' <span style="font-size:11px;font-weight:400;color:var(--text3)">Marque mês a mês conforme receber</span></div><table style="width:100%;border-collapse:collapse"><thead><tr style="font-size:11px;color:var(--text3)"><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Descrição</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Categoria</th><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)">Rec.</th><th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)">Valor/mês</th><th style="padding:6px 8px;border-bottom:1px solid var(--border)">'+MESES[finMes-1]+'</th></tr></thead><tbody>'+
         recAvulsaRecMes.map(function(x){var isRec=x.recebidoMeses&&x.recebidoMeses[mesKey];return '<tr><td style="padding:7px 8px;font-weight:500">'+x.servico+'</td><td style="padding:7px 8px;font-size:11px;color:var(--text2)">'+(x.categoriaReceita||'—')+'</td><td style="padding:7px 8px"><span class="badge b-fec">🔄 '+x.rec+'</span></td><td style="padding:7px 8px;text-align:right;font-family:\'JetBrains Mono\',monospace;color:var(--s-con);font-weight:600">'+fR(x.valorBruto)+'</td><td style="padding:7px 8px"><button class="btn btn-sm" style="font-size:11px;padding:3px 9px;border-radius:20px;border:1.5px solid;cursor:pointer;font-weight:600;background:'+(isRec?'var(--s-con-l)':'var(--s-per-l)')+';color:'+(isRec?'var(--s-con)':'var(--text3)')+';border-color:'+(isRec?'#86EFAC':'var(--border)')+'" onclick="toggleReceitaRecebido(\''+x.id+'\',\''+mesKey+'\',this)">'+(isRec?'✅ Recebido':'⏳ A Receber')+'</button></td><td style="padding:7px 8px"><button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openModalReceita(\''+x.id+'\')">✏️</button></td></tr>';}).join('')+
       '</tbody></table></div>';
     }
-    fc.innerHTML=recAvulsaHtml+'<div class="tw"><table><thead><tr><th>Data</th><th>Proposta</th><th>Serviço</th><th>Status</th><th style="text-align:right">Bruto</th><th style="text-align:right">ISS</th><th style="text-align:right">Custo Op.</th><th style="text-align:right">Líquido</th><th>Pagamento</th><th style="text-align:right">Recebido</th><th></th></tr></thead><tbody>' +
-      rows.map(function(dem){return '<tr><td style="font-size:11px;color:var(--text3)">'+fD(dem.dataCriacao)+'</td><td style="font-size:11px;color:'+(dem.dataPagamento?'var(--s-con)':'var(--text3)')+'">'+(dem.dataPagamento?fD(dem.dataPagamento):'—')+'</td><td><span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--text3)">'+(dem.proposta||'—')+'</span></td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+dem.servico+'</td><td>'+sBadge(dem.status)+'</td><td class="cn" style="color:var(--s-con);font-weight:600">'+fR(dem.valorBruto)+'</td><td class="cn" style="color:var(--red)">'+fR(dem.impostoEstimado)+'</td><td class="cn" style="color:var(--text2)">'+fR(dem.custoOperacional)+'</td><td class="cn" style="color:var(--accent);font-weight:600">'+fR(dem.valorLiquido)+'</td><td><select style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;background:var(--surface);cursor:pointer" onchange="updatePag(\''+dem.id+'\',this.value)">'+['Pendente','Parcial','Parcelado','Pago','Inadimplente'].map(function(p){return '<option'+(dem.statusPagamento===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select></td><td class="cn" style="color:'+(dem.statusPagamento==='Pago'?'var(--s-con)':'var(--amber)')+'">'+(dem.valorPago?fR(dem.valorPago):'—')+'</td><td>'+(dem.tipo==='Receita Avulsa'?'<button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openModalReceita(\''+dem.id+'\')">✏️</button>':'')+'</td></tr>';}).join('')+
-      '</tbody></table></div>';
+    // Arquivadas — seção colapsável
+    var arqRows=d.filter(function(x){return isArquivada(x);}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);}).slice(0,20);
+    var arqHtml=arqRows.length?'<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:8px;cursor:pointer" onclick="var s=document.getElementById(\'arq-rows\');s.style.display=s.style.display===\'none\'?\'block\':\'none\'">📦 Arquivados — Concluídos + Pagos ('+arqRows.length+') <span style="font-size:10px;font-weight:400">▼ ver</span></div><div id="arq-rows" style="display:none"><div class="tw"><table><thead><tr><th>Proposta</th><th>Serviço</th><th>Pago em</th><th style="text-align:right">Valor Bruto</th></tr></thead><tbody>'+arqRows.map(function(dem){return '<tr><td style="font-family:monospace;font-size:10px;color:var(--text3)">'+(dem.proposta||'—')+'</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+dem.servico+'</td><td style="font-size:11px;color:var(--s-con)">'+(dem.dataPagamento?fD(dem.dataPagamento):'—')+'</td><td class="cn" style="color:var(--s-con)">'+fR(dem.valorBruto)+'</td><td><button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openModalEdit(\''+dem.id+'\')">✏️</button></td></tr>';}).join('')+'</tbody></table></div></div></div>':'';
+    fc.innerHTML=recAvulsaHtml+'<div class="tw"><table><thead><tr><th>Criado</th><th>Proposta</th><th>Serviço</th><th>Status</th><th style="text-align:right">Bruto</th><th style="text-align:right">Líquido</th><th>Pagamento</th><th style="text-align:right">Recebido</th><th></th></tr></thead><tbody>' +
+      rows.map(function(dem){
+        var parcelasInfo=''; if(dem.statusPagamento==='Parcelado'&&dem.parcelas&&dem.parcelas.length){var pp=dem.parcelas.filter(function(p){return p.status==='Pago';}).length,pt=dem.parcelas.length;parcelasInfo='<div style="font-size:10px;color:var(--text3)">'+pp+'/'+pt+' parcelas pagas</div>';}
+        return '<tr>'+
+          '<td style="font-size:11px;color:var(--text3)">'+fD(dem.dataCriacao)+'</td>'+
+          '<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--text3)">'+(dem.proposta||'—')+'</span></td>'+
+          '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">'+dem.servico+'</td>'+
+          '<td>'+sBadge(dem.status)+'</td>'+
+          '<td class="cn" style="color:var(--s-con);font-weight:600">'+fR(dem.valorBruto)+'</td>'+
+          '<td class="cn" style="color:var(--accent);font-weight:600">'+fR(dem.valorLiquido)+'</td>'+
+          '<td><select style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;background:var(--surface);cursor:pointer" onchange="updatePag(\''+dem.id+'\',this.value)">'+['Pendente','Parcial','Parcelado','Pago','Inadimplente'].map(function(p){return '<option'+(dem.statusPagamento===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+parcelasInfo+'</td>'+
+          '<td class="cn" style="color:'+(dem.statusPagamento==='Pago'?'var(--s-con)':'var(--amber)')+'">'+(dem.valorPago?fR(dem.valorPago):'—')+'</td>'+
+          '<td style="display:flex;gap:3px">'+
+            (dem.tipo==='Receita Avulsa'?'<button class="btn btn-ghost btn-sm btn-icon" title="Editar receita" onclick="openModalReceita(\''+dem.id+'\')">✏️</button>':'')+
+            '<button class="btn btn-ghost btn-sm btn-icon" title="Abrir demanda" onclick="openModalEdit(\''+dem.id+'\')">📋</button>'+
+          '</td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table></div>'+arqHtml;
   } else if(finTab==='despesas') {
     var despList=esMes.length?esMes:e;
     despList=despList.slice().sort(function(a,b){return new Date(b.data)-new Date(a.data);});
@@ -4314,6 +4384,7 @@ function renderPrecificacao() {
         '<div style="font-size:10px;color:var(--text3);margin-top:3px;padding-bottom:4px">Custo Pessoal: '+fR(res.cp)+' [Líq.] • Lucro: '+fR(res.lucro)+'</div>' +
       '</div>' +
 (_precEditingDemandaId  ? '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;font-size:14px;padding:10px" onclick="usarNaDemanda('+res.bruto.toFixed(2)+','+res.iss.toFixed(2)+','+res.co.toFixed(2)+','+res.liq.toFixed(2)+')">✅ Aplicar na Demanda →</button>'  : '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;font-size:14px;padding:10px" onclick="usarNaDemanda('+res.bruto.toFixed(2)+','+res.iss.toFixed(2)+','+res.co.toFixed(2)+','+res.liq.toFixed(2)+')">Usar em Nova Demanda →</button>') +
+'<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;font-size:12px;padding:7px;color:var(--text3)" onclick="novaPrec()">🗑 Limpar / Nova Precificação</button>' +
     '</div>';
 
   document.getElementById('page-content').innerHTML='<div class="prec-main-grid"><div>'+leftCol+'</div>'+rightCol+'</div>';
@@ -4322,6 +4393,14 @@ function renderPrecificacao() {
 
 var _precEditingDemandaId = null; // id da demanda que está sendo editada na precif
 var _pendingPrecDados = null;    // precDados a salvar ao criar nova demanda via precificação
+
+function novaPrec() {
+  if(!confirm('Limpar a precificação atual e começar do zero?')) return;
+  precState={pessoal:[{prof:'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),complexidade:'',tamanho:'',fixo:5,cliIdx:''};
+  _precEditingDemandaId=null;
+  renderPrecificacao();
+  toast('Precificação limpa. Pode começar do zero!','success');
+}
 
 function editarNaPrec(demId) {
   // Salva a demanda atual antes de sair do modal
@@ -5210,7 +5289,7 @@ function duplicarDemanda(id) {
   nova.dataRetorno='';
   nova.dataFechamento='';
   nova.ultimoContato='';
-  nova.docsFiscais={nf:null,boleto:null};
+  nova.docsFiscais={nfs:[],boletos:[]};
   nova.linkFilesPdfProp=null; nova.linkFilesArt=null; nova.linkFilesContrato=null;
   nova.subtarefas=nova.subtarefas.map(function(s){return Object.assign({},s,{concluido:false,obs:'',anexos:[]});});
   nova.log=[{id:uid(),data:new Date().toISOString(),tipo:'criacao',desc:'Demanda duplicada de '+orig.proposta+' — '+orig.servico}];
@@ -5799,11 +5878,13 @@ function renderCalendario() {
       var evts=evtMap[ds]||[];
       var cEvts=evtCustomMap[ds]||[];
       var gEvts=gcEvtMap[ds]||[];
-      var eh=evts.slice(0,2).map(evtDemHtml).join('')+cEvts.slice(0,2).map(evtCustomHtmlMon).join('')+gEvts.slice(0,2).map(evtGoogleHtml).join('');
       var tot=evts.length+cEvts.length+gEvts.length;
-      // Renderizar TODOS os eventos (sem slice) para ter no popup
-      var ehAll=evts.map(evtDemHtml).join('')+cEvts.map(evtCustomHtmlMon).join('')+gEvts.map(evtGoogleHtml).join('');
-      if(tot>6) eh+='<div class="cal-more-btn" onclick="event.stopPropagation();calShowMore(\''+ds+'\',this)" style="font-size:11px;font-weight:700;color:var(--accent);padding:3px 6px;cursor:pointer;border-radius:4px;background:var(--bg2)">+'+(tot-6)+' mais</div>';
+      // Mostrar no máximo 3 eventos na célula, depois "+N mais"
+      var MAX_CELL=3; var shown=0; var eh='';
+      for(var _i=0;_i<evts.length&&shown<MAX_CELL;_i++){eh+=evtDemHtml(evts[_i]);shown++;}
+      for(var _i=0;_i<cEvts.length&&shown<MAX_CELL;_i++){eh+=evtCustomHtmlMon(cEvts[_i]);shown++;}
+      for(var _i=0;_i<gEvts.length&&shown<MAX_CELL;_i++){eh+=evtGoogleHtml(gEvts[_i]);shown++;}
+      if(tot>MAX_CELL) eh+='<div class="cal-more-btn" onclick="event.stopPropagation();calShowMore(\''+ds+'\',this)" style="font-size:11px;font-weight:700;color:var(--accent);padding:2px 6px;cursor:pointer;border-radius:4px;background:var(--accent-l);display:inline-block;margin-top:2px">+'+(tot-shown)+' mais</div>';
       cells+='<div class="cal-day'+(isToday?' today':'')+'" data-day-evts="" onclick="if(event.target.closest(\'.cal-event\')||event.target.closest(\'.cal-more-btn\')) return; openModalEvento(null,\''+ds+'\')">' +
         '<div class="cal-day-num">'+day+'</div>'+eh+'</div>';
     }
