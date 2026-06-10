@@ -4071,7 +4071,7 @@ function openModalEdit(id) {
   modalMarcos=(dem.marcos||[]).map(function(m){return JSON.parse(JSON.stringify(m));});
   renderChat();
   var _ptb=document.getElementById('modal-tab-projeto-btn');
-  if(_ptb) _ptb.style.display=(dem.status==='Fechado'||dem.status==='Em Andamento')?'flex':'none';
+  if(_ptb) _ptb.style.display=(dem.status==='Fechado'||dem.status==='Em Execução'||dem.status==='Em Revisão')?'flex':'none';
   switchTab('geral'); document.getElementById('modal-demanda').style.display='flex';
 }
 
@@ -11582,7 +11582,7 @@ function printNR12Laudo(maqId) {
 function renderProjetos() {
   var pc = document.getElementById('page-content');
   if(!pc) return;
-  var projetos = state.demandas.filter(function(d){ return d.status === 'Fechado' || d.status === 'Em Andamento'; });
+  var projetos = state.demandas.filter(function(d){ return d.status === 'Fechado' || d.status === 'Em Execução' || d.status === 'Em Revisão'; });
   var today = new Date(); today.setHours(0,0,0,0);
 
   // KPIs
