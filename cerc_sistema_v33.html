@@ -1125,18 +1125,18 @@ body::after{
 .proj-card-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--text3)}
 .proj-conflict-badge{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px}
 /* Gantt */
-.gantt-wrap{overflow-x:auto;margin-bottom:24px}
-.gantt-header{display:flex;border-bottom:2px solid var(--accent);padding-bottom:0;margin-bottom:0}
-.gantt-label-col{width:220px;flex-shrink:0;font-size:11px;font-weight:700;color:var(--text3);padding:8px 4px}
-.gantt-months{display:flex;flex:1}
-.gantt-month{text-align:center;font-size:11px;font-weight:700;color:var(--text2);border-left:2px solid var(--border);padding:8px 4px;background:var(--surface2)}
-.gantt-month:first-child{border-left:2px solid var(--border)}
-.gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--border);padding:4px 0;min-height:36px}
+.gantt-wrap{overflow-x:auto;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.gantt-inner{min-width:max-content}
+.gantt-header{display:flex;border-bottom:2px solid var(--accent);position:sticky;top:0;z-index:10;background:var(--surface2)}
+.gantt-label-col{width:220px;flex-shrink:0;font-size:11px;font-weight:700;color:var(--text3);padding:10px 8px;border-right:2px solid var(--accent)}
+.gantt-months{display:flex}
+.gantt-month{width:140px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:var(--text2);border-right:1px solid var(--border);padding:10px 4px;background:var(--surface2)}
+.gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--border);min-height:40px}
 .gantt-row:hover{background:var(--surface2)}
-.gantt-row-label{width:220px;flex-shrink:0;font-size:11px;color:var(--text);padding-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;padding-right:8px}
+.gantt-row-label{width:220px;flex-shrink:0;font-size:11px;color:var(--text);padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border-right:2px solid var(--border)}
 .gantt-row-label:hover{color:var(--accent)}
-.gantt-row-label span{font-size:9px;color:var(--text3);display:block}
-.gantt-timeline{flex:1;position:relative;height:28px;border-left:2px solid var(--border)}
+.gantt-row-label span{font-size:9px;color:var(--text3);display:block;margin-top:1px}
+.gantt-timeline{position:relative;height:40px;display:flex;align-items:center}
 .gantt-bar{position:absolute;height:18px;top:3px;border-radius:4px;opacity:.9;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .gantt-bar:hover{opacity:1}
 .gantt-bar.conflict{outline:2px solid #EF4444;outline-offset:1px}
@@ -11683,95 +11683,139 @@ function _projKpi(label, val, sub, color) {
     + '</div>';
 }
 
+var GANTT_COL_W = 140; // px por mês
+
 function _renderGantt(projetos, prazoMap) {
   if(!projetos.length) return '';
-  // Determinar range de datas
+
+  // Range de datas
   var allDates = [];
   projetos.forEach(function(d){
     if(d.dataCriacao) allDates.push(new Date(d.dataCriacao));
     (d.marcos||[]).forEach(function(m){ if(m.dataPrevista) allDates.push(new Date(m.dataPrevista)); });
   });
-  if(!allDates.length) return '';
+  // fallback: usar mês atual ±2
+  if(!allDates.length){
+    var now = new Date();
+    allDates.push(new Date(now.getFullYear(), now.getMonth()-1, 1));
+    allDates.push(new Date(now.getFullYear(), now.getMonth()+2, 1));
+  }
   var minDate = new Date(Math.min.apply(null, allDates));
   var maxDate = new Date(Math.max.apply(null, allDates));
-  // Extend range a bit
-  minDate.setDate(1);
-  maxDate.setMonth(maxDate.getMonth()+1); maxDate.setDate(1);
-  var totalDays = Math.max(1, Math.round((maxDate-minDate)/(1000*60*60*24)));
+  minDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth()+1, 1);
 
-  // Build months header
+  // Meses
   var months = [];
   var cur = new Date(minDate);
-  while(cur < maxDate) {
-    months.push({label: cur.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}), date: new Date(cur)});
-    cur.setMonth(cur.getMonth()+1);
+  while(cur < maxDate){
+    months.push({ label: cur.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}), date: new Date(cur) });
+    cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+  }
+  if(!months.length) return '';
+
+  var totalW = months.length * GANTT_COL_W;
+  var totalMs = maxDate - minDate;
+
+  function dateToPx(dt) {
+    return Math.round((dt - minDate) / totalMs * totalW);
   }
 
-  var monthPct = months.map(function(m,i){
-    var start = i===0 ? minDate : months[i].date;
-    var end = i===months.length-1 ? maxDate : months[i+1].date;
-    return Math.round((end-start)/(maxDate-minDate)*100);
-  });
-
-  var html = '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px">📊 Mapa de Interferências (Gantt)</div>';
-  html += '<div class="gantt-wrap"><div style="min-width:600px">';
-  // Header
-  html += '<div class="gantt-header"><div class="gantt-label-col">Projeto</div><div class="gantt-months">';
-  months.forEach(function(m,i){
-    html += '<div class="gantt-month" style="flex:'+monthPct[i]+';min-width:0">'+m.label+'</div>';
-  });
-  html += '</div></div>';
-
-  // Detect conflict dates (positions)
-  var conflictLines = [];
-  Object.keys(prazoMap).forEach(function(dt){
-    if(prazoMap[dt].length > 1){
-      var d = new Date(dt);
-      var pct = Math.round((d-minDate)/(maxDate-minDate)*100);
-      if(pct>=0&&pct<=100) conflictLines.push(pct);
+  // Conflict lines px
+  var conflictPxs = [];
+  Object.keys(prazoMap).forEach(function(dtStr){
+    if(prazoMap[dtStr].length > 1){
+      var px = dateToPx(new Date(dtStr));
+      if(px >= 0 && px <= totalW) conflictPxs.push(px);
     }
   });
 
-  // Rows
+  var today = new Date(); today.setHours(0,0,0,0);
+  var todayPx = dateToPx(today);
+
+  var html = '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px">📊 Mapa de Interferências (Gantt)</div>';
+  html += '<div class="gantt-wrap"><div class="gantt-inner">';
+
+  // Cabeçalho
+  html += '<div class="gantt-header">'
+    + '<div class="gantt-label-col">Projeto</div>'
+    + '<div class="gantt-months">';
+  months.forEach(function(m){
+    html += '<div class="gantt-month">'+m.label+'</div>';
+  });
+  html += '</div></div>';
+
+  // Linhas
   projetos.forEach(function(d){
     var marcos = d.marcos||[];
     var inicio = d.dataCriacao ? new Date(d.dataCriacao) : minDate;
-    var fim = null;
-    marcos.forEach(function(m){ if(m.dataPrevista){var dt=new Date(m.dataPrevista);if(!fim||dt>fim)fim=dt;} });
-    if(!fim) fim = new Date(inicio); fim.setDate(fim.getDate()+7);
-    if(inicio < minDate) inicio = new Date(minDate);
-    if(fim > maxDate) fim = new Date(maxDate);
-    var left = Math.max(0, Math.round((inicio-minDate)/(maxDate-minDate)*100));
-    var width = Math.max(1, Math.round((fim-inicio)/(maxDate-minDate)*100));
-    var hasConflito = prazoMap && Object.keys(prazoMap).some(function(dt){ return prazoMap[dt].length>1 && prazoMap[dt].indexOf(d.id)>=0; });
-    var barColor = hasConflito ? '#EF4444' : '#3B82F6';
+    var fim = new Date(inicio);
+    marcos.forEach(function(m){ if(m.dataPrevista){ var dt=new Date(m.dataPrevista); if(dt>fim) fim=dt; } });
+    if(fim <= inicio) fim = new Date(inicio.getTime() + 7*24*60*60*1000);
+
+    // Clamp to range
+    var startCl = Math.max(dateToPx(inicio), 0);
+    var endCl   = Math.min(dateToPx(fim), totalW);
+    var barW    = Math.max(endCl - startCl, 12);
+
+    var hasConflito = Object.keys(prazoMap).some(function(dt){ return prazoMap[dt].length>1 && prazoMap[dt].indexOf(d.id)>=0; });
+    var barColor = hasConflito ? '#EF4444' : (d.status==='Fechado'?'#6B7280':'#3B82F6');
 
     html += '<div class="gantt-row">'
-      + '<div class="gantt-row-label" onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)" title="'+_esc(d.servico)+'">'+_esc((d.proposta||'')+' ')+'<span>'+_esc(d.cliente||'')+'</span></div>'
-      + '<div class="gantt-timeline">';
-    // Month separator lines
-    months.forEach(function(m,i){
-      if(i===0) return;
-      var mPct = Math.round((m.date-minDate)/(maxDate-minDate)*100);
-      html += '<div style="position:absolute;left:'+mPct+'%;top:0;height:100%;border-left:1px dashed var(--border);pointer-events:none;z-index:0"></div>';
+      + '<div class="gantt-row-label" onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)" title="'+_esc(d.servico)+'">'
+        + '<strong>'+_esc(d.proposta||'')+'</strong>'
+        + '<span>'+_esc(d.cliente||'')+'</span>'
+      + '</div>'
+      + '<div class="gantt-timeline" style="width:'+totalW+'px">';
+
+    // Faixas de mês alternadas (zebra)
+    months.forEach(function(m, mi){
+      var x = mi * GANTT_COL_W;
+      if(mi % 2 === 1) html += '<div style="position:absolute;left:'+x+'px;top:0;width:'+GANTT_COL_W+'px;height:100%;background:rgba(0,0,0,.025);pointer-events:none"></div>';
     });
-    // Conflict lines
-    conflictLines.forEach(function(pct){
-      html += '<div class="gantt-conflict-line" style="left:'+pct+'%"></div>';
+
+    // Linhas verticais dos meses
+    months.forEach(function(m, mi){
+      var x = mi * GANTT_COL_W;
+      html += '<div style="position:absolute;left:'+x+'px;top:0;height:100%;border-left:1px solid var(--border);pointer-events:none"></div>';
     });
-    // Bar
-    html += '<div class="gantt-bar'+(hasConflito?' conflict':'')+'" style="left:'+left+'%;width:'+Math.max(width,2)+'%;background:'+barColor+'" title="'+_esc(d.servico)+'">'+(d.proposta||'')+'</div>';
-    // Marco dots
+
+    // Linha "hoje"
+    if(todayPx >= 0 && todayPx <= totalW){
+      html += '<div style="position:absolute;left:'+todayPx+'px;top:0;height:100%;border-left:2px solid #F59E0B;pointer-events:none;z-index:2" title="Hoje"></div>';
+    }
+
+    // Linhas de conflito
+    conflictPxs.forEach(function(px){
+      html += '<div class="gantt-conflict-line" style="left:'+px+'px"></div>';
+    });
+
+    // Barra principal
+    html += '<div class="gantt-bar'+(hasConflito?' conflict':'')+'" '
+      + 'style="left:'+startCl+'px;width:'+barW+'px;background:'+barColor+'" '
+      + 'title="'+_esc(d.servico)+' ('+_esc(d.proposta||'')+')">'+_esc(d.proposta||'')+'</div>';
+
+    // Marcadores de marco
     marcos.forEach(function(m){
       if(!m.dataPrevista) return;
-      var mdt = new Date(m.dataPrevista);
-      if(mdt<minDate||mdt>maxDate) return;
-      var mPct = Math.round((mdt-minDate)/(maxDate-minDate)*100);
-      var mColor = m.status==='Realizado'?'#10B981':m.status==='Não Realizado'?'#EF4444':'#F59E0B';
-      html += '<div style="position:absolute;left:'+mPct+'%;top:50%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:'+mColor+';border:2px solid #fff;z-index:2" title="'+_esc(m.nome)+' — '+fD(m.dataPrevista)+'"></div>';
+      var px = dateToPx(new Date(m.dataPrevista));
+      if(px < 0 || px > totalW) return;
+      var mc = m.status==='Realizado'?'#10B981': m.status==='Não Realizado'?'#EF4444':'#F59E0B';
+      html += '<div style="position:absolute;left:'+px+'px;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:'+mc+';border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:3;cursor:pointer" title="'+_esc(m.nome)+' — '+fD(m.dataPrevista)+'"></div>';
     });
+
     html += '</div></div>';
   });
+
+  // Legenda
+  html += '<div style="display:flex;gap:16px;padding:10px 8px 4px;font-size:10px;color:var(--text3);border-top:1px solid var(--border)">'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:#3B82F6;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Em Execução</span>'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:#6B7280;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Fechado</span>'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:#EF4444;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Conflito</span>'
+    + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10B981;border:2px solid #fff;box-shadow:0 0 0 1px #10B981;margin-right:4px;vertical-align:middle"></span>Marco Realizado</span>'
+    + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F59E0B;border:2px solid #fff;box-shadow:0 0 0 1px #F59E0B;margin-right:4px;vertical-align:middle"></span>Marco Pendente</span>'
+    + '<span><span style="display:inline-block;width:2px;height:12px;background:#F59E0B;margin-right:4px;vertical-align:middle;display:inline-block"></span>Hoje</span>'
+    + '</div>';
 
   html += '</div></div>';
   return html;
