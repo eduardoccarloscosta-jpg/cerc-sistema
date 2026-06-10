@@ -1126,16 +1126,17 @@ body::after{
 .proj-conflict-badge{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px}
 /* Gantt */
 .gantt-wrap{overflow-x:auto;margin-bottom:24px}
-.gantt-header{display:flex;border-bottom:2px solid var(--border);padding-bottom:6px;margin-bottom:4px}
-.gantt-label-col{width:220px;flex-shrink:0;font-size:11px;font-weight:700;color:var(--text3);padding-left:4px}
+.gantt-header{display:flex;border-bottom:2px solid var(--accent);padding-bottom:0;margin-bottom:0}
+.gantt-label-col{width:220px;flex-shrink:0;font-size:11px;font-weight:700;color:var(--text3);padding:8px 4px}
 .gantt-months{display:flex;flex:1}
-.gantt-month{text-align:center;font-size:10px;font-weight:600;color:var(--text3);border-left:1px solid var(--border)}
-.gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--border);padding:5px 0;min-height:32px}
+.gantt-month{text-align:center;font-size:11px;font-weight:700;color:var(--text2);border-left:2px solid var(--border);padding:8px 4px;background:var(--surface2)}
+.gantt-month:first-child{border-left:2px solid var(--border)}
+.gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--border);padding:4px 0;min-height:36px}
 .gantt-row:hover{background:var(--surface2)}
-.gantt-row-label{width:220px;flex-shrink:0;font-size:11px;color:var(--text);padding-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.gantt-row-label{width:220px;flex-shrink:0;font-size:11px;color:var(--text);padding-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;padding-right:8px}
 .gantt-row-label:hover{color:var(--accent)}
 .gantt-row-label span{font-size:9px;color:var(--text3);display:block}
-.gantt-timeline{flex:1;position:relative;height:24px}
+.gantt-timeline{flex:1;position:relative;height:28px;border-left:2px solid var(--border)}
 .gantt-bar{position:absolute;height:18px;top:3px;border-radius:4px;opacity:.9;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .gantt-bar:hover{opacity:1}
 .gantt-bar.conflict{outline:2px solid #EF4444;outline-offset:1px}
@@ -4070,7 +4071,7 @@ function openModalEdit(id) {
   modalMarcos=(dem.marcos||[]).map(function(m){return JSON.parse(JSON.stringify(m));});
   renderChat();
   var _ptb=document.getElementById('modal-tab-projeto-btn');
-  if(_ptb) _ptb.style.display=(dem.status==='Fechado')?'flex':'none';
+  if(_ptb) _ptb.style.display=(dem.status==='Fechado'||dem.status==='Em Andamento')?'flex':'none';
   switchTab('geral'); document.getElementById('modal-demanda').style.display='flex';
 }
 
@@ -11581,7 +11582,7 @@ function printNR12Laudo(maqId) {
 function renderProjetos() {
   var pc = document.getElementById('page-content');
   if(!pc) return;
-  var projetos = state.demandas.filter(function(d){ return d.status === 'Fechado'; });
+  var projetos = state.demandas.filter(function(d){ return d.status === 'Fechado' || d.status === 'Em Andamento'; });
   var today = new Date(); today.setHours(0,0,0,0);
 
   // KPIs
@@ -11748,12 +11749,18 @@ function _renderGantt(projetos, prazoMap) {
     html += '<div class="gantt-row">'
       + '<div class="gantt-row-label" onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)" title="'+_esc(d.servico)+'">'+_esc((d.proposta||'')+' ')+'<span>'+_esc(d.cliente||'')+'</span></div>'
       + '<div class="gantt-timeline">';
+    // Month separator lines
+    months.forEach(function(m,i){
+      if(i===0) return;
+      var mPct = Math.round((m.date-minDate)/(maxDate-minDate)*100);
+      html += '<div style="position:absolute;left:'+mPct+'%;top:0;height:100%;border-left:1px dashed var(--border);pointer-events:none;z-index:0"></div>';
+    });
     // Conflict lines
     conflictLines.forEach(function(pct){
       html += '<div class="gantt-conflict-line" style="left:'+pct+'%"></div>';
     });
     // Bar
-    html += '<div class="gantt-bar'+(hasConflito?' conflict':'')+'" style="left:'+left+'%;width:'+width+'%;background:'+barColor+'" title="'+_esc(d.servico)+'">'+(d.proposta||'')+'</div>';
+    html += '<div class="gantt-bar'+(hasConflito?' conflict':'')+'" style="left:'+left+'%;width:'+Math.max(width,2)+'%;background:'+barColor+'" title="'+_esc(d.servico)+'">'+(d.proposta||'')+'</div>';
     // Marco dots
     marcos.forEach(function(m){
       if(!m.dataPrevista) return;
