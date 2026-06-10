@@ -1125,18 +1125,18 @@ body::after{
 .proj-card-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--text3)}
 .proj-conflict-badge{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px}
 /* Gantt */
-.gantt-wrap{overflow-x:auto;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
-.gantt-inner{min-width:max-content}
-.gantt-header{display:flex;border-bottom:2px solid var(--accent);position:sticky;top:0;z-index:10;background:var(--surface2)}
-.gantt-label-col{width:220px;flex-shrink:0;font-size:11px;font-weight:700;color:var(--text3);padding:10px 8px;border-right:2px solid var(--accent)}
-.gantt-months{display:flex}
-.gantt-month{width:140px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:var(--text2);border-right:1px solid var(--border);padding:10px 4px;background:var(--surface2)}
-.gantt-row{display:flex;align-items:center;border-bottom:1px solid var(--border);min-height:40px}
-.gantt-row:hover{background:var(--surface2)}
-.gantt-row-label{width:220px;flex-shrink:0;font-size:11px;color:var(--text);padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border-right:2px solid var(--border)}
+.gantt-wrap{overflow-x:auto;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;background:var(--surface);-webkit-overflow-scrolling:touch}
+.gantt-inner{display:inline-block;min-width:100%}
+.gantt-header{display:flex;border-bottom:2px solid var(--accent);background:var(--surface2)}
+.gantt-label-col{width:220px;min-width:220px;flex-shrink:0;font-size:11px;font-weight:700;color:var(--text3);padding:10px 8px;border-right:2px solid var(--accent)}
+.gantt-months{display:flex;flex:1}
+.gantt-month{min-width:140px;width:140px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:var(--text2);border-right:1px solid var(--border);padding:10px 4px;background:var(--surface2)}
+.gantt-row{display:flex;align-items:stretch;border-bottom:1px solid var(--border);min-height:40px}
+.gantt-row:hover .gantt-timeline{background:rgba(0,0,0,.02)}
+.gantt-row-label{width:220px;min-width:220px;flex-shrink:0;font-size:11px;color:var(--text);padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border-right:2px solid var(--border);display:flex;flex-direction:column;justify-content:center}
 .gantt-row-label:hover{color:var(--accent)}
-.gantt-row-label span{font-size:9px;color:var(--text3);display:block;margin-top:1px}
-.gantt-timeline{position:relative;height:40px;display:flex;align-items:center}
+.gantt-row-label span{font-size:9px;color:var(--text3);display:block;margin-top:2px}
+.gantt-timeline{position:relative;height:40px;flex:1}
 .gantt-bar{position:absolute;height:18px;top:3px;border-radius:4px;opacity:.9;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .gantt-bar:hover{opacity:1}
 .gantt-bar.conflict{outline:2px solid #EF4444;outline-offset:1px}
@@ -11688,24 +11688,24 @@ var GANTT_COL_W = 140; // px por mês
 function _renderGantt(projetos, prazoMap) {
   if(!projetos.length) return '';
 
-  // Range de datas
+  // --- Range de datas ---
   var allDates = [];
   projetos.forEach(function(d){
     if(d.dataCriacao) allDates.push(new Date(d.dataCriacao));
     (d.marcos||[]).forEach(function(m){ if(m.dataPrevista) allDates.push(new Date(m.dataPrevista)); });
   });
-  // fallback: usar mês atual ±2
+  var now = new Date();
   if(!allDates.length){
-    var now = new Date();
     allDates.push(new Date(now.getFullYear(), now.getMonth()-1, 1));
     allDates.push(new Date(now.getFullYear(), now.getMonth()+2, 1));
   }
   var minDate = new Date(Math.min.apply(null, allDates));
   var maxDate = new Date(Math.max.apply(null, allDates));
+  // arredondar para início/fim do mês e garantir mês atual visível
   minDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-  maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth()+1, 1);
+  maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth()+2, 1);
 
-  // Meses
+  // --- Construir lista de meses ---
   var months = [];
   var cur = new Date(minDate);
   while(cur < maxDate){
@@ -11714,107 +11714,118 @@ function _renderGantt(projetos, prazoMap) {
   }
   if(!months.length) return '';
 
-  var totalW = months.length * GANTT_COL_W;
+  var totalW  = months.length * GANTT_COL_W;
   var totalMs = maxDate - minDate;
+  var totalRowW = 220 + totalW; // label + timeline
 
-  function dateToPx(dt) {
-    return Math.round((dt - minDate) / totalMs * totalW);
+  function dateToPx(dt){
+    var clamped = Math.max(minDate, Math.min(maxDate, dt));
+    return Math.round((clamped - minDate) / totalMs * totalW);
   }
 
-  // Conflict lines px
-  var conflictPxs = [];
-  Object.keys(prazoMap).forEach(function(dtStr){
-    if(prazoMap[dtStr].length > 1){
-      var px = dateToPx(new Date(dtStr));
-      if(px >= 0 && px <= totalW) conflictPxs.push(px);
-    }
-  });
-
+  // Linha de hoje
   var today = new Date(); today.setHours(0,0,0,0);
   var todayPx = dateToPx(today);
 
-  var html = '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px">📊 Mapa de Interferências (Gantt)</div>';
-  html += '<div class="gantt-wrap"><div class="gantt-inner">';
+  // Linhas de conflito
+  var conflictPxs = [];
+  Object.keys(prazoMap||{}).forEach(function(dtStr){
+    if(prazoMap[dtStr].length > 1){
+      var px = dateToPx(new Date(dtStr));
+      conflictPxs.push(px);
+    }
+  });
 
-  // Cabeçalho
-  html += '<div class="gantt-header">'
+  // --- HTML ---
+  var html = '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px">📊 Mapa de Interferências (Gantt)</div>';
+  html += '<div class="gantt-wrap">';
+  html += '<div class="gantt-inner" style="width:'+totalRowW+'px">';
+
+  // Cabeçalho fixo
+  html += '<div class="gantt-header" style="width:'+totalRowW+'px">'
     + '<div class="gantt-label-col">Projeto</div>'
-    + '<div class="gantt-months">';
-  months.forEach(function(m){
-    html += '<div class="gantt-month">'+m.label+'</div>';
+    + '<div class="gantt-months" style="width:'+totalW+'px">';
+  months.forEach(function(m, mi){
+    var bg = mi%2===0 ? 'var(--surface2)' : 'var(--surface)';
+    html += '<div class="gantt-month" style="background:'+bg+'">'+m.label+'</div>';
   });
   html += '</div></div>';
 
-  // Linhas
+  // Linhas de projetos
   projetos.forEach(function(d){
     var marcos = d.marcos||[];
-    var inicio = d.dataCriacao ? new Date(d.dataCriacao) : minDate;
-    var fim = new Date(inicio);
-    marcos.forEach(function(m){ if(m.dataPrevista){ var dt=new Date(m.dataPrevista); if(dt>fim) fim=dt; } });
-    if(fim <= inicio) fim = new Date(inicio.getTime() + 7*24*60*60*1000);
+    var inicio = d.dataCriacao ? new Date(d.dataCriacao) : new Date(minDate);
+    var fim    = new Date(inicio);
+    marcos.forEach(function(m){
+      if(m.dataPrevista){ var dt=new Date(m.dataPrevista); if(dt>fim) fim=dt; }
+    });
+    // Se sem marcos, barra de 30 dias a partir da criação
+    if(!marcos.length || fim.getTime()===inicio.getTime()){
+      fim = new Date(inicio.getTime() + 30*24*60*60*1000);
+    }
 
-    // Clamp to range
-    var startCl = Math.max(dateToPx(inicio), 0);
-    var endCl   = Math.min(dateToPx(fim), totalW);
-    var barW    = Math.max(endCl - startCl, 12);
+    var startPx = dateToPx(inicio);
+    var endPx   = dateToPx(fim);
+    var barW    = Math.max(endPx - startPx, 28);
 
-    var hasConflito = Object.keys(prazoMap).some(function(dt){ return prazoMap[dt].length>1 && prazoMap[dt].indexOf(d.id)>=0; });
-    var barColor = hasConflito ? '#EF4444' : (d.status==='Fechado'?'#6B7280':'#3B82F6');
+    var hasConflito = Object.keys(prazoMap||{}).some(function(dt){ return prazoMap[dt].length>1 && prazoMap[dt].indexOf(d.id)>=0; });
+    var barColor = hasConflito ? '#EF4444' : (d.status==='Fechado'?'#64748B':'#3B82F6');
 
-    html += '<div class="gantt-row">'
+    html += '<div class="gantt-row" style="width:'+totalRowW+'px">'
+      // Label
       + '<div class="gantt-row-label" onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)" title="'+_esc(d.servico)+'">'
-        + '<strong>'+_esc(d.proposta||'')+'</strong>'
-        + '<span>'+_esc(d.cliente||'')+'</span>'
+        + '<strong style="font-size:11px">'+_esc(d.proposta||'')+'</strong>'
+        + '<span>'+_esc((d.cliente||'').substring(0,28)+(d.cliente&&d.cliente.length>28?'…':''))+'</span>'
       + '</div>'
+      // Timeline
       + '<div class="gantt-timeline" style="width:'+totalW+'px">';
 
-    // Faixas de mês alternadas (zebra)
+    // Zebra de meses
     months.forEach(function(m, mi){
       var x = mi * GANTT_COL_W;
-      if(mi % 2 === 1) html += '<div style="position:absolute;left:'+x+'px;top:0;width:'+GANTT_COL_W+'px;height:100%;background:rgba(0,0,0,.025);pointer-events:none"></div>';
+      if(mi%2===1) html += '<div style="position:absolute;left:'+x+'px;top:0;width:'+GANTT_COL_W+'px;height:100%;background:rgba(0,0,0,.018);pointer-events:none"></div>';
     });
 
     // Linhas verticais dos meses
     months.forEach(function(m, mi){
       var x = mi * GANTT_COL_W;
-      html += '<div style="position:absolute;left:'+x+'px;top:0;height:100%;border-left:1px solid var(--border);pointer-events:none"></div>';
+      html += '<div style="position:absolute;left:'+x+'px;top:0;height:100%;width:1px;background:var(--border);pointer-events:none"></div>';
     });
 
-    // Linha "hoje"
+    // Linha hoje
     if(todayPx >= 0 && todayPx <= totalW){
-      html += '<div style="position:absolute;left:'+todayPx+'px;top:0;height:100%;border-left:2px solid #F59E0B;pointer-events:none;z-index:2" title="Hoje"></div>';
+      html += '<div style="position:absolute;left:'+todayPx+'px;top:0;height:100%;width:2px;background:#F59E0B;opacity:.8;pointer-events:none;z-index:3"></div>';
     }
 
-    // Linhas de conflito
+    // Linhas conflito
     conflictPxs.forEach(function(px){
-      html += '<div class="gantt-conflict-line" style="left:'+px+'px"></div>';
+      html += '<div style="position:absolute;left:'+px+'px;top:0;height:100%;width:2px;background:#EF4444;opacity:.5;pointer-events:none;z-index:3"></div>';
     });
 
     // Barra principal
     html += '<div class="gantt-bar'+(hasConflito?' conflict':'')+'" '
-      + 'style="left:'+startCl+'px;width:'+barW+'px;background:'+barColor+'" '
-      + 'title="'+_esc(d.servico)+' ('+_esc(d.proposta||'')+')">'+_esc(d.proposta||'')+'</div>';
+      + 'style="position:absolute;left:'+startPx+'px;width:'+barW+'px;top:50%;transform:translateY(-50%);height:20px;border-radius:4px;background:'+barColor+';display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;z-index:4;cursor:pointer" '
+      + 'title="'+_esc(d.servico)+'">'+_esc(d.proposta||'')+'</div>';
 
     // Marcadores de marco
     marcos.forEach(function(m){
       if(!m.dataPrevista) return;
       var px = dateToPx(new Date(m.dataPrevista));
-      if(px < 0 || px > totalW) return;
       var mc = m.status==='Realizado'?'#10B981': m.status==='Não Realizado'?'#EF4444':'#F59E0B';
-      html += '<div style="position:absolute;left:'+px+'px;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:'+mc+';border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:3;cursor:pointer" title="'+_esc(m.nome)+' — '+fD(m.dataPrevista)+'"></div>';
+      html += '<div style="position:absolute;left:'+px+'px;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:'+mc+';border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:5;cursor:pointer" title="'+_esc(m.nome)+' — '+fD(m.dataPrevista)+'"></div>';
     });
 
     html += '</div></div>';
   });
 
   // Legenda
-  html += '<div style="display:flex;gap:16px;padding:10px 8px 4px;font-size:10px;color:var(--text3);border-top:1px solid var(--border)">'
-    + '<span><span style="display:inline-block;width:10px;height:10px;background:#3B82F6;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Em Execução</span>'
-    + '<span><span style="display:inline-block;width:10px;height:10px;background:#6B7280;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Fechado</span>'
-    + '<span><span style="display:inline-block;width:10px;height:10px;background:#EF4444;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Conflito</span>'
-    + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10B981;border:2px solid #fff;box-shadow:0 0 0 1px #10B981;margin-right:4px;vertical-align:middle"></span>Marco Realizado</span>'
-    + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F59E0B;border:2px solid #fff;box-shadow:0 0 0 1px #F59E0B;margin-right:4px;vertical-align:middle"></span>Marco Pendente</span>'
-    + '<span><span style="display:inline-block;width:2px;height:12px;background:#F59E0B;margin-right:4px;vertical-align:middle;display:inline-block"></span>Hoje</span>'
+  html += '<div style="display:flex;flex-wrap:wrap;gap:14px;padding:10px 8px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);width:'+totalRowW+'px;box-sizing:border-box">'
+    + '<span>🟦 Em Execução / Em Revisão</span>'
+    + '<span>⬛ Fechado</span>'
+    + '<span>🟥 Conflito de prazo</span>'
+    + '<span>🟢 Marco Realizado</span>'
+    + '<span>🟡 Marco Pendente</span>'
+    + '<span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:2px;height:12px;background:#F59E0B;border-radius:1px"></span> Hoje</span>'
     + '</div>';
 
   html += '</div></div>';
