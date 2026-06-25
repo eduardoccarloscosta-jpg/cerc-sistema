@@ -287,6 +287,9 @@ tbody tr:hover td{background:var(--bg)}
 .finput[readonly]{background:var(--surface2);color:var(--text3)}
 .fgrid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .fgrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+input[type="date"],input[type="time"]{cursor:pointer;position:relative}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .fsec{margin-bottom:14px}
 .fsec-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 
@@ -681,6 +684,9 @@ body::after{
 .finput[readonly]{background:var(--surface2);color:var(--text3)}
 .fgrid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .fgrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+input[type="date"],input[type="time"]{cursor:pointer;position:relative}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .fsec{margin-bottom:14px}
 .fsec-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 
@@ -1128,16 +1134,16 @@ body::after{
 .gantt-wrap{overflow-x:auto;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;background:var(--surface);-webkit-overflow-scrolling:touch}
 .gantt-inner{display:inline-block;min-width:100%}
 .gantt-header{display:flex;border-bottom:2px solid var(--accent);background:var(--surface2)}
-.gantt-label-col{width:220px;min-width:220px;flex-shrink:0;font-size:11px;font-weight:700;color:var(--text3);padding:10px 8px;border-right:2px solid var(--accent)}
+.gantt-label-col{width:240px;min-width:240px;flex-shrink:0;font-size:13px;font-weight:700;color:var(--text3);padding:10px 8px;border-right:2px solid var(--accent)}
 .gantt-months{display:flex;flex:1}
-.gantt-month{min-width:140px;width:140px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:var(--text2);border-right:1px solid var(--border);padding:10px 4px;background:var(--surface2)}
-.gantt-row{display:flex;align-items:stretch;border-bottom:1px solid var(--border);min-height:40px}
+.gantt-month{min-width:140px;width:140px;flex-shrink:0;text-align:center;font-size:13px;font-weight:700;color:var(--text2);border-right:1px solid var(--border);padding:10px 4px;background:var(--surface2)}
+.gantt-row{display:flex;align-items:stretch;border-bottom:1px solid var(--border);min-height:52px}
 .gantt-row:hover .gantt-timeline{background:rgba(0,0,0,.02)}
-.gantt-row-label{width:220px;min-width:220px;flex-shrink:0;font-size:11px;color:var(--text);padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border-right:2px solid var(--border);display:flex;flex-direction:column;justify-content:center}
+.gantt-row-label{width:240px;min-width:240px;flex-shrink:0;font-size:13px;color:var(--text);padding:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border-right:2px solid var(--border);display:flex;flex-direction:column;justify-content:center}
 .gantt-row-label:hover{color:var(--accent)}
-.gantt-row-label span{font-size:9px;color:var(--text3);display:block;margin-top:2px}
-.gantt-timeline{position:relative;height:40px;flex:1}
-.gantt-bar{position:absolute;height:18px;top:3px;border-radius:4px;opacity:.9;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.gantt-row-label span{font-size:11px;color:var(--text3);display:block;margin-top:2px}
+.gantt-timeline{position:relative;height:52px;flex:1}
+.gantt-bar{position:absolute;height:22px;top:3px;border-radius:4px;opacity:.9;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .gantt-bar:hover{opacity:1}
 .gantt-bar.conflict{outline:2px solid #EF4444;outline-offset:1px}
 .gantt-conflict-line{position:absolute;top:0;height:100%;background:rgba(239,68,68,.1);border-left:2px dashed #EF4444;pointer-events:none;z-index:1}
@@ -2352,6 +2358,7 @@ function demandaToDb(d) {
     historico_prec: d.historicoPrec||[],
     checklist_lev: d.checklistLev||[],
     checklist_custom: d.checklistCustom||[],
+    marcos: d.marcos||[],
     updated_at: d.updatedAt||_now()
   };
 }
@@ -2394,6 +2401,7 @@ function dbToDemanda(r) {
     historicoPrec: r.historico_prec||[],
     checklistLev: r.checklist_lev||[],
     checklistCustom: r.checklist_custom||[],
+    marcos: r.marcos||[],
     updatedAt: r.updated_at||''
   };
 }
@@ -2825,7 +2833,7 @@ async function pushLocalToSupabase() {
     toast('⚠️ Sincronizado com '+errs+' erros. Veja o console.','danger');
   }
 }
-var state = {demandas:[], despesas:[], clientes:[], collapseStatus:{}, servicos:[], eventos:[], contratos:[], pmocs:[], nr12Maquinas:[], nr12Riscos:[]};
+var state = {demandas:[], despesas:[], clientes:[], collapseStatus:{}, servicos:[], eventos:[], contratos:[], pmocs:[], nr12Maquinas:[], nr12Riscos:[], pisoSalarial:0};
 var finMes = new Date().getMonth()+1;
 var finAno = new Date().getFullYear();
 
@@ -2903,6 +2911,7 @@ function loadState() {
       state.pmocs=_dedupById(r.pmocs||[]);
       state.nr12Maquinas=r.nr12Maquinas||[];
       state.nr12Riscos=r.nr12Riscos||[];
+      state.pisoSalarial=r.pisoSalarial||0;
     } else {
       state.demandas=DEMO_D; state.despesas=DEMO_E;
       state.clientes=DEMO_CLIENTES; state.collapseStatus={};
@@ -2922,7 +2931,7 @@ function loadState() {
 }
 function saveState() {
   try {
-    localStorage.setItem(SK,JSON.stringify({demandas:state.demandas,despesas:state.despesas,clientes:state.clientes,collapseStatus:state.collapseStatus,servicos:state.servicos,svCatCollapsed:state.svCatCollapsed||{},eventos:state.eventos||[],contratos:state.contratos||[],pmocs:state.pmocs||[],nr12Maquinas:state.nr12Maquinas||[],nr12Riscos:state.nr12Riscos||[]}));
+    localStorage.setItem(SK,JSON.stringify({demandas:state.demandas,despesas:state.despesas,clientes:state.clientes,collapseStatus:state.collapseStatus,servicos:state.servicos,svCatCollapsed:state.svCatCollapsed||{},eventos:state.eventos||[],contratos:state.contratos||[],pmocs:state.pmocs||[],nr12Maquinas:state.nr12Maquinas||[],nr12Riscos:state.nr12Riscos||[],pisoSalarial:state.pisoSalarial||0}));
   } catch(e) {
     // localStorage cheio — tentar salvar versão sem base64
     try {
@@ -3027,9 +3036,63 @@ function logDiff(old,nw,dem) {
     var nova=nw.linkPropostas[nw.linkPropostas.length-1];
     addLog(dem,'anx','📄 Proposta anexada: '+(nova.versao||'Nova Revisão')+(nova.nome&&nova.nome!=='Proposta'?' — '+nova.nome:''));
   }
+  // Track marcos / tarefas / subtarefas
+  var _ts = function(s){ return s==='done'?'Concluída':s==='in_progress'?'Em andamento':'Pendente'; };
+  var oldMarcos = old.marcos||[], newMarcos = nw.marcos||[];
+  // Marcos removidos
+  oldMarcos.forEach(function(om){
+    if(!newMarcos.find(function(nm){return nm.id===om.id;}))
+      addLog(dem,'projeto','🏁 Marco removido: "'+om.nome+'"');
+  });
+  newMarcos.forEach(function(nm){
+    var om = oldMarcos.find(function(m){return m.id===nm.id;});
+    if(!om) {
+      addLog(dem,'projeto','🏁 Marco criado: "'+nm.nome+'"');
+    } else {
+      if(om.nome!==nm.nome)                         addLog(dem,'projeto','🏁 Marco renomeado: "'+om.nome+'" → "'+nm.nome+'"');
+      if(om.status!==nm.status)                     addLog(dem,'projeto','🏁 Marco "'+nm.nome+'": Status '+om.status+' → '+nm.status);
+      if((om.dataPrevista||'')!==(nm.dataPrevista||'')) addLog(dem,'projeto','🏁 Marco "'+nm.nome+'": Prazo '+fD(om.dataPrevista)+' → '+fD(nm.dataPrevista));
+      // Tarefas
+      var oldTars = om.tarefas||[], newTars = nm.tarefas||[];
+      oldTars.forEach(function(ot){
+        if(!newTars.find(function(nt){return nt.id===ot.id;}))
+          addLog(dem,'projeto','📋 Tarefa removida de "'+nm.nome+'": "'+ot.nome+'"');
+      });
+      newTars.forEach(function(nt){
+        var ot = oldTars.find(function(t){return t.id===nt.id;});
+        if(!ot) {
+          addLog(dem,'projeto','📋 Tarefa criada em "'+nm.nome+'": "'+nt.nome+'"');
+        } else {
+          if(ot.nome!==nt.nome)                               addLog(dem,'projeto','📋 Tarefa renomeada ['+nm.nome+']: "'+ot.nome+'" → "'+nt.nome+'"');
+          if(ot.status!==nt.status)                           addLog(dem,'projeto','📋 ['+nm.nome+'] "'+nt.nome+'": '+_ts(ot.status)+' → '+_ts(nt.status));
+          if((ot.dataPrevista||'')!==(nt.dataPrevista||''))   addLog(dem,'projeto','📋 ['+nm.nome+'] "'+nt.nome+'": Prazo '+fD(ot.dataPrevista)+' → '+fD(nt.dataPrevista));
+          if((ot.dataInicio||'')!==(nt.dataInicio||''))       addLog(dem,'projeto','📋 ['+nm.nome+'] "'+nt.nome+'": Início '+fD(ot.dataInicio)+' → '+fD(nt.dataInicio));
+          if((ot.dataRealizada||'')!==(nt.dataRealizada||'')) addLog(dem,'projeto','📋 ['+nm.nome+'] "'+nt.nome+'": Realizada '+fD(ot.dataRealizada)+' → '+fD(nt.dataRealizada));
+          // Subtarefas
+          var oldSubs = ot.subtarefas||[], newSubs = nt.subtarefas||[];
+          oldSubs.forEach(function(os){
+            if(!newSubs.find(function(ns){return ns.id===os.id;}))
+              addLog(dem,'projeto','↳ Subtarefa removida de "'+nt.nome+'": "'+os.nome+'"');
+          });
+          newSubs.forEach(function(ns){
+            var os = oldSubs.find(function(s){return s.id===ns.id;});
+            if(!os) {
+              addLog(dem,'projeto','↳ Subtarefa criada em "'+nt.nome+'": "'+ns.nome+'"');
+            } else {
+              if(os.nome!==ns.nome)                               addLog(dem,'projeto','↳ ['+nt.nome+'] "'+os.nome+'" → "'+ns.nome+'"');
+              if(os.status!==ns.status)                           addLog(dem,'projeto','↳ ['+nt.nome+'] "'+ns.nome+'": '+(os.status==='done'?'Concluída':'Pendente')+' → '+(ns.status==='done'?'Concluída':'Pendente'));
+              if((os.dataPrevista||'')!==(ns.dataPrevista||''))   addLog(dem,'projeto','↳ ['+nt.nome+'] "'+ns.nome+'": Prazo '+fD(os.dataPrevista)+' → '+fD(ns.dataPrevista));
+              if((os.dataInicio||'')!==(ns.dataInicio||''))       addLog(dem,'projeto','↳ ['+nt.nome+'] "'+ns.nome+'": Início '+fD(os.dataInicio)+' → '+fD(ns.dataInicio));
+              if((os.dataRealizada||'')!==(ns.dataRealizada||'')) addLog(dem,'projeto','↳ ['+nt.nome+'] "'+ns.nome+'": Realizada '+fD(os.dataRealizada)+' → '+fD(ns.dataRealizada));
+            }
+          });
+        }
+      });
+    }
+  });
 }
-var LICO = {criacao:'#16A34A',status:'#EA580C',campo:'#2563EB',sub:'#7C3AED',anx:'#0891B2',fin:'#DC2626',perda:'#DC2626',prec:'#7C3AED'};
-var LIBC = {criacao:'#DCFCE7',status:'#FFEDD5',campo:'#DBEAFE',sub:'#EDE9FE',anx:'#CFFAFE',fin:'#FEE2E2',perda:'#FEE2E2',prec:'#EDE9FE'};
+var LICO = {criacao:'#16A34A',status:'#EA580C',campo:'#2563EB',sub:'#7C3AED',anx:'#0891B2',fin:'#DC2626',perda:'#DC2626',prec:'#7C3AED',projeto:'#0D9488'};
+var LIBC = {criacao:'#DCFCE7',status:'#FFEDD5',campo:'#DBEAFE',sub:'#EDE9FE',anx:'#CFFAFE',fin:'#FEE2E2',perda:'#FEE2E2',prec:'#EDE9FE',projeto:'#CCFBF1'};
 function renderLog(log) {
   if(!log||!log.length) return '<div style="padding:30px;text-align:center;color:var(--text3)">Nenhuma atividade registrada.</div>';
   // ── Calcular lead time por status ─────────────────────────────────
@@ -4809,6 +4872,7 @@ function _saveDemandaImpl() {
     updatedAt: _now()
   };
 
+  var _isNew = !editingId;
   if(editingId) {
     var i=state.demandas.findIndex(function(d){return d.id===editingId;});
     if(i>=0) {
@@ -4832,10 +4896,8 @@ function _saveDemandaImpl() {
       // Auto-financeiro: inserir no fluxo quando concluído pela primeira vez
       if(nw.status==='Concluído'&&old.status!=='Concluído') {
         addLog(old,'fin','Serviço Concluído — inserido automaticamente no fluxo financeiro');
-        toast('✅ Serviço concluído! Já aparece no Financeiro → Receitas.','success');
       }
       state.demandas[i]=Object.assign({},old,nw);
-      toast('Demanda atualizada!');
     }
   } else {
     var nd=Object.assign({id:uid(),dataCriacao:new Date().toISOString().slice(0,10),log:[]},nw);
@@ -4846,27 +4908,55 @@ function _saveDemandaImpl() {
       if(nw.planoAcaoPerda) pLogMsg+=' | 📋 Plano: '+nw.planoAcaoPerda;
       if(nw.dataResgate)    pLogMsg+=' | 📅 Resgate: '+fD(nw.dataResgate);
       addLog(nd,'perda',pLogMsg);
-      // Cria lembrete no calendário para nova demanda, se tiver lembrete
       if(nw.dataLembrete) criarLembretePerda(nd, nw.dataLembrete, nw.dataResgate);
       _perdaTempData=null;
     }
     if(_pendingPrecDados){nd.precDados=_pendingPrecDados;_pendingPrecDados=null;}
     state.demandas.unshift(nd);
-    toast('Demanda criada!','success');
+    // Para nova demanda: define editingId para que próximos saves funcionem sem fechar
+    editingId = nd.id;
   }
+
   saveState();
-  var _demSyncSb=editingId?state.demandas.find(function(d){return d.id===editingId;}):state.demandas[0];
-  if(_sbUser&&_demSyncSb) sbUpsertDemanda(_demSyncSb);
-  closeModal();
+
+  // Sync Supabase
+  var _demSyncSb = state.demandas.find(function(d){return d.id===editingId;});
+  if(_sbUser && _demSyncSb) sbUpsertDemanda(_demSyncSb);
+
   // Sync retorno com Google Calendar (silencioso)
   if(gcIsConnected()) {
-    var _demSalva = editingId
-      ? state.demandas.find(function(d){ return d.id===editingId; })
-      : state.demandas[0];
+    var _demSalva = state.demandas.find(function(d){return d.id===editingId;});
     if(_demSalva) gcSyncRetornoDemanda(_demSalva);
   }
-  // Sempre vai para Demandas após salvar — garante que o usuário veja o item salvo
-  showPage('demandas');
+
+  // Re-renderiza a página de fundo sem fechar o modal
+  try {
+    var _RMAP={dashboard:renderDashboard,demandas:renderDemandas,clientes:renderClientes,financeiro:renderFinanceiro,projetos:renderProjetos,calendario:renderCalendario};
+    (_RMAP[currentPage]||renderDemandas)();
+  } catch(e) {}
+
+  // Exibe notificação de salvo — não fecha o modal
+  _showSavedBadge(_isNew);
+}
+
+function _showSavedBadge(isNew) {
+  var msg = isNew ? '✅ Demanda criada e salva!' : '✅ Alterações salvas com sucesso!';
+  // Toast principal
+  toast(msg, 'success');
+  // Badge visual no botão Salvar
+  var btn = document.querySelector('#modal-demanda .btn-primary[onclick="saveDemanda()"]');
+  if(btn) {
+    var orig = btn.innerHTML;
+    var origBg = btn.style.background;
+    btn.innerHTML = '✅ Salvo!';
+    btn.style.background = '#10B981';
+    btn.disabled = true;
+    setTimeout(function(){
+      btn.innerHTML = orig;
+      btn.style.background = origBg || '';
+      btn.disabled = false;
+    }, 2500);
+  }
 }
 
 function deleteDemanda(id) {
@@ -5197,6 +5287,40 @@ function _loadScript(src,cb){
   s.onload=function(){if(cb)cb();};
   s.onerror=function(){toast('Erro ao carregar biblioteca de relatório','danger');};
   document.head.appendChild(s);
+}
+
+function openEditPiso(){
+  var cur=state.pisoSalarial||0;
+  var html='<div id="modal-piso" class="overlay" onclick="if(event.target===this)this.remove()">' +
+    '<div class="modal" style="max-width:360px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">' +
+        '<div class="modal-title">🎯 Piso Salarial</div>' +
+        '<button class="btn btn-ghost btn-icon" onclick="document.getElementById(\'modal-piso\').remove()">✕</button>' +
+      '</div>' +
+      '<div class="fg"><label>Valor do Piso Mensal (R$)</label>' +
+        '<input id="piso-input" class="finput" type="text" placeholder="Ex: 5.000,00" value="'+(cur>0?cur.toLocaleString('pt-BR',{minimumFractionDigits:2}):'')+'"/>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-top:4px;margin-bottom:16px">Este valor é usado para mostrar quanto falta faturar no mês para atingir o piso.</div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+        '<button class="btn btn-ghost" onclick="document.getElementById(\'modal-piso\').remove()">Cancelar</button>' +
+        '<button class="btn btn-primary" onclick="savePiso()">💾 Salvar</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+  setTimeout(function(){
+    var inp=document.getElementById('piso-input');
+    if(inp){inp.focus();inp.select();inp.onblur=function(){mascValor(inp);};}
+  },50);
+}
+function savePiso(){
+  var v=parseValorBR('piso-input');
+  if(isNaN(v)||v<0){toast('Valor inválido','error');return;}
+  state.pisoSalarial=v;
+  saveState();
+  document.getElementById('modal-piso').remove();
+  toast('Piso salarial atualizado!','success');
+  renderFinanceiro();
 }
 
 function openModalRelatorio(){
@@ -5635,6 +5759,31 @@ function renderFinanceiro() {
       '<div class="kpi"><div class="kpi-label">Despesas — '+MESES[finMes-1]+'</div><div class="kpi-value" style="color:var(--red)">'+fR(totDespMes)+'</div><div class="kpi-sub">'+varHtml(varPct(totDespMes,despAnt),true)+(totDespMesPago<totDespMes?'<br><span style="color:var(--s-con)">'+fR(totDespMesPago)+' pagas</span>':'')+'</div></div>' +
       '<div class="kpi"><div class="kpi-label">A Receber</div><div class="kpi-value" style="color:var(--amber)">'+fR(recPendMes)+'</div><div class="kpi-sub">Em execução no mês</div></div>' +
     '</div>' +
+    (function(){
+      var piso=state.pisoSalarial||0;
+      var faturado=totalRecMes;
+      var falta=Math.max(0,piso-faturado);
+      var pct=piso>0?Math.min(100,(faturado/piso)*100):0;
+      var barColor=pct>=100?'var(--s-con)':pct>=60?'var(--amber)':'var(--red)';
+      var pisoHtml='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:13px 18px;margin-bottom:14px;box-shadow:var(--sh)">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">' +
+          '<span style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">🎯 Piso Salarial — '+MESES[finMes-1]+'</span>' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+            (piso>0?'<span style="font-size:12px;color:var(--text3)">Meta: <strong style="color:var(--text1)">'+fR(piso)+'</strong></span>':'<span style="font-size:12px;color:var(--text3)">Defina o piso</span>') +
+            '<button onclick="openEditPiso()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:4px">✏️ Editar</button>' +
+          '</div>' +
+        '</div>' +
+        (piso>0?
+          '<div style="background:var(--bg);border-radius:20px;height:8px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+barColor+';border-radius:20px;transition:width .4s"></div></div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">' +
+            '<span style="font-size:12px;color:var(--text3)">Faturado: <strong style="color:var(--s-con)">'+fR(faturado)+'</strong></span>' +
+            (falta>0?'<span style="font-size:12px;color:var(--text3)">Falta: <strong style="color:'+barColor+'">'+fR(falta)+'</strong></span>':'<span style="font-size:12px;font-weight:700;color:var(--s-con)">✅ Meta atingida!</span>') +
+            '<span style="font-size:12px;font-weight:700;color:'+barColor+'">'+pct.toFixed(1)+'%</span>' +
+          '</div>'
+        :'<div style="font-size:12px;color:var(--text3);text-align:center;padding:4px 0">Clique em <strong>Editar</strong> para definir o piso salarial mensal</div>') +
+      '</div>';
+      return pisoHtml;
+    })()+
     '<div class="tabs"><div class="tab'+(finTab==='fluxo'?' active':'')+'" onclick="finTab=\'fluxo\';renderFinanceiro()">Fluxo de Caixa</div><div class="tab'+(finTab==='receitas'?' active':'')+'" onclick="finTab=\'receitas\';renderFinanceiro()">Receitas</div><div class="tab'+(finTab==='despesas'?' active':'')+'" onclick="finTab=\'despesas\';renderFinanceiro()">Despesas</div></div>' +
     '<div id="fin-content"></div>';
   var fc=document.getElementById('fin-content');
@@ -11578,102 +11727,205 @@ function printNR12Laudo(maqId) {
 
 // ══ GESTÃO DE PROJETOS ════════════════════════════════════
 
-// ── renderProjetos: tela principal ────────────────────────
+// ── Estado da tela Projetos ────────────────────────────────
+var _projTab = 'lista';
+var _projExpanded = {};    // demandaId → bool (linha pai expandida)
+var _projMarcosOpen = {};  // demandaId+'-'+mi → bool (marco expandido)
+
+// ── renderProjetos: tela principal (tudo em uma página) ───
 function renderProjetos() {
   var pc = document.getElementById('page-content');
   if(!pc) return;
-  var projetos = state.demandas.filter(function(d){ return d.status === 'Fechado' || d.status === 'Em Execução' || d.status === 'Em Revisão'; });
+  var projetos = state.demandas.filter(function(d){
+    return d.status==='Fechado'||d.status==='Em Execução'||d.status==='Em Revisão';
+  });
   var today = new Date(); today.setHours(0,0,0,0);
 
-  // KPIs
-  var total = projetos.length;
-  var emAndamento = projetos.filter(function(d){
-    var marcos = d.marcos||[];
-    if(!marcos.length) return true;
-    return marcos.some(function(m){ return m.status !== 'Realizado'; });
-  }).length;
-  var concluidos = projetos.filter(function(d){
-    var marcos = d.marcos||[];
-    return marcos.length > 0 && marcos.every(function(m){ return m.status === 'Realizado'; });
-  }).length;
-  var atrasados = projetos.filter(function(d){
-    var marcos = d.marcos||[];
-    return marcos.some(function(m){
-      if(m.status === 'Realizado') return false;
-      if(!m.dataPrevista) return false;
-      return new Date(m.dataPrevista) < today;
-    });
-  }).length;
-
-  // Calcular conflitos de prazo (demandas com prazo no mesmo dia)
   var prazoMap = {};
   projetos.forEach(function(d){
-    var marcos = d.marcos||[];
-    marcos.forEach(function(m){
-      if(m.dataPrevista && m.status !== 'Realizado'){
-        if(!prazoMap[m.dataPrevista]) prazoMap[m.dataPrevista] = [];
+    (d.marcos||[]).forEach(function(m){
+      if(m.dataPrevista && m.status!=='Realizado'){
+        if(!prazoMap[m.dataPrevista]) prazoMap[m.dataPrevista]=[];
         prazoMap[m.dataPrevista].push(d.id);
       }
     });
   });
   var conflitosSet = {};
   Object.keys(prazoMap).forEach(function(dt){
-    if(prazoMap[dt].length > 1) prazoMap[dt].forEach(function(id){ conflitosSet[id]=true; });
+    if(prazoMap[dt].length>1) prazoMap[dt].forEach(function(id){conflitosSet[id]=true;});
   });
+
+  var total = projetos.length;
+  var emExec = projetos.filter(function(d){ var m=d.marcos||[]; return !m.length||m.some(function(x){return x.status!=='Realizado';}); }).length;
+  var concluidos = projetos.filter(function(d){ var m=d.marcos||[]; return m.length>0&&m.every(function(x){return x.status==='Realizado';}); }).length;
+  var atrasados = projetos.filter(function(d){ return (d.marcos||[]).some(function(m){ return m.status!=='Realizado'&&m.dataPrevista&&new Date(m.dataPrevista)<today; }); }).length;
   var nConflitos = Object.keys(conflitosSet).length;
 
   var html = '<div style="padding:20px 24px">';
 
-  // KPI grid
+  if(!projetos.length){
+    html += '<div style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:48px;margin-bottom:12px">🗂️</div>'
+      + '<div style="font-size:15px;font-weight:700;margin-bottom:6px">Nenhum projeto ativo</div>'
+      + '<div style="font-size:12px">Demandas com status "Em Execução", "Em Revisão" ou "Fechado" aparecem aqui</div></div>';
+    html += '</div>';
+    pc.innerHTML = html;
+    return;
+  }
+
+  // KPIs
   html += '<div class="proj-kpi-grid">'
-    + _projKpi('Projetos Fechados', total, '', '#3B82F6')
-    + _projKpi('Em Andamento', emAndamento, '', '#F59E0B')
+    + _projKpi('Projetos Ativos', total, 'Em Execução + Revisão + Fechados', '#3B82F6')
+    + _projKpi('Em Andamento', emExec, 'Com pelo menos 1 marco pendente', '#F59E0B')
     + _projKpi('Concluídos', concluidos, 'Todos os marcos realizados', '#10B981')
-    + _projKpi('Com Conflito de Prazo', nConflitos, 'Mesmo prazo que outro projeto', nConflitos>0?'#EF4444':'#6B7280')
+    + _projKpi('Conflitos de Prazo', nConflitos, 'Mesmo prazo que outro projeto', nConflitos>0?'#EF4444':'#6B7280')
     + '</div>';
 
-  if(atrasados > 0) {
-    html += '<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#991B1B;font-weight:600">⚠️ '+atrasados+' projeto(s) com marco(s) em atraso</div>';
+  // Banner de atraso
+  if(atrasados>0){
+    html += '<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:8px 14px;font-size:12px;color:#991B1B;font-weight:600;margin-bottom:16px">⚠️ '+atrasados+' projeto(s) com marco(s) em atraso</div>';
   }
 
-  // Cards de projetos
-  if(projetos.length === 0) {
-    html += '<div style="text-align:center;padding:48px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">🗂️</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Nenhum projeto fechado</div><div style="font-size:12px">Projetos aparecem aqui quando a demanda é marcada como "Fechado"</div></div>';
-  } else {
-    html += '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px">📋 Projetos Ativos</div>';
-    html += '<div class="proj-cards-grid">';
-    projetos.forEach(function(d){
-      var marcos = d.marcos||[];
-      var total_m = marcos.length;
-      var realizados = marcos.filter(function(m){return m.status==='Realizado';}).length;
-      var pct = total_m > 0 ? Math.round(realizados/total_m*100) : 0;
-      var hasConflito = conflitosSet[d.id];
-      var hasAtraso = marcos.some(function(m){
-        return m.status!=='Realizado' && m.dataPrevista && new Date(m.dataPrevista)<today;
-      });
-      var barColor = hasAtraso ? '#EF4444' : pct===100 ? '#10B981' : '#3B82F6';
-      var nextMarco = marcos.find(function(m){return m.status!=='Realizado'&&m.dataPrevista;});
-      html += '<div class="proj-card" onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)">'
-        + '<div class="proj-card-hd"><div class="proj-card-title">'+_esc(d.servico)+'</div><div class="proj-card-prop">'+(d.proposta||'')+'</div></div>'
-        + '<div class="proj-card-client">👤 '+_esc(d.cliente||'')+'</div>'
-        + (total_m > 0 ? '<div class="proj-progress-bar"><div class="proj-progress-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>' : '<div class="proj-progress-bar"><div class="proj-progress-fill" style="width:0%;background:var(--border)"></div></div>')
-        + '<div class="proj-card-meta">'
-          + '<span>'+(total_m>0?realizados+'/'+total_m+' marcos':'Sem marcos')+'</span>'
-          + '<span style="font-weight:700;color:'+barColor+'">'+pct+'%</span>'
-        + '</div>'
-        + (nextMarco ? '<div style="font-size:10px;color:var(--text3);margin-top:6px">📅 Próximo: '+_esc(nextMarco.nome)+' — '+fD(nextMarco.dataPrevista)+'</div>' : '')
-        + (hasConflito ? '<div class="proj-conflict-badge" style="margin-top:6px;display:inline-block">⚡ Conflito de prazo</div>' : '')
-        + (hasAtraso ? '<div style="background:#FEF2F2;color:#991B1B;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-top:6px;display:inline-block;margin-left:4px">⏰ Atrasado</div>' : '')
-        + '</div>';
-    });
-    html += '</div>';
-  }
+  // Cards agrupados por status
+  html += _renderProjetosList(projetos, conflitosSet, today);
 
   // Gantt
   html += _renderGantt(projetos, prazoMap);
 
   html += '</div>';
   pc.innerHTML = html;
+}
+
+// ── ABA LISTA (cards) ──────────────────────────────────────
+function _renderProjetosList(projetos, conflitosSet, today){
+  // Agrupar por status
+  var grupos = [
+    { key:'Em Execução', label:'🔵 Em Execução', borderColor:'#3B82F6', bgHeader:'#EFF6FF', textColor:'#1D4ED8' },
+    { key:'Em Revisão',  label:'🟣 Em Revisão',  borderColor:'#7C3AED', bgHeader:'#F5F3FF', textColor:'#6D28D9' },
+    { key:'Fechado',     label:'⚫ Fechados',     borderColor:'#64748B', bgHeader:'#F8FAFC', textColor:'#475569' }
+  ];
+
+  function _renderCard(d){
+    var marcos = d.marcos||[];
+    var totalM = marcos.length;
+    var realizadosM = marcos.filter(function(m){return m.status==='Realizado';}).length;
+    var pct = totalM>0 ? Math.round(realizadosM/totalM*100) : 0;
+    var hasAtraso = marcos.some(function(m){return m.status!=='Realizado'&&m.dataPrevista&&new Date(m.dataPrevista)<today;});
+    var hasConflito = !!conflitosSet[d.id];
+    var barColor = hasAtraso?'#EF4444':pct===100?'#10B981':'#3B82F6';
+    var nextMarco = marcos.find(function(m){return m.status!=='Realizado'&&m.dataPrevista;});
+    var statusColor = d.status==='Em Execução'?'#0E7490':d.status==='Em Revisão'?'#7C3AED':'#374151';
+    var statusBg    = d.status==='Em Execução'?'#CFFAFE':d.status==='Em Revisão'?'#EDE9FE':'#F3F4F6';
+    return '<div class="proj-card" onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.3">'+_esc(d.servico)+'</div>'
+        + '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;background:'+statusBg+';color:'+statusColor+'">'+d.status+'</span>'
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px">👤 '+_esc(d.cliente||'')+'</div>'
+      + '<div style="font-family:monospace;font-size:11px;font-weight:700;color:var(--accent);margin-bottom:10px">'+_esc(d.proposta||'')+'</div>'
+      + '<div style="height:5px;background:var(--border);border-radius:3px;margin-bottom:6px"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px;transition:width .3s"></div></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:6px">'
+        + '<span>'+(totalM>0?realizadosM+'/'+totalM+' marcos':'Sem marcos')+'</span>'
+        + '<span style="font-weight:700;color:'+barColor+'">'+pct+'%</span>'
+      + '</div>'
+      + (nextMarco?'<div style="font-size:10px;color:var(--text3)">📅 Próximo: <b>'+_esc(nextMarco.nome)+'</b> — '+fD(nextMarco.dataPrevista)+'</div>':'')
+      + (hasConflito||hasAtraso?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">'
+          +(hasConflito?'<span style="font-size:9px;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;padding:1px 6px;border-radius:8px;font-weight:700">⚡ Conflito de prazo</span>':'')
+          +(hasAtraso?'<span style="font-size:9px;background:#FEF2F2;color:#991B1B;padding:1px 6px;border-radius:8px;font-weight:700">⏰ Atraso</span>':'')
+        + '</div>':'')
+      + '</div>';
+  }
+
+  var h = '';
+  grupos.forEach(function(g){
+    var lista = projetos.filter(function(d){ return d.status === g.key; });
+    if(!lista.length) return;
+    h += '<div style="margin-bottom:24px">';
+    h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:'+g.bgHeader+';border-radius:8px;border-left:4px solid '+g.borderColor+'">'
+      + '<span style="font-size:13px;font-weight:700;color:'+g.textColor+'">'+g.label+'</span>'
+      + '<span style="font-size:11px;background:'+g.borderColor+';color:#fff;border-radius:20px;padding:1px 8px;font-weight:700">'+lista.length+'</span>'
+      + '</div>';
+    h += '<div class="proj-cards-grid">';
+    lista.forEach(function(d){ h += _renderCard(d); });
+    h += '</div></div>';
+  });
+  return h;
+}
+
+// ── ABA KPIs ───────────────────────────────────────────────
+function _renderProjetosKpis(total, emExec, concluidos, nConflitos, projetos, today){
+  var h = '<div class="proj-kpi-grid">'
+    + _projKpi('Projetos Ativos', total, 'Em Execução + Revisão + Fechados', '#3B82F6')
+    + _projKpi('Em Andamento', emExec, 'Com pelo menos 1 marco pendente', '#F59E0B')
+    + _projKpi('Concluídos', concluidos, 'Todos os marcos realizados', '#10B981')
+    + _projKpi('Conflitos de Prazo', nConflitos, 'Mesmo prazo que outro projeto', nConflitos>0?'#EF4444':'#6B7280')
+    + '</div>';
+
+  // Tabela resumo por projeto
+  h += '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px;margin-top:8px">📊 Progresso por Projeto</div>';
+  h += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">';
+  h += '<table style="width:100%;border-collapse:collapse">';
+  h += '<thead><tr style="background:var(--surface2);border-bottom:2px solid var(--border)">'
+    + '<th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:700;color:var(--text3)">Projeto</th>'
+    + '<th style="text-align:left;padding:10px 8px;font-size:11px;font-weight:700;color:var(--text3)">Cliente</th>'
+    + '<th style="text-align:center;padding:10px 8px;font-size:11px;font-weight:700;color:var(--text3)">Marcos</th>'
+    + '<th style="text-align:left;padding:10px 8px;font-size:11px;font-weight:700;color:var(--text3);min-width:140px">Progresso</th>'
+    + '<th style="text-align:center;padding:10px 8px;font-size:11px;font-weight:700;color:var(--text3)">Status</th>'
+    + '</tr></thead><tbody>';
+
+  projetos.forEach(function(d){
+    var marcos = d.marcos||[];
+    var totalM = marcos.length;
+    var realM = marcos.filter(function(m){return m.status==='Realizado';}).length;
+    var pct = totalM>0?Math.round(realM/totalM*100):0;
+    var hasAtraso = marcos.some(function(m){return m.status!=='Realizado'&&m.dataPrevista&&new Date(m.dataPrevista)<today;});
+    var barColor = hasAtraso?'#EF4444':pct===100?'#10B981':'#3B82F6';
+    h += '<tr style="border-bottom:1px solid var(--border)">'
+      + '<td style="padding:10px 12px"><span style="font-size:12px;font-weight:600;color:var(--text)">'+_esc(d.servico)+'</span><br><span style="font-size:10px;font-family:monospace;color:var(--accent)">'+_esc(d.proposta||'')+'</span></td>'
+      + '<td style="padding:10px 8px;font-size:11px;color:var(--text2)">'+_esc((d.cliente||'').substring(0,28))+'</td>'
+      + '<td style="padding:10px 8px;text-align:center;font-size:12px;font-weight:600">'+realM+'/'+totalM+'</td>'
+      + '<td style="padding:10px 8px"><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:6px;background:var(--border);border-radius:3px"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px"></div></div><span style="font-size:11px;font-weight:700;color:'+barColor+';min-width:32px;text-align:right">'+pct+'%</span></div></td>'
+      + '<td style="padding:10px 8px;text-align:center"><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+(d.status==='Em Execução'?'#CFFAFE':d.status==='Em Revisão'?'#EDE9FE':'#F3F4F6')+';color:'+(d.status==='Em Execução'?'#0E7490':d.status==='Em Revisão'?'#7C3AED':'#374151')+'">'+d.status+'</span></td>'
+      + '</tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+
+// ── Ações inline da tabela de projetos ────────────────────
+function toggleProjRow(demId){
+  _projExpanded[demId] = !_projExpanded[demId];
+  renderProjetos();
+}
+function toggleMarcoProjRow(mKey){
+  _projMarcosOpen[mKey] = !_projMarcosOpen[mKey];
+  renderProjetos();
+}
+function updateMarcoStatus(demId, mi, newStatus){
+  var dem = state.demandas.find(function(d){return d.id===demId;});
+  if(!dem||!dem.marcos||!dem.marcos[mi]) return;
+  dem.marcos[mi].status = newStatus;
+  dem.updatedAt = _now();
+  saveState();
+  if(_sbUser) sbUpsertDemanda(dem);
+  renderProjetos();
+}
+function updateTarefaStatus(demId, mi, ti, newStatus){
+  var dem = state.demandas.find(function(d){return d.id===demId;});
+  if(!dem||!dem.marcos||!dem.marcos[mi]||!dem.marcos[mi].tarefas||!dem.marcos[mi].tarefas[ti]) return;
+  dem.marcos[mi].tarefas[ti].status = newStatus;
+  dem.updatedAt = _now();
+  saveState();
+  if(_sbUser) sbUpsertDemanda(dem);
+  renderProjetos();
+}
+function updateSubtarefaStatus(demId, mi, ti, si, done){
+  var dem = state.demandas.find(function(d){return d.id===demId;});
+  if(!dem||!dem.marcos||!dem.marcos[mi]||!dem.marcos[mi].tarefas||!dem.marcos[mi].tarefas[ti]) return;
+  dem.marcos[mi].tarefas[ti].subtarefas[si].status = done?'done':'pending';
+  dem.updatedAt = _now();
+  saveState();
+  if(_sbUser) sbUpsertDemanda(dem);
+  renderProjetos();
 }
 
 function _projKpi(label, val, sub, color) {
@@ -11684,6 +11936,9 @@ function _projKpi(label, val, sub, color) {
 }
 
 var GANTT_COL_W = 140; // px por mês
+var GANTT_DAY_W = 28;  // px por dia (modo dias)
+var _ganttMode  = 'months'; // 'months' | 'days'
+function _setGanttMode(m){ _ganttMode = m; renderProjetos(); }
 
 function _renderGantt(projetos, prazoMap) {
   if(!projetos.length) return '';
@@ -11701,26 +11956,58 @@ function _renderGantt(projetos, prazoMap) {
   }
   var minDate = new Date(Math.min.apply(null, allDates));
   var maxDate = new Date(Math.max.apply(null, allDates));
-  // arredondar para início/fim do mês e garantir mês atual visível
-  minDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-  maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth()+2, 1);
+  // arredondar para início/fim do mês; exibir pelo menos 2 meses antes e 8 meses além de hoje
+  var nowMinus2 = new Date(now.getFullYear(), now.getMonth()-2, 1);
+  var nowPlus8  = new Date(now.getFullYear(), now.getMonth()+8, 1);
+  minDate = new Date(Math.min(new Date(minDate.getFullYear(), minDate.getMonth(), 1).getTime(), nowMinus2.getTime()));
+  maxDate = new Date(Math.max(new Date(maxDate.getFullYear(), maxDate.getMonth()+2, 1).getTime(), nowPlus8.getTime()));
 
-  // --- Construir lista de meses ---
-  var months = [];
+  // --- Construir unidades de tempo (meses ou dias) ---
+  var months = [], days = [];
   var cur = new Date(minDate);
+
+  // Sempre constrói meses
   while(cur < maxDate){
     months.push({ label: cur.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}), date: new Date(cur) });
     cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
   }
+
+  // No modo dias: limitar range a 45 dias antes / 90 dias depois de hoje para não ficar gigante
+  var daysMinDate = minDate, daysMaxDate = maxDate;
+  if(_ganttMode === 'days'){
+    var dMin = new Date(now.getFullYear(), now.getMonth(), now.getDate()-45);
+    var dMax = new Date(now.getFullYear(), now.getMonth(), now.getDate()+90);
+    daysMinDate = new Date(Math.max(minDate.getTime(), dMin.getTime()));
+    daysMaxDate = new Date(Math.min(maxDate.getTime(), dMax.getTime()));
+    var dc = new Date(daysMinDate);
+    while(dc <= daysMaxDate){
+      var dow = dc.getDay(); // 0=Sun,6=Sat
+      days.push({ date: new Date(dc), day: dc.getDate(), dow: dow,
+        isWeekend: dow===0||dow===6,
+        label: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dow] });
+      dc.setDate(dc.getDate()+1);
+    }
+  }
+
   if(!months.length) return '';
 
-  var totalW  = months.length * GANTT_COL_W;
-  var totalMs = maxDate - minDate;
-  var totalRowW = 220 + totalW; // label + timeline
+  var totalW, totalMs, effectiveMin, effectiveMax;
+  if(_ganttMode === 'days'){
+    totalW       = days.length * GANTT_DAY_W;
+    effectiveMin = daysMinDate;
+    effectiveMax = daysMaxDate;
+    totalMs      = daysMaxDate - daysMinDate || 1;
+  } else {
+    totalW       = months.length * GANTT_COL_W;
+    effectiveMin = minDate;
+    effectiveMax = maxDate;
+    totalMs      = maxDate - minDate;
+  }
+  var totalRowW = 240 + totalW; // label + timeline
 
   function dateToPx(dt){
-    var clamped = Math.max(minDate, Math.min(maxDate, dt));
-    return Math.round((clamped - minDate) / totalMs * totalW);
+    var clamped = Math.max(effectiveMin, Math.min(effectiveMax, dt));
+    return Math.round((clamped - effectiveMin) / totalMs * totalW);
   }
 
   // Linha de hoje
@@ -11737,19 +12024,79 @@ function _renderGantt(projetos, prazoMap) {
   });
 
   // --- HTML ---
-  var html = '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px">📊 Mapa de Interferências (Gantt)</div>';
+  var isMeses = _ganttMode === 'months';
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    + '<span style="font-size:13px;font-weight:700;color:var(--text2)">📊 Mapa de Interferências (Gantt)</span>'
+    + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;font-size:11px">'
+        + '<button onclick="_setGanttMode(\'months\')" style="padding:4px 12px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:'+(isMeses?'var(--primary)':'var(--surface)')+';color:'+(isMeses?'#fff':'var(--text2)')+'">📅 Meses</button>'
+        + '<button onclick="_setGanttMode(\'days\')" style="padding:4px 12px;border:none;border-left:1px solid var(--border);cursor:pointer;font-size:11px;font-weight:600;background:'+(!isMeses?'var(--primary)':'var(--surface)')+';color:'+(!isMeses?'#fff':'var(--text2)')+'">📆 Dias</button>'
+      + '</div>'
+      + '<button onclick="_showExportModal()" style="font-size:11px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px">📄 Exportar</button>'
+    + '</div>'
+    + '</div>';
   html += '<div class="gantt-wrap">';
   html += '<div class="gantt-inner" style="width:'+totalRowW+'px">';
 
   // Cabeçalho fixo
-  html += '<div class="gantt-header" style="width:'+totalRowW+'px">'
-    + '<div class="gantt-label-col">Projeto</div>'
-    + '<div class="gantt-months" style="width:'+totalW+'px">';
-  months.forEach(function(m, mi){
-    var bg = mi%2===0 ? 'var(--surface2)' : 'var(--surface)';
-    html += '<div class="gantt-month" style="background:'+bg+'">'+m.label+'</div>';
-  });
-  html += '</div></div>';
+  if(isMeses){
+    // Modo meses — uma linha com rótulos de mês
+    html += '<div class="gantt-header" style="width:'+totalRowW+'px">'
+      + '<div class="gantt-label-col">Projeto</div>'
+      + '<div class="gantt-months" style="width:'+totalW+'px">';
+    months.forEach(function(m, mi){
+      var bg = mi%2===0 ? 'var(--surface2)' : 'var(--surface)';
+      html += '<div class="gantt-month" style="background:'+bg+'">'+m.label+'</div>';
+    });
+    html += '</div></div>';
+  } else {
+    // Modo dias — linha 1: meses agrupados | linha 2: dias com destaque fds
+    // Agrupar dias por mês para a linha de meses
+    var monthGroups = [];
+    days.forEach(function(d){
+      var mKey = d.date.getFullYear()+'-'+(d.date.getMonth());
+      var last = monthGroups[monthGroups.length-1];
+      if(last && last.key===mKey){ last.count++; } else {
+        monthGroups.push({ key:mKey, count:1,
+          label: d.date.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}) });
+      }
+    });
+    html += '<div style="width:'+totalRowW+'px;border-bottom:2px solid var(--accent);display:flex;background:var(--surface2)">'
+      + '<div class="gantt-label-col" style="border-bottom:none">Projeto</div>'
+      + '<div style="position:relative;width:'+totalW+'px;display:flex;border-left:2px solid var(--accent)">';
+    monthGroups.forEach(function(mg){
+      html += '<div style="width:'+(mg.count*GANTT_DAY_W)+'px;min-width:'+(mg.count*GANTT_DAY_W)+'px;font-size:10px;font-weight:700;color:var(--text2);padding:3px 6px;border-right:1px solid var(--border);box-sizing:border-box;overflow:hidden;white-space:nowrap">'+mg.label+'</div>';
+    });
+    html += '</div></div>';
+    // Linha 2: dias — largura do label spacer igual à coluna label (240px)
+    html += '<div style="width:'+totalRowW+'px;border-bottom:1px solid var(--border);display:flex;background:var(--surface)">'
+      + '<div style="width:240px;min-width:240px;flex-shrink:0;border-right:2px solid var(--accent)"></div>'
+      + '<div style="position:relative;width:'+totalW+'px;display:flex;overflow:hidden">';
+    days.forEach(function(d, di){
+      var isToday = d.date.toDateString() === today.toDateString();
+      var bg = isToday ? '#FEF9C3' : d.isWeekend ? 'rgba(239,68,68,.08)' : 'transparent';
+      var col = isToday ? '#92400E' : d.isWeekend ? '#DC2626' : 'var(--text3)';
+      // sem border para não deslocar — separação visual pelo fundo alternado
+      html += '<div style="width:'+GANTT_DAY_W+'px;min-width:'+GANTT_DAY_W+'px;flex-shrink:0;text-align:center;font-size:10px;font-weight:'+(isToday?'800':'600')+';color:'+col+';background:'+bg+';padding:2px 0;line-height:1.4;box-sizing:content-box">'
+        + '<div style="font-weight:'+(isToday?'800':'700')+'">'+d.day+'</div>'
+        + '<div style="font-size:9px;font-weight:400">'+d.label+'</div>'
+        + '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // Zebra pré-computada para linhas de tarefas (reutilizado)
+  var _rowZebra = '';
+  if(isMeses){
+    months.forEach(function(m, mi){ if(mi%2===1) _rowZebra += '<div style="position:absolute;left:'+(mi*GANTT_COL_W)+'px;top:0;width:'+GANTT_COL_W+'px;height:100%;background:rgba(0,0,0,.018);pointer-events:none"></div>'; });
+  } else {
+    days.forEach(function(d, di){
+      var x = di * GANTT_DAY_W;
+      if(d.isWeekend) _rowZebra += '<div style="position:absolute;left:'+x+'px;top:0;width:'+GANTT_DAY_W+'px;height:100%;background:rgba(239,68,68,.06);pointer-events:none"></div>';
+      var isMonday = d.dow === 1;
+      _rowZebra += '<div style="position:absolute;left:'+x+'px;top:0;height:100%;width:'+(isMonday?'2':'1')+'px;background:'+(isMonday?'rgba(99,102,241,.2)':'var(--border)')+';pointer-events:none"></div>';
+    });
+  }
 
   // Linhas de projetos
   projetos.forEach(function(d){
@@ -11771,26 +12118,36 @@ function _renderGantt(projetos, prazoMap) {
     var hasConflito = Object.keys(prazoMap||{}).some(function(dt){ return prazoMap[dt].length>1 && prazoMap[dt].indexOf(d.id)>=0; });
     var barColor = hasConflito ? '#EF4444' : (d.status==='Fechado'?'#64748B':'#3B82F6');
 
+    var allTarefas = [];
+    (d.marcos||[]).forEach(function(m){ (m.tarefas||[]).forEach(function(t){ allTarefas.push(t); }); });
+
     html += '<div class="gantt-row" style="width:'+totalRowW+'px">'
       // Label
-      + '<div class="gantt-row-label" onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)" title="'+_esc(d.servico)+'">'
-        + '<strong style="font-size:11px">'+_esc(d.proposta||'')+'</strong>'
-        + '<span>'+_esc((d.cliente||'').substring(0,28)+(d.cliente&&d.cliente.length>28?'…':''))+'</span>'
+      + '<div class="gantt-row-label" style="white-space:normal;flex-direction:row;align-items:center;gap:2px;padding:4px 6px">'
+        + (allTarefas.length ? '<span id="gtog-'+d.id+'" onclick="event.stopPropagation();_gToggle(\''+d.id+'\')" style="cursor:pointer;font-size:11px;color:var(--primary);flex-shrink:0;width:16px;text-align:center;line-height:1;user-select:none">&#9654;</span>' : '<span style="display:inline-block;width:16px;flex-shrink:0"></span>')
+        + '<div onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)" style="flex:1;min-width:0;overflow:hidden;cursor:pointer" title="'+_esc(d.servico)+'">'
+          + '<strong style="font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(d.proposta||'')+'</strong>'
+          + '<span style="font-size:11px;color:var(--text3);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">'+_esc((d.cliente||'').substring(0,26)+(d.cliente&&d.cliente.length>26?'…':''))+'</span>'
+        + '</div>'
       + '</div>'
       // Timeline
       + '<div class="gantt-timeline" style="width:'+totalW+'px">';
 
-    // Zebra de meses
-    months.forEach(function(m, mi){
-      var x = mi * GANTT_COL_W;
-      if(mi%2===1) html += '<div style="position:absolute;left:'+x+'px;top:0;width:'+GANTT_COL_W+'px;height:100%;background:rgba(0,0,0,.018);pointer-events:none"></div>';
-    });
-
-    // Linhas verticais dos meses
-    months.forEach(function(m, mi){
-      var x = mi * GANTT_COL_W;
-      html += '<div style="position:absolute;left:'+x+'px;top:0;height:100%;width:1px;background:var(--border);pointer-events:none"></div>';
-    });
+    // Zebra e linhas de grade (meses ou dias)
+    if(isMeses){
+      months.forEach(function(m, mi){
+        var x = mi * GANTT_COL_W;
+        if(mi%2===1) html += '<div style="position:absolute;left:'+x+'px;top:0;width:'+GANTT_COL_W+'px;height:100%;background:rgba(0,0,0,.018);pointer-events:none"></div>';
+        html += '<div style="position:absolute;left:'+x+'px;top:0;height:100%;width:1px;background:var(--border);pointer-events:none"></div>';
+      });
+    } else {
+      days.forEach(function(d, di){
+        var x = di * GANTT_DAY_W;
+        if(d.isWeekend) html += '<div style="position:absolute;left:'+x+'px;top:0;width:'+GANTT_DAY_W+'px;height:100%;background:rgba(239,68,68,.05);pointer-events:none"></div>';
+        var isMonday = d.dow === 1;
+        html += '<div style="position:absolute;left:'+x+'px;top:0;height:100%;width:'+(isMonday?'2':'1')+'px;background:'+(isMonday?'rgba(99,102,241,.25)':'var(--border)')+';pointer-events:none"></div>';
+      });
+    }
 
     // Linha hoje
     if(todayPx >= 0 && todayPx <= totalW){
@@ -11804,18 +12161,126 @@ function _renderGantt(projetos, prazoMap) {
 
     // Barra principal
     html += '<div class="gantt-bar'+(hasConflito?' conflict':'')+'" '
+      + 'onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)" '
       + 'style="position:absolute;left:'+startPx+'px;width:'+barW+'px;top:50%;transform:translateY(-50%);height:20px;border-radius:4px;background:'+barColor+';display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;z-index:4;cursor:pointer" '
-      + 'title="'+_esc(d.servico)+'">'+_esc(d.proposta||'')+'</div>';
+      + 'title="'+_esc(d.servico)+' — clique para abrir">'+_esc(d.proposta||'')+'</div>';
 
     // Marcadores de marco
     marcos.forEach(function(m){
       if(!m.dataPrevista) return;
       var px = dateToPx(new Date(m.dataPrevista));
       var mc = m.status==='Realizado'?'#10B981': m.status==='Não Realizado'?'#EF4444':'#F59E0B';
-      html += '<div style="position:absolute;left:'+px+'px;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:'+mc+';border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:5;cursor:pointer" title="'+_esc(m.nome)+' — '+fD(m.dataPrevista)+'"></div>';
+      html += '<div onclick="showPage(\'demandas\');setTimeout(function(){openModalEdit(\''+d.id+'\');setTimeout(function(){switchTab(\'projeto\');},300);},200)" style="position:absolute;left:'+px+'px;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:'+mc+';border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:5;cursor:pointer" title="'+_esc(m.nome)+' — '+fD(m.dataPrevista)+'"></div>';
     });
 
     html += '</div></div>';
+
+    // Sub-linhas agrupadas por Marco (ocultas, expandidas via _gToggle)
+    (d.marcos||[]).forEach(function(marco){
+      var mTarefas = marco.tarefas||[];
+      if(!mTarefas.length) return;
+      var mDone  = mTarefas.filter(function(t){return t.status==='done';}).length;
+      var mColor = marco.status==='Realizado'?'#10B981':marco.status==='Não Realizado'?'#EF4444':'#6B7280';
+      var mPct   = mTarefas.length>0?Math.round(mDone/mTarefas.length*100):0;
+
+      // Cabeçalho do Marco (com toggle próprio)
+      html += '<div data-gproj="'+d.id+'" data-gtype="marco" data-gmarco="'+marco.id+'" style="display:none;height:40px;width:'+totalRowW+'px;background:#dde3ee;border-bottom:1px solid #b8c4d8">'
+        + '<div style="width:240px;min-width:240px;flex-shrink:0;display:flex;align-items:center;gap:3px;padding:0 6px 0 6px;border-right:2px solid var(--border);border-left:4px solid '+mColor+';overflow:hidden;height:40px">'
+          + '<span id="gmtog-'+marco.id+'" onclick="event.stopPropagation();_mToggle(\''+d.id+'\',\''+marco.id+'\')" style="cursor:pointer;font-size:11px;color:var(--primary);flex-shrink:0;width:14px;text-align:center;user-select:none">&#9654;</span>'
+          + '<span style="font-size:12px;flex-shrink:0">🏁</span>'
+          + '<span style="font-size:12px;font-weight:700;color:#1e3a5f;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:2px">'+_esc(marco.nome)+'</span>'
+          + '<span style="font-size:11px;color:'+mColor+';font-weight:700;white-space:nowrap;flex-shrink:0">'+mDone+'/'+mTarefas.length+'</span>'
+        + '</div>'
+        + '<div class="gantt-timeline" style="width:'+totalW+'px;height:40px;background:#dde3ee">'
+          + _rowZebra
+          + (todayPx>=0&&todayPx<=totalW?'<div style="position:absolute;left:'+todayPx+'px;top:0;height:100%;width:2px;background:#F59E0B;opacity:.8;pointer-events:none;z-index:3"></div>':'')
+          + (mPct>0?'<div style="position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:'+mColor+'">'+mPct+'%</div>':'')
+        + '</div>'
+      + '</div>';
+
+      // Tarefas do Marco
+      mTarefas.forEach(function(tar){
+        var tColor   = tar.status==='done'?'#10B981':tar.status==='in_progress'?'#3B82F6':'#CBD5E1';
+        var subsDone = (tar.subtarefas||[]).filter(function(s){return s.status==='done';}).length;
+        var subsTotal= (tar.subtarefas||[]).length;
+        var pct      = subsTotal>0?Math.round(subsDone/subsTotal*100):(tar.status==='done'?100:0);
+        // Barra do Gantt: de dataInicio até dataRealizada (ou dataPrevista como fallback)
+        var tBarHtml = '';
+        var tStart = tar.dataInicio ? new Date(tar.dataInicio) : null;
+        var tEnd   = tar.dataRealizada ? new Date(tar.dataRealizada) : (tar.dataPrevista ? new Date(tar.dataPrevista) : null);
+        if(tStart && tEnd) {
+          var tLeftPx  = dateToPx(tStart);
+          var tRightPx = dateToPx(tEnd);
+          var tW       = Math.max(8, tRightPx - tLeftPx);
+          var tooltip  = _esc(tar.nome)+' — Início: '+fD(tar.dataInicio)+' | '+(tar.dataRealizada?'Realizada: '+fD(tar.dataRealizada):'Prevista: '+fD(tar.dataPrevista));
+          tBarHtml += '<div title="'+tooltip+'" style="position:absolute;left:'+tLeftPx+'px;width:'+tW+'px;top:50%;transform:translateY(-50%);height:14px;border-radius:3px;background:'+tColor+';z-index:4;opacity:.85;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;overflow:hidden">'+(pct>0?pct+'%':'')+'</div>';
+          tBarHtml += '<div style="position:absolute;left:'+tLeftPx+'px;top:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:2px;background:#fff;border:2px solid '+tColor+';z-index:5" title="Início: '+fD(tar.dataInicio)+'"></div>';
+          tBarHtml += '<div style="position:absolute;left:'+tRightPx+'px;top:50%;transform:translate(-50%,-50%);width:7px;height:7px;border-radius:50%;background:'+tColor+';border:1.5px solid #fff;z-index:5" title="'+(tar.dataRealizada?'Realizada':'Prevista')+': '+(tar.dataRealizada?fD(tar.dataRealizada):fD(tar.dataPrevista))+'"></div>';
+        } else if(tEnd) {
+          // Só tem data fim — barra 72px como antes
+          var tDotPx = dateToPx(tEnd);
+          var tW72   = 72;
+          var tLeft72 = Math.max(0, tDotPx - tW72);
+          tBarHtml += '<div style="position:absolute;left:'+tLeft72+'px;width:'+tW72+'px;top:50%;transform:translateY(-50%);height:14px;border-radius:3px;background:'+tColor+';z-index:4;opacity:.85;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;overflow:hidden">'+(pct>0?pct+'%':'')+'</div>';
+          tBarHtml += '<div style="position:absolute;left:'+tDotPx+'px;top:50%;transform:translate(-50%,-50%);width:7px;height:7px;border-radius:50%;background:'+tColor+';border:1.5px solid #fff;z-index:5" title="'+_esc(tar.nome)+' — '+(tar.dataRealizada?'Realizada':'Prevista')+': '+(tar.dataRealizada?fD(tar.dataRealizada):fD(tar.dataPrevista))+'"></div>';
+        } else {
+          tBarHtml = '<div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;color:#cbd5e1;font-style:italic">sem data</div>';
+        }
+        html += '<div data-gproj="'+d.id+'" data-gtype="tar" data-gmarco="'+marco.id+'" data-gtar="'+tar.id+'" style="display:none;height:42px;width:'+totalRowW+'px;background:#f4f6f9;border-bottom:1px dashed #e2e8f0">'
+          + '<div style="width:240px;min-width:240px;flex-shrink:0;display:flex;align-items:center;gap:2px;padding:0 4px 0 0;border-right:2px solid var(--border);border-left:3px solid '+tColor+';overflow:hidden;height:42px">'
+            + '<span style="display:inline-block;width:16px;flex-shrink:0;text-align:center;font-size:11px;color:#b0bec5">└</span>'
+            + (subsTotal>0?'<span id="gttog-'+tar.id+'" onclick="event.stopPropagation();_tToggle(\''+d.id+'\',\''+tar.id+'\')" style="cursor:pointer;font-size:11px;color:#94A3B8;flex-shrink:0;width:14px;text-align:center;user-select:none">&#9654;</span>':'<span style="display:inline-block;width:14px;flex-shrink:0"></span>')
+            + '<span style="flex-shrink:0;font-size:12px">'+(tar.status==='done'?'✅':tar.status==='in_progress'?'🔄':'⏳')+'</span>'
+            + '<div style="flex:1;min-width:0;overflow:hidden;margin-left:2px">'
+              + '<span style="font-size:12px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">'+_esc(tar.nome)+'</span>'
+              + (tar.dataPrevista||tar.dataInicio||subsTotal>0?'<span style="font-size:10px;color:var(--text3);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(tar.dataInicio?'▶ '+fD(tar.dataInicio)+' ':'')+((tar.dataRealizada||tar.dataPrevista)?'⏹ '+(tar.dataRealizada?fD(tar.dataRealizada):fD(tar.dataPrevista)):'')+(subsTotal>0?' · '+subsDone+'/'+subsTotal+' sub':'')+'</span>':'')
+            + '</div>'
+          + '</div>'
+          + '<div class="gantt-timeline" style="width:'+totalW+'px;height:42px;background:#f4f6f9">'
+            + _rowZebra
+            + (todayPx>=0&&todayPx<=totalW?'<div style="position:absolute;left:'+todayPx+'px;top:0;height:100%;width:2px;background:#F59E0B;opacity:.8;pointer-events:none;z-index:3"></div>':'')
+            + tBarHtml
+          + '</div>'
+        + '</div>';
+
+        // Linhas de Subtarefas (quando houver)
+        (tar.subtarefas||[]).forEach(function(sub){
+          var sColor = sub.status==='done'?'#10B981':'#94A3B8';
+          var sStart = sub.dataInicio   ? new Date(sub.dataInicio)   : null;
+          var sEnd   = sub.dataRealizada? new Date(sub.dataRealizada): (sub.dataPrevista? new Date(sub.dataPrevista): null);
+          var sBarHtml = '';
+          if(sStart && sEnd) {
+            var sLP  = dateToPx(sStart), sRP = dateToPx(sEnd);
+            var sW   = Math.max(6, sRP - sLP);
+            var sTip = _esc(sub.nome)+' — Início: '+fD(sub.dataInicio)+' | '+(sub.dataRealizada?'Realizada: '+fD(sub.dataRealizada):'Prevista: '+fD(sub.dataPrevista));
+            sBarHtml += '<div title="'+sTip+'" style="position:absolute;left:'+sLP+'px;width:'+sW+'px;top:50%;transform:translateY(-50%);height:10px;border-radius:2px;background:'+sColor+';z-index:4;opacity:.75"></div>';
+            sBarHtml += '<div style="position:absolute;left:'+sLP+'px;top:50%;transform:translate(-50%,-50%);width:5px;height:5px;border-radius:1px;background:#fff;border:1.5px solid '+sColor+';z-index:5"></div>';
+            sBarHtml += '<div style="position:absolute;left:'+sRP+'px;top:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:'+sColor+';border:1.5px solid #fff;z-index:5"></div>';
+          } else if(sEnd) {
+            var sDotPx = dateToPx(sEnd), sW48 = 48;
+            var sLeft48 = Math.max(0, sDotPx - sW48);
+            sBarHtml += '<div style="position:absolute;left:'+sLeft48+'px;width:'+sW48+'px;top:50%;transform:translateY(-50%);height:7px;border-radius:2px;background:'+sColor+';z-index:4;opacity:.7"></div>';
+            sBarHtml += '<div style="position:absolute;left:'+sDotPx+'px;top:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:'+sColor+';border:1.5px solid #fff;z-index:5" title="'+_esc(sub.nome)+' — '+fD(sub.dataPrevista||sub.dataRealizada)+'"></div>';
+          } else {
+            sBarHtml = '<div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:8px;color:#cbd5e1;font-style:italic">sem data</div>';
+          }
+          html += '<div data-gproj="'+d.id+'" data-gtype="sub" data-gmarco="'+marco.id+'" data-gtar="'+tar.id+'" style="display:none;height:32px;width:'+totalRowW+'px;background:#fafbfd;border-bottom:1px dashed #edf0f5">'
+            + '<div style="width:240px;min-width:240px;flex-shrink:0;display:flex;align-items:center;gap:2px;padding:0 4px 0 0;border-right:2px solid var(--border);border-left:3px solid '+sColor+';overflow:hidden;height:32px">'
+              + '<span style="display:inline-block;width:32px;flex-shrink:0;text-align:right;font-size:11px;color:#c8d0dc;padding-right:2px">└─</span>'
+              + '<span style="flex-shrink:0;font-size:11px">'+(sub.status==='done'?'✅':'○')+'</span>'
+              + '<div style="flex:1;min-width:0;overflow:hidden;margin-left:2px">'
+                + '<span style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;text-decoration:'+(sub.status==='done'?'line-through':'none')+'">'+_esc(sub.nome)+'</span>'
+              + '</div>'
+            + '</div>'
+            + '<div class="gantt-timeline" style="width:'+totalW+'px;height:32px;background:#fafbfd">'
+              + _rowZebra
+              + (todayPx>=0&&todayPx<=totalW?'<div style="position:absolute;left:'+todayPx+'px;top:0;height:100%;width:2px;background:#F59E0B;opacity:.6;pointer-events:none;z-index:3"></div>':'')
+              + sBarHtml
+            + '</div>'
+          + '</div>';
+        });
+      });
+    });
   });
 
   // Legenda
@@ -11834,6 +12299,190 @@ function _renderGantt(projetos, prazoMap) {
 
 function _esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// Gantt: sistema de expansão hierárquica — Projeto → Marco → Tarefa
+var _gState = { proj:{}, marco:{}, tar:{} };
+
+function _gToggle(projId) {
+  _gState.proj[projId] = !_gState.proj[projId];
+  _applyGState(projId);
+}
+function _mToggle(projId, marcoId) {
+  _gState.marco[marcoId] = !_gState.marco[marcoId];
+  _applyGState(projId);
+}
+function _tToggle(projId, tarId) {
+  _gState.tar[tarId] = !_gState.tar[tarId];
+  _applyGState(projId);
+}
+function _applyGState(projId) {
+  var pOpen = !!_gState.proj[projId];
+  var ptog = document.getElementById('gtog-'+projId);
+  if(ptog){ ptog.innerHTML = pOpen ? '&#9660;' : '&#9654;'; ptog.style.color = pOpen ? 'var(--accent)' : 'var(--primary)'; }
+  document.querySelectorAll('[data-gproj="'+projId+'"][data-gtype="marco"]').forEach(function(el){
+    el.style.display = pOpen ? 'flex' : 'none';
+    var mid = el.getAttribute('data-gmarco');
+    var mtog = document.getElementById('gmtog-'+mid);
+    if(mtog){ var mO=!!_gState.marco[mid]; mtog.innerHTML=mO?'&#9660;':'&#9654;'; mtog.style.color=mO?'var(--accent)':'var(--primary)'; }
+  });
+  document.querySelectorAll('[data-gproj="'+projId+'"][data-gtype="tar"]').forEach(function(el){
+    var mid = el.getAttribute('data-gmarco');
+    var show = pOpen && !!_gState.marco[mid];
+    el.style.display = show ? 'flex' : 'none';
+    var tid = el.getAttribute('data-gtar');
+    var ttog = document.getElementById('gttog-'+tid);
+    if(ttog){ var tO=!!_gState.tar[tid]; ttog.innerHTML=tO?'&#9660;':'&#9654;'; ttog.style.color=tO?'var(--accent)':'#94A3B8'; }
+  });
+  document.querySelectorAll('[data-gproj="'+projId+'"][data-gtype="sub"]').forEach(function(el){
+    var mid = el.getAttribute('data-gmarco');
+    var tid = el.getAttribute('data-gtar');
+    el.style.display = (pOpen && !!_gState.marco[mid] && !!_gState.tar[tid]) ? 'flex' : 'none';
+  });
+}
+
+// Modal de seleção de projetos para exportar
+function _showExportModal() {
+  var projetos = state.demandas.filter(function(d){
+    return d.status==='Fechado'||d.status==='Em Execução'||d.status==='Em Revisão';
+  });
+  var ex = document.getElementById('_exp-overlay'); if(ex) ex.remove();
+  var ov = document.createElement('div');
+  ov.id = '_exp-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  var h = '<div style="background:var(--surface);border-radius:12px;padding:24px;width:400px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">';
+  h += '<h3 style="margin:0 0 4px;font-size:15px;color:var(--text)">📄 Exportar Relatório</h3>';
+  h += '<p style="margin:0 0 14px;font-size:12px;color:var(--text3)">Selecione os projetos para incluir no relatório:</p>';
+  h += '<label style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 4px;border-bottom:2px solid var(--border);margin-bottom:4px;cursor:pointer">';
+  h += '<input type="checkbox" id="_exp-all" checked onchange="document.querySelectorAll(\'._exp-cb\').forEach(function(c){c.checked=this.checked},this)"> <strong>Selecionar todos ('+projetos.length+')</strong></label>';
+  projetos.forEach(function(d){
+    var stColor = d.status==='Em Execução'?'#3B82F6':d.status==='Em Revisão'?'#F59E0B':'#64748B';
+    var marcos = d.marcos||[];
+    var totalT=0, doneT=0;
+    marcos.forEach(function(m){(m.tarefas||[]).forEach(function(t){totalT++;if(t.status==='done')doneT++;});});
+    h += '<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:4px">';
+    h += '<input type="checkbox" class="_exp-cb" value="'+d.id+'" checked>';
+    h += '<div style="flex:1;min-width:0">';
+    h += '<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(d.proposta||'')+'</div>';
+    h += '<div style="font-size:10px;color:'+stColor+'">'+_esc(d.status)+'&nbsp;·&nbsp;'+_esc((d.cliente||'').substring(0,30))+(totalT>0?' &nbsp;·&nbsp; '+doneT+'/'+totalT+' tarefas':'')+'</div>';
+    h += '</div></label>';
+  });
+  h += '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">';
+  h += '<button onclick="document.getElementById(\'_exp-overlay\').remove()" style="padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:12px">Cancelar</button>';
+  h += '<button onclick="_runExportPDF()" style="padding:8px 18px;border-radius:6px;border:none;background:#1e3a5f;color:#fff;cursor:pointer;font-size:12px;font-weight:700">📄 Gerar PDF</button>';
+  h += '</div></div>';
+  ov.innerHTML = h;
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
+
+function _runExportPDF() {
+  var selected = Array.from(document.querySelectorAll('._exp-cb:checked')).map(function(c){return c.value;});
+  var ov = document.getElementById('_exp-overlay'); if(ov) ov.remove();
+  if(!selected.length){ alert('Selecione pelo menos um projeto.'); return; }
+  var projetos = state.demandas.filter(function(d){ return selected.indexOf(d.id)>=0; });
+  _exportGanttPDF(projetos);
+}
+
+// Exportar relatório completo em PDF
+function _exportGanttPDF(projetos) {
+  if(!projetos) projetos = state.demandas.filter(function(d){
+    return d.status==='Fechado'||d.status==='Em Execução'||d.status==='Em Revisão';
+  });
+  var today = new Date().toLocaleDateString('pt-BR');
+  var h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório de Projetos — CERC</title><style>';
+  h += 'body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b;margin:0;padding:24px}';
+  h += 'h1{font-size:18px;color:#1e3a5f;border-bottom:2px solid #3B82F6;padding-bottom:8px;margin-bottom:4px}';
+  h += '.subtitle{font-size:11px;color:#64748b;margin-bottom:24px}';
+  h += '.proj{page-break-inside:avoid;margin-bottom:28px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}';
+  h += '.proj-hd{background:#1e3a5f;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center}';
+  h += '.proj-hd h2{margin:0;font-size:14px;font-weight:700}';
+  h += '.proj-hd .badge{font-size:10px;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px}';
+  h += '.proj-body{padding:12px 16px}';
+  h += '.info-row{display:flex;gap:24px;margin-bottom:10px;flex-wrap:wrap;border-bottom:1px solid #f1f5f9;padding-bottom:10px}';
+  h += '.info-item{font-size:11px}.info-item label{color:#64748b;display:block;font-size:9px;text-transform:uppercase;letter-spacing:.5px}';
+  h += '.section-title{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 6px}';
+  h += '.marco{margin-bottom:10px;padding:8px 10px;background:#f8fafc;border-radius:6px;border-left:3px solid #3B82F6}';
+  h += '.marco-hd{font-weight:700;font-size:11px;color:#1e3a5f;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center}';
+  h += '.tarefa{padding:4px 8px;margin:3px 0;background:#fff;border-radius:4px;font-size:10px;display:flex;gap:8px;align-items:flex-start;border:1px solid #e2e8f0}';
+  h += '.tar-info{flex:1}';
+  h += '.tar-dates{font-size:9px;color:#94a3b8;white-space:nowrap}';
+  h += '.subtarefa{padding:3px 8px 3px 28px;font-size:10px;color:#475569;display:flex;gap:6px}';
+  h += '.done{color:#10B981}.prog{color:#3B82F6}.pend{color:#94A3B8}';
+  h += '.progress-bar{height:4px;background:#e2e8f0;border-radius:2px;margin-top:3px;overflow:hidden}';
+  h += '.progress-fill{height:100%;background:#3B82F6;border-radius:2px}';
+  h += '@media print{body{padding:10px}button{display:none}.proj{page-break-inside:avoid}}';
+  h += '</style></head><body>';
+  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+  h += '<div><h1>📋 Relatório de Projetos Ativos</h1>';
+  h += '<div class="subtitle">CERC Soluções em Engenharia &nbsp;|&nbsp; Gerado em '+today+' &nbsp;|&nbsp; '+projetos.length+' projeto(s)</div></div>';
+  h += '<button onclick="window.print()" style="padding:8px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">🖨️ Imprimir</button>';
+  h += '</div>';
+
+  projetos.forEach(function(d){
+    var stColor = d.status==='Em Execução'?'#3B82F6':d.status==='Em Revisão'?'#F59E0B':'#64748B';
+    var marcos = d.marcos||[];
+    var totalTar = 0, doneTar = 0;
+    marcos.forEach(function(m){ (m.tarefas||[]).forEach(function(t){ totalTar++; if(t.status==='done') doneTar++; }); });
+    var pctGeral = totalTar>0?Math.round(doneTar/totalTar*100):0;
+
+    h += '<div class="proj">';
+    h += '<div class="proj-hd" style="background:'+stColor+'"><h2>'+d.proposta+'</h2><span class="badge">'+d.status+'</span></div>';
+    h += '<div class="proj-body">';
+    h += '<div class="info-row">';
+    h += '<div class="info-item"><label>Cliente</label>'+((d.cliente)||'—')+'</div>';
+    h += '<div class="info-item"><label>Responsável</label>'+((d.responsavel)||'—')+'</div>';
+    h += '<div class="info-item"><label>Data de Criação</label>'+(d.dataCriacao?new Date(d.dataCriacao).toLocaleDateString('pt-BR'):'—')+'</div>';
+    h += '<div class="info-item"><label>Progresso Geral</label><strong>'+pctGeral+'%</strong> ('+doneTar+'/'+totalTar+' tarefas)</div>';
+    if(d.servico) h += '<div class="info-item" style="flex:1"><label>Serviço</label>'+d.servico.substring(0,80)+'</div>';
+    h += '</div>';
+
+    if(totalTar>0){
+      h += '<div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" style="width:'+pctGeral+'%;background:'+stColor+'"></div></div>';
+    }
+
+    if(marcos.length){
+      h += '<div class="section-title">Marcos e Tarefas</div>';
+      marcos.forEach(function(m){
+        var mSt = m.status==='Realizado'?'#10B981':m.status==='Não Realizado'?'#EF4444':'#F59E0B';
+        var mTarefas = m.tarefas||[];
+        var mDone = mTarefas.filter(function(t){return t.status==='done';}).length;
+        h += '<div class="marco">';
+        h += '<div class="marco-hd"><span>🏁 '+m.nome+'</span><span style="color:'+mSt+';font-size:10px">'+m.status+(mTarefas.length?' &nbsp;('+mDone+'/'+mTarefas.length+' tarefas)':'')+'</span></div>';
+        if(mTarefas.length){
+          mTarefas.forEach(function(t){
+            var tIcon = t.status==='done'?'✅':t.status==='in_progress'?'🔄':'⏳';
+            var tClass = t.status==='done'?'done':t.status==='in_progress'?'prog':'pend';
+            var subs = t.subtarefas||[];
+            var sTotal = subs.length, sDone = subs.filter(function(s){return s.status==='done';}).length;
+            h += '<div class="tarefa"><span>'+tIcon+'</span><div class="tar-info"><span class="'+tClass+'">'+t.nome+'</span>';
+            if(sTotal>0){ var sp=Math.round(sDone/sTotal*100); h += '<div class="progress-bar"><div class="progress-fill" style="width:'+sp+'%"></div></div>'; }
+            h += '</div>';
+            h += '<div class="tar-dates">'+(t.dataPrevista?'📅 '+new Date(t.dataPrevista).toLocaleDateString('pt-BR'):'')+(t.dataRealizada?' ✅ '+new Date(t.dataRealizada).toLocaleDateString('pt-BR'):'')+(sTotal>0?'<br>'+sDone+'/'+sTotal+' sub':'')+'</div>';
+            h += '</div>';
+            subs.forEach(function(s){
+              var sIcon = s.status==='done'?'✓ ':'○ ';
+              h += '<div class="subtarefa" style="color:'+(s.status==='done'?'#10B981':'#94A3B8')+'"><span>'+sIcon+'</span><span>'+s.nome+(s.dataPrevista?' — '+new Date(s.dataPrevista).toLocaleDateString('pt-BR'):'')+'</span></div>';
+            });
+          });
+        } else {
+          h += '<div style="font-size:10px;color:#94A3B8;padding:2px 0">Sem tarefas cadastradas</div>';
+        }
+        h += '</div>';
+      });
+    } else {
+      h += '<div style="font-size:11px;color:#94A3B8;padding:4px 0">Sem marcos cadastrados</div>';
+    }
+
+    h += '</div></div>';
+  });
+
+  h += '</body></html>';
+  var w = window.open('','_blank');
+  w.document.write(h);
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ w.print(); }, 600);
+}
+
 // ── Marcos: funções do modal ───────────────────────────────
 var ETAPAS_PADRAO = ['Levantamento','Elaboração','Revisão','Entrega','Fechamento'];
 
@@ -11847,35 +12496,54 @@ function renderMarcosTab() {
     return;
   }
   if(empty) empty.style.display='none';
-  list.innerHTML = modalMarcos.map(function(marco, mi){
+
+  // ── Progresso total do projeto ──
+  var _totalTar = 0, _doneTar = 0;
+  modalMarcos.forEach(function(m){ (m.tarefas||[]).forEach(function(t){ _totalTar++; if(t.status==='done') _doneTar++; }); });
+  var _projPct   = _totalTar>0 ? Math.round(_doneTar/_totalTar*100) : 0;
+  var _projColor = _projPct===100?'#10B981':_projPct>=50?'#3B82F6':'#F59E0B';
+  var _projBanner = '<div id="proj-progress-banner" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+      + '<span style="font-size:11px;font-weight:700;color:var(--text2)">📊 Progresso Total do Projeto</span>'
+      + '<span style="font-size:14px;font-weight:800;color:'+_projColor+'">'+_projPct+'%</span>'
+    + '</div>'
+    + '<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
+      + '<div style="height:100%;width:'+_projPct+'%;background:'+_projColor+';border-radius:4px;transition:width .4s"></div>'
+    + '</div>'
+    + '<div style="font-size:10px;color:var(--text3);margin-top:5px">'+_doneTar+' de '+_totalTar+' tarefa(s) concluída(s) · '+modalMarcos.length+' marco(s)</div>'
+    + '</div>';
+
+  list.innerHTML = _projBanner + modalMarcos.map(function(marco, mi){
     var statusColor = marco.status==='Realizado'?'#166534':marco.status==='Não Realizado'?'#991B1B':'#92400E';
     var statusBg = marco.status==='Realizado'?'#DCFCE7':marco.status==='Não Realizado'?'#FEF2F2':'#FEF3C7';
     var tarefas = marco.tarefas||[];
     var tarefasDone = tarefas.filter(function(t){return t.status==='done';}).length;
+    var mPct   = tarefas.length>0 ? Math.round(tarefasDone/tarefas.length*100) : 0;
+    var mPctColor = mPct===100?'#10B981':mPct>0?'#3B82F6':'#94A3B8';
     return '<div class="marco-item" id="marco-item-'+mi+'">'
       + '<div class="marco-hd" onclick="toggleMarcoBody('+mi+')">'
         + '<span class="marco-toggle" id="marco-toggle-'+mi+'">▶</span>'
         + '<span class="marco-nome">'+_esc(marco.nome)+'</span>'
-        + (tarefas.length?'<span style="font-size:10px;color:var(--text3);margin-right:6px">'+tarefasDone+'/'+tarefas.length+' tarefas</span>':'')
+        + (tarefas.length
+            ? '<span style="font-size:10px;color:var(--text3);margin-right:6px">'+tarefasDone+'/'+tarefas.length+' tarefas</span>'
+              + '<span style="font-size:10px;font-weight:800;color:'+mPctColor+';margin-right:6px">'+mPct+'%</span>'
+            : '')
         + '<span class="marco-status-badge" style="color:'+statusColor+';background:'+statusBg+'">'+marco.status+'</span>'
         + '<button onclick="event.stopPropagation();removeMarco('+mi+')" style="margin-left:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0 4px" title="Remover marco">✕</button>'
       + '</div>'
+      + (tarefas.length
+          ? '<div style="height:4px;background:var(--border);overflow:hidden;margin:0 0 0 0">'
+              + '<div style="height:100%;width:'+mPct+'%;background:'+mPctColor+';transition:width .4s"></div>'
+            + '</div>'
+          : '')
       + '<div class="marco-body" id="marco-body-'+mi+'">'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">'
+        + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:14px">'
           + '<div><label style="font-size:10px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Nome do Marco</label>'
             + '<input class="finput" style="font-size:12px" value="'+_esc(marco.nome)+'" oninput="modalMarcos['+mi+'].nome=this.value;_updateMarcoBadge('+mi+')" /></div>'
-          + '<div><label style="font-size:10px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Data Prevista</label>'
-            + '<input type="date" class="finput" style="font-size:12px" value="'+(marco.dataPrevista||'')+'" onchange="modalMarcos['+mi+'].dataPrevista=this.value" /></div>'
           + '<div><label style="font-size:10px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Status</label>'
             + '<select class="finput" style="font-size:12px" onchange="modalMarcos['+mi+'].status=this.value;renderMarcosTab()">'
               + ['Pendente','Realizado','Não Realizado'].map(function(s){return '<option value="'+s+'"'+(marco.status===s?' selected':'')+'>'+s+'</option>';}).join('')
             + '</select></div>'
-        + '</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
-          + '<div><label style="font-size:10px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Data Realizada</label>'
-            + '<input type="date" class="finput" style="font-size:12px" value="'+(marco.dataRealizadaData||'')+'" onchange="modalMarcos['+mi+'].dataRealizadaData=this.value" /></div>'
-          + '<div><label style="font-size:10px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">Hora Realizada</label>'
-            + '<input type="time" class="finput" style="font-size:12px" value="'+(marco.dataRealizadaHora||'')+'" onchange="modalMarcos['+mi+'].dataRealizadaHora=this.value" /></div>'
         + '</div>'
         + '<div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">'
           + '<span style="font-size:11px;font-weight:700;color:var(--text2)">📋 Tarefas</span>'
@@ -11893,38 +12561,149 @@ function _renderTarefas(tarefas, mi) {
   if(!tarefas||!tarefas.length) return '<div style="font-size:11px;color:var(--text3);padding:6px 0">Nenhuma tarefa. Clique em "＋ Tarefa" para adicionar.</div>';
   return tarefas.map(function(tar, ti){
     var statusColor = tar.status==='done'?'#166534':tar.status==='in_progress'?'#1D4ED8':'#6B7280';
+    var statusBg    = tar.status==='done'?'#DCFCE7':tar.status==='in_progress'?'#DBEAFE':'#F3F4F6';
     var subtarefas = tar.subtarefas||[];
     var subDone = subtarefas.filter(function(s){return s.status==='done';}).length;
+    var subTotal = subtarefas.length;
+    var subPct = subTotal>0 ? Math.round(subDone/subTotal*100) : 0;
+    var progColor = subPct===100?'#10B981':subPct>0?'#3B82F6':'var(--border)';
     return '<div class="tarefa-item">'
       + '<div class="tarefa-hd">'
-        + '<span class="tarefa-toggle-btn" onclick="toggleTarefaBody('+mi+','+ti+')" id="tar-tog-'+mi+'-'+ti+'">▶</span>'
+        + '<span class="tarefa-toggle-btn" onclick="toggleTarefaBody('+mi+','+ti+')" id="tar-tog-'+mi+'-'+ti+'" title="Expandir subtarefas">▶</span>'
         + '<input class="finput" style="flex:1;font-size:11px;padding:3px 6px" value="'+_esc(tar.nome)+'" oninput="modalMarcos['+mi+'].tarefas['+ti+'].nome=this.value" />'
-        + '<select class="tarefa-status-sel" onchange="modalMarcos['+mi+'].tarefas['+ti+'].status=this.value;renderMarcosTab()" style="color:'+statusColor+'">'
+        + '<select id="tar-sel-'+mi+'-'+ti+'" class="tarefa-status-sel" onchange="_setTarefaStatus('+mi+','+ti+',this.value,this)" style="color:'+statusColor+';background:'+statusBg+'">'
           + '<option value="pending"'+(tar.status==='pending'?' selected':'')+'>Pendente</option>'
           + '<option value="in_progress"'+(tar.status==='in_progress'?' selected':'')+'>Em Andamento</option>'
           + '<option value="done"'+(tar.status==='done'?' selected':'')+'>Concluído</option>'
         + '</select>'
-        + (subtarefas.length?'<span style="font-size:9px;color:var(--text3);margin-left:4px">'+subDone+'/'+subtarefas.length+'</span>':'')
-        + '<button onclick="removeTarefa('+mi+','+ti+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0">✕</button>'
+        + '<span id="sub-badge-'+mi+'-'+ti+'" style="font-size:9px;color:var(--text3);margin-left:2px;'+(subTotal?'':'display:none')+'">'+subDone+'/'+subTotal+'</span>'
+        + '<button onclick="removeTarefa('+mi+','+ti+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0" title="Remover tarefa">✕</button>'
       + '</div>'
+      // Barra de progresso das subtarefas (visível sempre quando há subtarefas)
+      + (subTotal>0
+        ? '<div id="tar-prog-'+mi+'-'+ti+'" style="padding:0 10px 4px">'
+            + '<div style="display:flex;align-items:center;gap:6px">'
+              + '<div style="flex:1;height:4px;background:var(--border);border-radius:2px">'
+                + '<div id="tar-prog-bar-'+mi+'-'+ti+'" style="height:100%;width:'+subPct+'%;background:'+progColor+';border-radius:2px;transition:width .25s"></div>'
+              + '</div>'
+              + '<span id="tar-prog-txt-'+mi+'-'+ti+'" style="font-size:9px;color:var(--text3);min-width:28px;text-align:right">'+subPct+'%</span>'
+            + '</div>'
+          + '</div>'
+        : '')
+      // Painel de datas da tarefa (expandível junto com subtarefas)
+      + '<div id="tar-dates-'+mi+'-'+ti+'" style="display:none;padding:6px 10px 8px;border-top:1px solid var(--border);background:rgba(59,130,246,.03)">'
+          + '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">'
+            + '<div><label style="font-size:9px;font-weight:700;color:var(--text3);display:block;margin-bottom:3px">📅 Data Prevista</label>'
+              + '<input type="date" style="font-size:11px;padding:3px 6px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);width:130px" value="'+(tar.dataPrevista||'')+'" onchange="modalMarcos['+mi+'].tarefas['+ti+'].dataPrevista=this.value;_syncMarcoDates('+mi+')" /></div>'
+            + '<div><label style="font-size:9px;font-weight:700;color:#3B82F6;display:block;margin-bottom:3px">🚀 Data Início</label>'
+              + '<input type="date" style="font-size:11px;padding:3px 6px;border:1.5px solid #93C5FD;border-radius:6px;background:var(--surface);color:var(--text);width:130px" value="'+(tar.dataInicio||'')+'" onchange="modalMarcos['+mi+'].tarefas['+ti+'].dataInicio=this.value;_refreshDuracao(\'tar-dur-'+mi+'-'+ti+'\',this.value,modalMarcos['+mi+'].tarefas['+ti+'].dataRealizada)" /></div>'
+            + '<div><label style="font-size:9px;font-weight:700;color:#10B981;display:block;margin-bottom:3px">✅ Data Realizada</label>'
+              + '<input type="date" style="font-size:11px;padding:3px 6px;border:1.5px solid #6EE7B7;border-radius:6px;background:var(--surface);color:var(--text);width:130px" value="'+(tar.dataRealizada||'')+'" onchange="modalMarcos['+mi+'].tarefas['+ti+'].dataRealizada=this.value;_syncMarcoDates('+mi+');_refreshDuracao(\'tar-dur-'+mi+'-'+ti+'\',modalMarcos['+mi+'].tarefas['+ti+'].dataInicio,this.value)" /></div>'
+            + '<div id="tar-dur-'+mi+'-'+ti+'" style="font-size:11px;font-weight:600;color:#7C3AED;background:#EDE9FE;border-radius:6px;padding:3px 8px;align-self:flex-end;display:'+(tar.dataInicio&&tar.dataRealizada?'block':'none')+'">'
+              + _calcDuracao(tar.dataInicio, tar.dataRealizada)
+            + '</div>'
+          + '</div>'
+        + '</div>'
       + '<div class="subtarefa-list" id="sub-list-'+mi+'-'+ti+'" style="display:none">'
         + _renderSubtarefas(subtarefas, mi, ti)
-        + '<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 8px;margin-top:4px" onclick="addSubtarefa('+mi+','+ti+')">＋ Subtarefa</button>'
+        + '<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 8px;margin-top:6px" onclick="addSubtarefa('+mi+','+ti+')">＋ Subtarefa</button>'
       + '</div>'
     + '</div>';
   }).join('');
 }
 
+// Valida e aplica status da tarefa (bloqueia Concluído se subtarefas pendentes)
+function _setTarefaStatus(mi, ti, newStatus, sel) {
+  var subs = (modalMarcos[mi]&&modalMarcos[mi].tarefas&&modalMarcos[mi].tarefas[ti]&&modalMarcos[mi].tarefas[ti].subtarefas)||[];
+  if(newStatus==='done' && subs.length>0) {
+    var pendentes = subs.filter(function(s){return s.status!=='done';}).length;
+    if(pendentes>0) {
+      alert('⚠️ Conclua as '+pendentes+' subtarefa(s) pendente(s) antes de marcar a tarefa como Concluída.');
+      var cur = modalMarcos[mi].tarefas[ti].status;
+      sel.value = cur;
+      var sc = cur==='done'?'#166534':cur==='in_progress'?'#1D4ED8':'#6B7280';
+      var sb = cur==='done'?'#DCFCE7':cur==='in_progress'?'#DBEAFE':'#F3F4F6';
+      sel.style.color = sc; sel.style.background = sb;
+      return;
+    }
+  }
+  modalMarcos[mi].tarefas[ti].status = newStatus;
+  var sc = newStatus==='done'?'#166534':newStatus==='in_progress'?'#1D4ED8':'#6B7280';
+  var sb = newStatus==='done'?'#DCFCE7':newStatus==='in_progress'?'#DBEAFE':'#F3F4F6';
+  sel.style.color = sc; sel.style.background = sb;
+}
+
 function _renderSubtarefas(subtarefas, mi, ti) {
-  if(!subtarefas||!subtarefas.length) return '';
+  if(!subtarefas||!subtarefas.length) return '<div style="font-size:10px;color:var(--text3);padding:4px 0 2px">Nenhuma subtarefa ainda.</div>';
   return subtarefas.map(function(sub, si){
     var doneColor = sub.status==='done'?'#10B981':'var(--text3)';
-    return '<div class="subtarefa-item">'
-      + '<input type="checkbox"'+(sub.status==='done'?' checked':'')+' onchange="modalMarcos['+mi+'].tarefas['+ti+'].subtarefas['+si+'].status=this.checked?\'done\':\'pending\';renderMarcosTab()" style="width:14px;height:14px;cursor:pointer;flex-shrink:0" />'
-      + '<input class="finput" style="flex:1;font-size:11px;padding:2px 6px;text-decoration:'+(sub.status==='done'?'line-through':'none')+';color:'+doneColor+'" value="'+_esc(sub.nome)+'" oninput="modalMarcos['+mi+'].tarefas['+ti+'].subtarefas['+si+'].nome=this.value" />'
-      + '<button onclick="removeSubtarefa('+mi+','+ti+','+si+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0">✕</button>'
+    var durStr = _calcDuracao(sub.dataInicio, sub.dataRealizada);
+    return '<div class="subtarefa-item" style="flex-wrap:wrap;gap:4px;padding-bottom:4px">'
+      + '<input type="checkbox"'+(sub.status==='done'?' checked':'')+' onchange="modalMarcos['+mi+'].tarefas['+ti+'].subtarefas['+si+'].status=this.checked?\'done\':\'pending\';_refreshSubList('+mi+','+ti+')" style="width:14px;height:14px;cursor:pointer;flex-shrink:0;margin-top:3px" />'
+      + '<input class="finput" style="flex:1;min-width:120px;font-size:11px;padding:2px 6px;text-decoration:'+(sub.status==='done'?'line-through':'none')+';color:'+doneColor+'" value="'+_esc(sub.nome)+'" oninput="modalMarcos['+mi+'].tarefas['+ti+'].subtarefas['+si+'].nome=this.value" />'
+      + '<button onclick="removeSubtarefa('+mi+','+ti+','+si+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;margin-top:3px">✕</button>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;width:100%;padding-left:18px;margin-top:2px">'
+        + '<div style="display:flex;flex-direction:column;gap:1px">'
+          + '<span style="font-size:8px;font-weight:700;color:var(--text3)">📅 Prevista</span>'
+          + '<input type="date" title="Data Prevista" style="font-size:10px;padding:2px 4px;border-radius:4px;border:1px solid var(--border);color:var(--text3);background:var(--surface);width:112px" value="'+(sub.dataPrevista||'')+'" onchange="modalMarcos['+mi+'].tarefas['+ti+'].subtarefas['+si+'].dataPrevista=this.value" />'
+        + '</div>'
+        + '<div style="display:flex;flex-direction:column;gap:1px">'
+          + '<span style="font-size:8px;font-weight:700;color:#3B82F6">🚀 Início</span>'
+          + '<input type="date" title="Data Início" style="font-size:10px;padding:2px 4px;border-radius:4px;border:1px solid #93C5FD;color:var(--text);background:var(--surface);width:112px" value="'+(sub.dataInicio||'')+'" onchange="modalMarcos['+mi+'].tarefas['+ti+'].subtarefas['+si+'].dataInicio=this.value;_refreshDuracao(\'sub-dur-'+mi+'-'+ti+'-'+si+'\',this.value,modalMarcos['+mi+'].tarefas['+ti+'].subtarefas['+si+'].dataRealizada)" />'
+        + '</div>'
+        + '<div style="display:flex;flex-direction:column;gap:1px">'
+          + '<span style="font-size:8px;font-weight:700;color:#10B981">✅ Realizada</span>'
+          + '<input type="date" title="Data Realizada" style="font-size:10px;padding:2px 4px;border-radius:4px;border:1px solid #6EE7B7;color:var(--text);background:var(--surface);width:112px" value="'+(sub.dataRealizada||'')+'" onchange="modalMarcos['+mi+'].tarefas['+ti+'].subtarefas['+si+'].dataRealizada=this.value;_refreshDuracao(\'sub-dur-'+mi+'-'+ti+'-'+si+'\',modalMarcos['+mi+'].tarefas['+ti+'].subtarefas['+si+'].dataInicio,this.value)" />'
+        + '</div>'
+        + (durStr ? '<div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:8px;font-weight:700;color:transparent">.</span><span id="sub-dur-'+mi+'-'+ti+'-'+si+'" style="font-size:10px;font-weight:600;color:#7C3AED;background:#EDE9FE;border-radius:4px;padding:2px 6px;align-self:flex-start">'+durStr+'</span></div>'
+            : '<span id="sub-dur-'+mi+'-'+ti+'-'+si+'" style="display:none"></span>')
+      + '</div>'
     + '</div>';
   }).join('');
+}
+
+// Atualiza apenas a lista de subtarefas sem recolapsar o painel
+function _refreshSubList(mi, ti) {
+  var el = document.getElementById('sub-list-'+mi+'-'+ti);
+  if(!el){ renderMarcosTab(); return; }
+  var subs = (modalMarcos[mi]&&modalMarcos[mi].tarefas&&modalMarcos[mi].tarefas[ti]&&modalMarcos[mi].tarefas[ti].subtarefas)||[];
+  el.innerHTML = _renderSubtarefas(subs, mi, ti)
+    + '<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 8px;margin-top:6px" onclick="addSubtarefa('+mi+','+ti+')">＋ Subtarefa</button>';
+  el.style.display = 'block';
+  var datesEl = document.getElementById('tar-dates-'+mi+'-'+ti);
+  if(datesEl) datesEl.style.display = 'block';
+
+  var done = subs.filter(function(s){return s.status==='done';}).length;
+  var total = subs.length;
+  var pct = total>0 ? Math.round(done/total*100) : 0;
+  var progColor = pct===100?'#10B981':pct>0?'#3B82F6':'var(--border)';
+
+  // Atualizar badge contagem
+  var badge = document.getElementById('sub-badge-'+mi+'-'+ti);
+  if(badge){ badge.textContent = done+'/'+total; badge.style.display = total?'inline':'none'; }
+
+  // Atualizar barra de progresso
+  var bar = document.getElementById('tar-prog-bar-'+mi+'-'+ti);
+  if(bar){ bar.style.width = pct+'%'; bar.style.background = progColor; }
+  var txt = document.getElementById('tar-prog-txt-'+mi+'-'+ti);
+  if(txt) txt.textContent = pct+'%';
+
+  // Atualizar seta
+  var tog = document.getElementById('tar-tog-'+mi+'-'+ti);
+  if(tog) tog.textContent = '▼';
+
+  // Auto-completar tarefa quando todas as subtarefas estiverem concluídas
+  if(total>0 && done===total) {
+    modalMarcos[mi].tarefas[ti].status = 'done';
+    var sel = document.getElementById('tar-sel-'+mi+'-'+ti);
+    if(sel){ sel.value='done'; sel.style.color='#166534'; sel.style.background='#DCFCE7'; }
+  }
+  // Se desmarcou alguma e a tarefa estava concluída, volta para Em Andamento
+  if(total>0 && done<total && modalMarcos[mi].tarefas[ti].status==='done') {
+    modalMarcos[mi].tarefas[ti].status = 'in_progress';
+    var sel2 = document.getElementById('tar-sel-'+mi+'-'+ti);
+    if(sel2){ sel2.value='in_progress'; sel2.style.color='#1D4ED8'; sel2.style.background='#DBEAFE'; }
+  }
 }
 
 function toggleMarcoBody(mi) {
@@ -11937,11 +12716,53 @@ function toggleMarcoBody(mi) {
 
 function toggleTarefaBody(mi, ti) {
   var el = document.getElementById('sub-list-'+mi+'-'+ti);
+  var dates = document.getElementById('tar-dates-'+mi+'-'+ti);
   var tog = document.getElementById('tar-tog-'+mi+'-'+ti);
   if(!el) return;
   var open = el.style.display === 'none';
   el.style.display = open ? 'block' : 'none';
+  if(dates) dates.style.display = open ? 'block' : 'none';
   if(tog) tog.textContent = open ? '▼' : '▶';
+}
+
+// Calcula duração entre duas datas (retorna string "X dias" ou "")
+function _calcDuracao(dataInicio, dataFim) {
+  if(!dataInicio || !dataFim) return '';
+  var d1 = new Date(dataInicio), d2 = new Date(dataFim);
+  if(isNaN(d1)||isNaN(d2)) return '';
+  var dias = Math.round((d2 - d1) / (1000*60*60*24));
+  if(dias < 0) return '⚠️ datas inv.';
+  if(dias === 0) return '⏱ mesmo dia';
+  return '⏱ ' + dias + ' dia' + (dias > 1 ? 's' : '');
+}
+
+// Atualiza badge de duração inline sem re-renderizar
+function _refreshDuracao(elemId, dataInicio, dataFim) {
+  var el = document.getElementById(elemId);
+  if(!el) return;
+  var str = _calcDuracao(dataInicio, dataFim);
+  if(str) {
+    el.textContent = str;
+    el.style.display = 'inline-block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// Sincroniza dataPrevista/dataRealizadaData do marco a partir das tarefas (para o Gantt)
+function _syncMarcoDates(mi) {
+  var marco = modalMarcos[mi];
+  if(!marco) return;
+  var tarefas = marco.tarefas||[];
+  // dataPrevista = maior dataPrevista entre as tarefas
+  var dps = tarefas.filter(function(t){return t.dataPrevista;}).map(function(t){return t.dataPrevista;});
+  if(dps.length){ dps.sort(); marco.dataPrevista = dps[dps.length-1]; }
+  // dataRealizadaData = maior dataRealizada quando todas concluídas
+  var allDone = tarefas.length>0 && tarefas.every(function(t){return t.status==='done';});
+  if(allDone){
+    var drs = tarefas.filter(function(t){return t.dataRealizada;}).map(function(t){return t.dataRealizada;});
+    if(drs.length){ drs.sort(); marco.dataRealizadaData = drs[drs.length-1]; }
+  }
 }
 
 function _updateMarcoBadge(mi) {
@@ -11964,7 +12785,7 @@ function removeMarco(mi) {
 
 function addTarefa(mi) {
   if(!modalMarcos[mi].tarefas) modalMarcos[mi].tarefas=[];
-  modalMarcos[mi].tarefas.push({id:uid(),nome:'Nova Tarefa',status:'pending',subtarefas:[]});
+  modalMarcos[mi].tarefas.push({id:uid(),nome:'Nova Tarefa',status:'pending',dataPrevista:'',dataInicio:'',dataRealizada:'',subtarefas:[]});
   renderMarcosTab();
   // Re-open marco body
   var body = document.getElementById('marco-body-'+mi);
@@ -11977,17 +12798,26 @@ function removeTarefa(mi, ti) {
 }
 
 function addSubtarefa(mi, ti) {
+  if(!modalMarcos[mi]||!modalMarcos[mi].tarefas||!modalMarcos[mi].tarefas[ti]) return;
   if(!modalMarcos[mi].tarefas[ti].subtarefas) modalMarcos[mi].tarefas[ti].subtarefas=[];
-  modalMarcos[mi].tarefas[ti].subtarefas.push({id:uid(),nome:'Nova Subtarefa',status:'pending'});
-  renderMarcosTab();
+  modalMarcos[mi].tarefas[ti].subtarefas.push({id:uid(),nome:'Nova Subtarefa',status:'pending',dataPrevista:'',dataInicio:'',dataRealizada:''});
+  _refreshSubList(mi, ti);
 }
 
 function removeSubtarefa(mi, ti, si) {
+  if(!modalMarcos[mi]||!modalMarcos[mi].tarefas||!modalMarcos[mi].tarefas[ti]) return;
   modalMarcos[mi].tarefas[ti].subtarefas.splice(si,1);
-  renderMarcosTab();
+  _refreshSubList(mi, ti);
 }
 
 // ── INIT ══════════════════════════════════════════════════
+// Abre calendário ao clicar em qualquer parte do campo de data/hora (todos os campos do sistema)
+document.addEventListener('click', function(e){
+  if(e.target.type==='date' || e.target.type==='time'){
+    try{ e.target.showPicker(); }catch(ex){}
+  }
+}, true);
+
 // Auth-first: initAuth verifica sessão, chama init() e loadState() internamente após login
 initAuth();
 </script>
