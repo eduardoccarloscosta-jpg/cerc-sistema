@@ -5840,17 +5840,27 @@ function renderFinanceiro() {
     '<div id="fin-content"></div>';
   var fc=document.getElementById('fin-content');
   if(finTab==='receitas') {
-    // Receitas = apenas demandas CONCLUÍDAS (serviço entregue, independente do status de pagamento)
+    // Receitas = demandas concluídas (serviço entregue) + demandas ainda em execução que já tiveram pagamento (parcial/parcelado/pago) recebido no mês
     var isArquivada=function(x){return x.status==='Concluído'&&x.statusPagamento==='Pago';};
-    var rows=d.filter(function(x){
-      if(x.status!=='Concluído') return false; // SOMENTE concluídas
+    var rowsConcluidas=d.filter(function(x){
+      if(x.status!=='Concluído') return false;
       if(x.statusPagamento==='Recorrente') return false;
       var refDate=x.dataPagamento||x.dataFechamento||x.dataCriacao;
       // Parcelado: aparece no mês se tem parcela com vencimento ou pagamento no mês
       if(x.statusPagamento==='Parcelado') return (x.parcelas||[]).some(function(p){return inMes(p.dataPrev||'',finMes,finAno)||inMes(p.dataPagamento||'',finMes,finAno);});
       return inMes(refDate,finMes,finAno)||inMes(x.dataCriacao,finMes,finAno)||inMes(x.dataFechamento||'',finMes,finAno);
-    }).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);});
-    // Fallback: se nenhuma concluída neste mês, mostra todas as concluídas pendentes de pagamento
+    });
+    // Demandas ainda não concluídas mas que já receberam pagamento (parcial/parcela paga/pago) neste mês — precisam aparecer para bater com os totais do topo
+    var rowsAtivasComPagamento=d.filter(function(x){
+      if(x.status==='Concluído') return false; // já cobertas acima
+      if(x.tipo==='Receita Avulsa') return false; // tratadas na seção de recorrentes
+      if(x.statusPagamento==='Parcial') return inMes(x.dataPagamentoParcial||x.dataPagamento||x.dataCriacao,finMes,finAno);
+      if(x.statusPagamento==='Parcelado') return (x.parcelas||[]).some(function(p){return p.status==='Pago'&&(inMes(p.dataPrev||'',finMes,finAno)||inMes(p.dataPagamento||'',finMes,finAno));});
+      if(x.statusPagamento==='Pago') return inMes(x.dataPagamento||x.dataCriacao,finMes,finAno);
+      return false;
+    });
+    var rows=rowsConcluidas.concat(rowsAtivasComPagamento).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);});
+    // Fallback: se nenhuma linha neste mês, mostra todas as concluídas pendentes de pagamento
     if(!rows.length) rows=d.filter(function(x){return x.status==='Concluído'&&x.statusPagamento!=='Recorrente'&&x.statusPagamento!=='Pago';}).sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);}).slice(0,20);
     var recAvulsaHtml='';
     if(recAvulsaRecMes.length){
@@ -5887,6 +5897,15 @@ function renderFinanceiro() {
             parcelasInfo='<div style="font-size:10px;color:var(--text3)">'+pp+'/'+pt+' parcelas pagas</div>';
           }
         }
+        // Data do pagamento — exibida junto ao status, igual ao que é feito nas despesas
+        var demDataPag='';
+        if(dem.statusPagamento==='Pago'&&dem.dataPagamento) demDataPag=dem.dataPagamento;
+        else if(dem.statusPagamento==='Parcial'&&(dem.dataPagamentoParcial||dem.dataPagamento)) demDataPag=dem.dataPagamentoParcial||dem.dataPagamento;
+        else if(dem.statusPagamento==='Parcelado'){
+          var _pagas=(dem.parcelas||[]).filter(function(p){return p.status==='Pago'&&p.dataPagamento;});
+          if(_pagas.length) demDataPag=_pagas[_pagas.length-1].dataPagamento;
+        }
+        var demDataPagStr=demDataPag?'<div style="font-size:10px;color:var(--s-con);margin-top:2px">'+fD(demDataPag)+'</div>':'';
         return '<tr>'+
           '<td style="font-size:11px;color:var(--text3)">'+fD(dem.dataCriacao)+'</td>'+
           '<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--text3)">'+(dem.proposta||'—')+'</span></td>'+
@@ -5894,7 +5913,7 @@ function renderFinanceiro() {
           '<td>'+sBadge(dem.status)+'</td>'+
           '<td class="cn" style="color:var(--s-con);font-weight:600">'+fR(displayBruto)+(dem.statusPagamento==='Parcelado'?'<div style="font-size:9px;color:var(--text3);font-weight:400">de '+fR(dem.valorBruto)+'</div>':'')+'</td>'+
           '<td class="cn" style="color:var(--accent);font-weight:600">'+fR(displayLiquido)+'</td>'+
-          '<td><select style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;background:var(--surface);cursor:pointer" onchange="updatePag(\''+dem.id+'\',this.value)">'+['Pendente','Parcial','Parcelado','Pago','Inadimplente'].map(function(p){return '<option'+(dem.statusPagamento===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+parcelasInfo+'</td>'+
+          '<td><select style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;background:var(--surface);cursor:pointer" onchange="updatePag(\''+dem.id+'\',this.value)">'+['Pendente','Parcial','Parcelado','Pago','Inadimplente'].map(function(p){return '<option'+(dem.statusPagamento===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+demDataPagStr+parcelasInfo+'</td>'+
           '<td class="cn" style="color:'+(dem.statusPagamento==='Pago'?'var(--s-con)':'var(--amber)')+'">'+(dem.valorPago?fR(dem.valorPago):'—')+'</td>'+
           '<td style="display:flex;gap:3px">'+
             (dem.tipo==='Receita Avulsa'?'<button class="btn btn-ghost btn-sm btn-icon" title="Editar receita" onclick="openModalReceita(\''+dem.id+'\')">✏️</button>':'')+
