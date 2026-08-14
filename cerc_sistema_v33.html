@@ -6237,26 +6237,35 @@ function _applyDespPago(id,btn,mk,dataPag){
 // ══ PRECIFICAÇÃO ═════════════════════════════════════════
 var precState={pessoal:[{prof:'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),pacotes:[],complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:2000};
 var _precCliList=[]; // cache ordenado {i:índice original em state.clientes, c:cliente} para busca/seleção da Precificação
-var _precCliQuery=''; // busca atual, persistida para sobreviver a re-renders disparados por outras edições da tela
-function precCliOptsHtml(list){
-  return list.map(function(item){var c=item.c;var loc=(c.cidade||c.uf)?' ['+((c.cidade||'')+(c.cidade&&c.uf?' — ':'')+( c.uf||''))+']':'';return '<option value="'+item.i+'"'+(String(item.i)===String(precState.cliIdx)?' selected':'')+'>'+c.empresa+loc+(c.contato?' — '+c.contato:'')+'</option>';}).join('');
-}
 function filterPrecClienteList(list,q){
   q=(q||'').trim().toLowerCase();
   return !q?list:list.filter(function(item){return (item.c.empresa||'').toLowerCase().indexOf(q)>=0;});
 }
+function precCliResultRowHtml(item){
+  var c=item.c;var loc=(c.cidade||c.uf)?' ['+((c.cidade||'')+(c.cidade&&c.uf?' — ':'')+( c.uf||''))+']':'';
+  return '<div style="padding:7px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border)" onmousedown="selectPrecCliente('+item.i+')" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'\'">'+c.empresa+loc+(c.contato?' — '+c.contato:'')+'</div>';
+}
+// Mostra a lista de resultados enquanto o usuário digita/foca a busca — o resultado aparece imediatamente, sem precisar abrir um select
 function filterPrecClientes(q){
-  var sel=document.getElementById('prec-cli-sel'); if(!sel) return;
-  _precCliQuery=q||'';
-  var filtered=filterPrecClienteList(_precCliList,_precCliQuery);
-  var cur=sel.value;
-  sel.innerHTML='<option value="">— selecione —</option>'+precCliOptsHtml(filtered);
-  if(filtered.some(function(item){return String(item.i)===cur;})) sel.value=cur;
-  else if(cur!==''){
-    // cliente selecionado saiu do filtro: limpa seleção para não ficar dessincronizado com precState.cliIdx
-    precState.cliIdx='';
-    var infoEl=document.getElementById('prec-cli-info'); if(infoEl) infoEl.innerHTML='';
-  }
+  var resEl=document.getElementById('prec-cli-results'); if(!resEl) return;
+  var filtered=filterPrecClienteList(_precCliList,q);
+  resEl.innerHTML=filtered.length?filtered.slice(0,50).map(precCliResultRowHtml).join(''):'<div style="padding:8px 12px;font-size:12px;color:var(--text3)">Nenhum cliente encontrado</div>';
+  resEl.style.display='block';
+}
+function selectPrecCliente(idx){
+  var el=document.getElementById('prec-cli-search'); var c=state.clientes[parseInt(idx)];
+  if(el) el.value=c?c.empresa:'';
+  var resEl=document.getElementById('prec-cli-results'); if(resEl) resEl.style.display='none';
+  showPrecClient(idx);
+}
+function onPrecCliSearchBlur(){
+  // Pequeno atraso para o onmousedown de um item da lista disparar antes do blur escondê-la
+  setTimeout(function(){
+    var resEl=document.getElementById('prec-cli-results'); if(resEl) resEl.style.display='none';
+    var el=document.getElementById('prec-cli-search'); if(!el) return;
+    var c=(precState.cliIdx!==''&&precState.cliIdx!==null&&precState.cliIdx!==undefined)?state.clientes[parseInt(precState.cliIdx)]:null;
+    el.value=c?c.empresa:'';
+  },150);
 }
 
 function getProfRate(nome) {
@@ -6321,12 +6330,16 @@ function renderPrecificacao() {
   // Ordena por nome para exibição, mas preserva o índice original de state.clientes como value
   // (compatibilidade com precDados já salvos, que guardam cliIdx como índice original)
   _precCliList = state.clientes.map(function(c,i){return {i:i,c:c};}).sort(function(a,b){return (a.c.empresa||'').localeCompare(b.c.empresa||'','pt-BR',{sensitivity:'base'});});
-  var cliOpts=precCliOptsHtml(filterPrecClienteList(_precCliList,_precCliQuery));
+  var _precCliSel=(precState.cliIdx!==''&&precState.cliIdx!==null&&precState.cliIdx!==undefined)?state.clientes[parseInt(precState.cliIdx)]:null;
   var leftCol=
     // 1. CLIENTE (primeiro)
     '<div class="prec-sec"><div class="prec-hd">1. Referência — Cliente</div><div class="prec-body">' +
-      '<div class="fg" style="margin-bottom:6px"><input class="finput" type="text" id="prec-cli-search" placeholder="🔍 Buscar cliente..." value="'+_precCliQuery.replace(/"/g,'&quot;')+'" oninput="filterPrecClientes(this.value)"/></div>' +
-      '<div class="fg" style="margin-bottom:8px"><label>Selecione do cadastro</label><select class="finput" id="prec-cli-sel" onchange="precState.cliIdx=this.value;showPrecClient(this.value)"><option value="">— selecione —</option>'+cliOpts+'</select></div>' +
+      '<div class="fg" style="margin-bottom:8px">' +
+        '<label>Cliente</label>' +
+        '<input class="finput" type="text" id="prec-cli-search" placeholder="🔍 Buscar cliente..." autocomplete="off" value="'+(_precCliSel?_precCliSel.empresa.replace(/"/g,'&quot;'):'')+'" oninput="filterPrecClientes(this.value)" onfocus="this.select();filterPrecClientes(this.value)" onblur="onPrecCliSearchBlur()"/>' +
+        // Lista de resultados em fluxo normal (não position:absolute) — a seção pai (.prec-sec) tem overflow:hidden, que cortaria um dropdown flutuante
+        '<div id="prec-cli-results" style="display:none;margin-top:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;max-height:220px;overflow-y:auto"></div>' +
+      '</div>' +
       '<div id="prec-cli-info" style="font-size:12px;color:var(--text2)"></div>' +
     '</div></div>' +
     // 2. CUSTO PESSOAL
@@ -6436,6 +6449,8 @@ function renderPrecificacao() {
 
 function addPacote(){
   precState.pacotes=precState.pacotes||[];
+  // Remove linhas sem pacote que ainda estão totalmente em branco (placeholder inicial), para não sobrar uma linha solta ao lado do pacote recém-criado
+  precState.pessoal=precState.pessoal.filter(function(p){return p.pacoteId||p.prof||(p.qtd||0)>0||(p.obs||'').trim();});
   var id=uid();
   precState.pacotes.push({id:id,nome:'Novo Pacote'});
   precState.pessoal.push({prof:'',qtd:0,pessoas:1,obs:'',pacoteId:id});
@@ -6462,7 +6477,6 @@ function novaPrec() {
   if(!confirm('Limpar a precificação atual e começar do zero?')) return;
   precState={pessoal:[{prof:'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),pacotes:[],complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:precState.teto||2000};
   _precEditingDemandaId=null;
-  _precCliQuery='';
   renderPrecificacao();
   toast('Precificação limpa. Pode começar do zero!','success');
 }
@@ -6471,7 +6485,6 @@ function editarNaPrec(demId) {
   // Salva a demanda atual antes de sair do modal
   var dem = demId ? state.demandas.find(function(d){return d.id===demId;}) : null;
   _precEditingDemandaId = demId || null;
-  _precCliQuery='';
   // Carrega dados da demanda na precificação se disponíveis
   if(dem && dem.precDados){
     try { precState = JSON.parse(JSON.stringify(dem.precDados)); } catch(e){}
