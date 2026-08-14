@@ -7947,16 +7947,6 @@ function renderCalendario() {
     }).join(''):'<div style="font-size:11px;color:var(--text3);padding:6px 0">Nenhum evento futuro<br><button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="openModalEvento(null)">+ Criar</button></div>')+
   '</div>';
 
-  // ── KPIs ─────────────────────────────────────────────────────────
-  var mesStr=calAno+'-'+pad2(calMes+1);
-  var mesAlertas=state.demandas.filter(function(d){return d.dataRetorno&&d.dataRetorno.startsWith(mesStr);}).length;
-  var mesEventos=(state.eventos||[]).filter(function(ev){return ev.data&&ev.data.startsWith(mesStr);}).length;
-  var kpis='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;padding:0 16px 16px">'+
-    '<div class="kpi" style="padding:10px 16px"><div class="kpi-label">Retornos no Mês</div><div class="kpi-value" style="font-size:20px;color:var(--accent)">'+mesAlertas+'</div><div class="kpi-sub">Follow-ups agendados</div></div>'+
-    '<div class="kpi" style="padding:10px 16px"><div class="kpi-label">Eventos / Lembretes</div><div class="kpi-value" style="font-size:20px;color:var(--amber)">'+mesEventos+'</div><div class="kpi-sub">No mês selecionado</div></div>'+
-    '<div class="kpi" style="padding:10px 16px"><div class="kpi-label">Total com Retorno</div><div class="kpi-value" style="font-size:20px">'+Object.keys(evtMap).length+'</div><div class="kpi-sub">Demandas ativas</div></div>'+
-  '</div>';
-
   // ── VIEW: MÊS ────────────────────────────────────────────────────
   var gridHtml='';
   if(calView==='month'){
@@ -8121,7 +8111,7 @@ function renderCalendario() {
       '<div class="cal-main">'+toolbar+gridHtml+'</div>'+
     '</div>';
 
-  document.getElementById('page-content').innerHTML=calShell+kpis;
+  document.getElementById('page-content').innerHTML=calShell;
 
   // Atualiza label topbar
   var lbl=document.getElementById('cal-mes-label');
