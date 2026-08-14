@@ -7974,8 +7974,8 @@ function renderCalendario() {
 
     // Constante: altura de cada slot de 1h
     var SLOT_H=48;
-    var HOURS_START=6;
-    var hours=[];for(var h=HOURS_START;h<=22;h++) hours.push(h);
+    var HOURS_START=0; // 24h completas — antes começava às 6h e cortava eventos fora da faixa 6h-23h
+    var hours=[];for(var h=HOURS_START;h<=23;h++) hours.push(h);
 
     // ── Cabeçalho: coluna de horas (52px) + 7 colunas de dia ────────
     // Usamos table-layout:fixed para alinhamento PERFEITO
@@ -8131,6 +8131,13 @@ function renderCalendario() {
       var tbl=document.getElementById('cal-week-table');
       var ovl=document.getElementById('cal-evt-overlay');
       if(!tbl||!ovl) return;
+      // Rola para um horário útil por padrão (agora, se hoje estiver na semana; senão 7h) — a grade agora cobre 24h e abriria à meia-noite sem isso
+      var scrollEl=document.getElementById('cal-week-scroll');
+      if(scrollEl){
+        var _temHoje=weekDays.some(function(d){return d.getTime()===today.getTime();});
+        var _defH=_temHoje?Math.max(0,new Date().getHours()-2):7;
+        scrollEl.scrollTop=_defH*SLOT_H;
+      }
       // Pega largura das colunas da tabela
       var cols=tbl.querySelectorAll('col');
       var left=0;
