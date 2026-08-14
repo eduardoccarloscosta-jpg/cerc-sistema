@@ -7831,19 +7831,21 @@ function renderCalendario() {
     var inSel=ws0&&mdt>=ws0&&mdt<=new Date(ws0.getTime()+6*86400000);
     miniCells+='<div class="cal-mini-day'+(isT?' mini-today':inSel?' mini-sel':'')+'" onclick="calJumpDay('+calAno+','+calMes+','+md+')">'+md+'</div>';
   }
+  var sideCriar='<button onclick="openModalEvento(null)" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px 16px;margin-bottom:14px;background:var(--accent);color:#fff;border:none;border-radius:24px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15);transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 2px 10px rgba(0,0,0,.22)\'" onmouseout="this.style.boxShadow=\'0 1px 4px rgba(0,0,0,.15)\'"><span style="font-size:18px;line-height:1;font-weight:400">+</span> Criar</button>';
+
   var miniCal=
     '<div style="margin-bottom:4px">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-      '<button class="cal-nav-btn" onclick="calMes--;if(calMes<0){calMes=11;calAno--;}renderCalendario()" style="padding:2px 7px">‹</button>'+
+      '<button class="cal-nav-btn" onclick="calMes--;if(calMes<0){calMes=11;calAno--;}renderCalendario()" style="padding:2px 7px;border:none">‹</button>'+
       '<span style="font-size:11px;font-weight:700;color:var(--text)">'+MESES_PT[calMes]+' '+calAno+'</span>'+
-      '<button class="cal-nav-btn" onclick="calMes++;if(calMes>11){calMes=0;calAno++;}renderCalendario()" style="padding:2px 7px">›</button>'+
+      '<button class="cal-nav-btn" onclick="calMes++;if(calMes>11){calMes=0;calAno++;}renderCalendario()" style="padding:2px 7px;border:none">›</button>'+
     '</div>'+
     '<div class="cal-mini-grid">'+miniHd+miniCells+'</div></div>';
 
   // ── Sidebar ───────────────────────────────────────────────────────
   // ── Painel Google Calendar ────────────────────────────────────────
   var gcConn=gcIsConnected();
-  var sideGc='<div style="margin-bottom:14px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px">'+
+  var sideGc='<div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
       '<div style="display:flex;align-items:center;gap:6px">'+
         '<svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12s4.48 10 10 10 10-4.48 10-10z"/><path fill="white" d="M17.27 12c0 .15-.01.3-.03.44l1.28.97c.12.09.15.26.07.39l-1.22 2.1c-.08.14-.25.19-.39.14l-1.51-.6c-.32.24-.67.44-1.04.59l-.23 1.6c-.02.15-.15.26-.3.26h-2.44c-.15 0-.28-.11-.3-.26l-.23-1.6c-.37-.15-.72-.35-1.04-.59l-1.51.6c-.14.05-.31 0-.39-.14l-1.22-2.1c-.08-.13-.05-.3.07-.39l1.28-.97c-.02-.14-.03-.29-.03-.44s.01-.3.03-.44l-1.28-.97c-.12-.09-.15-.26-.07-.39l1.22-2.1c.08-.14.25-.19.39-.14l1.51.6c.32-.24.67-.44 1.04-.59l.23-1.6c.02-.15.15-.26.3-.26h2.44c.15 0 .28.11.3.26l.23 1.6c.37.15.72.35 1.04.59l1.51-.6c.14-.05.31 0 .39.14l1.22 2.1c.08.13.05.3-.07.39l-1.28.97c.02.14.03.29.03.44z"/></svg>'+
@@ -7879,13 +7881,16 @@ function renderCalendario() {
       var dr=new Date(d.dataRetorno+'T12:00');dr.setHours(0,0,0,0);
       var diff=Math.round((dr-agora)/(1000*60*60*24));
       var cor=diff<0?'var(--red)':diff===0?'var(--amber)':'var(--s-con)';
-      return '<div style="padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openModalEdit(\''+d.id+'\')">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
-          '<span style="font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:4px">'+d.servico+'</span>'+
-          '<span style="font-size:10px;font-weight:700;color:'+cor+';flex-shrink:0">'+(diff<0?Math.abs(diff)+'d atraso':diff===0?'Hoje':'em '+diff+'d')+'</span>'+
+      return '<div style="padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:7px" onclick="openModalEdit(\''+d.id+'\')">' +
+        '<span style="width:7px;height:7px;border-radius:50%;background:'+cor+';flex-shrink:0;margin-top:5px"></span>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+            '<span style="font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:4px">'+d.servico+'</span>'+
+            '<span style="font-size:10px;font-weight:700;color:'+cor+';flex-shrink:0">'+(diff<0?Math.abs(diff)+'d atraso':diff===0?'Hoje':'em '+diff+'d')+'</span>'+
+          '</div>'+
+          '<div style="font-size:10px;color:var(--text3)">'+d.cliente+'</div>'+
+          '<div style="font-size:10px;font-weight:600;color:'+cor+'">'+fD(d.dataRetorno)+'</div>'+
         '</div>'+
-        '<div style="font-size:10px;color:var(--text3)">'+d.cliente+'</div>'+
-        '<div style="font-size:10px;font-weight:600;color:'+cor+'">'+fD(d.dataRetorno)+'</div>'+
       '</div>';
     }).join(''):'<div style="font-size:11px;color:var(--text3);padding:6px 0">Nenhum retorno</div>')+
   '</div>';
@@ -7900,8 +7905,8 @@ function renderCalendario() {
       var cfg=TIPO_EVT_CFG[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌'};
       var d2=new Date(ev.data+'T12:00');d2.setHours(0,0,0,0);
       var dff=Math.round((d2-agora)/(1000*60*60*24));
-      return '<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openModalEvento(\''+ev.id+'\')">' +
-        '<div style="width:24px;height:24px;border-radius:6px;background:'+cfg.bg+';display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">'+cfg.ico+'</div>'+
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openModalEvento(\''+ev.id+'\')">' +
+        '<span style="width:7px;height:7px;border-radius:50%;background:'+cfg.c+';flex-shrink:0"></span>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ev.titulo+'</div>'+
           '<div style="font-size:10px;color:var(--text3)">'+fD(ev.data)+(ev.horaInicio?' · '+ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):'')+'</div>'+
@@ -8081,14 +8086,13 @@ function renderCalendario() {
         '<button class="cal-view-btn'+(calView==='month'?' active':'')+'" onclick="setCalView(\'month\')">Mês</button>'+
         '<button class="cal-view-btn'+(calView==='week'?' active':'')+'" onclick="setCalView(\'week\')">Semana</button>'+
       '</div>'+
-      '<button class="btn btn-primary" onclick="openModalEvento(null)" style="margin-left:10px;padding:6px 14px">+ Evento</button>'+
     '</div>';
 
   // ── Monta shell ──────────────────────────────────────────────────
   // padding:0 no page-content → altura sem os 40px de padding vertical
   var calShell=
     '<div class="cal-shell" style="height:calc(100vh - 56px);border-radius:0;border-left:none;border-right:none;border-top:none">'+
-      '<div class="cal-left">'+miniCal+sideGc+sideRet+sideEvt+'</div>'+
+      '<div class="cal-left">'+sideCriar+miniCal+sideGc+sideRet+sideEvt+'</div>'+
       '<div class="cal-main">'+toolbar+gridHtml+'</div>'+
     '</div>';
 
