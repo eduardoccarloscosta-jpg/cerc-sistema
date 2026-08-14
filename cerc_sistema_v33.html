@@ -7514,12 +7514,25 @@ function gcExportEvent(evId) {
     start: { dateTime: start, timeZone: 'America/Sao_Paulo' },
     end:   { dateTime: end,   timeZone: 'America/Sao_Paulo' }
   };
-  fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-    method: 'POST',
+  // Reaproveita o evento já exportado (PUT) em vez de sempre criar um novo (POST) — evita duplicar a cada clique
+  var gcId = ev.gcEventId;
+  var url = gcId
+    ? 'https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(gcId)
+    : 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+  fetch(url, {
+    method: gcId ? 'PUT' : 'POST',
     headers: { 'Authorization': 'Bearer ' + gcToken, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   }).then(function(r){ return r.json(); }).then(function(data){
     if (data.id) {
+      // Salva o gcEventId localmente para não duplicar nas próximas sincronizações
+      var idx = state.eventos.findIndex(function(e){ return e.id === evId; });
+      if (idx >= 0) {
+        state.eventos[idx].gcEventId = data.id;
+        state.eventos[idx].updatedAt = _now();
+        saveState();
+        if(_sbUser) sbUpsertEvento(state.eventos[idx]);
+      }
       toast('✅ Evento exportado para o Google Calendar!', 'success');
     } else {
       toast('Erro ao exportar: ' + (data.error ? data.error.message : 'desconhecido'), 'error');
@@ -7540,7 +7553,20 @@ function calShowMore(ds, btn) {
   });
   var evts2=evtMap2[ds]||[];
   var cEvts2=(state.eventos||[]).filter(function(ev){return ev.data===ds||((ev.dataFim||ev.data)>=ds&&ev.data<=ds);});
-  var gEvts2=gcEvents.filter(function(ev){return ev.inicio&&ev.inicio.slice(0,10)===ds;});
+  // Exclui eventos do Google que já existem localmente (sincronizados via gcSyncEvent/gcSyncRetornoDemanda) — evita duplicidade
+  var _localGcIds2={}, _localTitleDates2={};
+  (state.eventos||[]).forEach(function(e){
+    if(e.gcEventId) _localGcIds2[e.gcEventId]=true;
+    if(e.titulo && e.data) _localTitleDates2[(e.titulo.trim().toLowerCase())+'|'+e.data]=true;
+  });
+  state.demandas.forEach(function(d){ if(d.gcRetornoId) _localGcIds2[d.gcRetornoId]=true; });
+  var gEvts2=gcEvents.filter(function(ev){
+    if(!ev.inicio||ev.inicio.slice(0,10)!==ds) return false;
+    if(ev.gcEventId&&_localGcIds2[ev.gcEventId]) return false;
+    var titleKey=(ev.titulo||'').trim().toLowerCase()+'|'+ds;
+    if(_localTitleDates2[titleKey]) return false;
+    return true;
+  });
 
   var dt=new Date(ds+'T12:00');
   var label=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
@@ -7774,6 +7800,10 @@ function renderCalendario() {
     if(e.gcEventId) _localGcIds[e.gcEventId]=true;
     // Fallback: deduplicar por título+data quando gcEventId não foi salvo no BD ainda
     if(e.titulo && e.data) _localTitleDates[(e.titulo.trim().toLowerCase())+'|'+e.data]=true;
+  });
+  // Retornos de demanda também são sincronizados para o Google (gcSyncRetornoDemanda) — excluir também
+  (state.demandas||[]).forEach(function(d){
+    if(d.gcRetornoId) _localGcIds[d.gcRetornoId]=true;
   });
   // ── Mapear gcEvents por data (excluindo os já existentes localmente) ─
   var gcEvtMap={};
@@ -8050,7 +8080,14 @@ function renderCalendario() {
       }).join('');
 
       // Eventos importados do Google Calendar (faltavam na visão Semana — só apareciam na visão Mês)
-      var gEvts3=gcEvents.filter(function(ev){return ev.inicio&&ev.inicio.slice(0,10)===ds3;});
+      // Mesma exclusão de duplicados usada na visão Mês (gcEventId ou título+data já existem localmente)
+      var gEvts3=gcEvents.filter(function(ev){
+        if(!ev.inicio||ev.inicio.slice(0,10)!==ds3) return false;
+        if(ev.gcEventId&&_localGcIds[ev.gcEventId]) return false;
+        var titleKey=(ev.titulo||'').trim().toLowerCase()+'|'+ds3;
+        if(_localTitleDates[titleKey]) return false;
+        return true;
+      });
       evHtml+=gEvts3.map(function(ev,gi){
         var hStart2=8;
         if(!ev.allDay&&ev.inicio){var pi=ev.inicio.slice(11,16).split(':');hStart2=parseInt(pi[0])+(parseInt(pi[1]||0)/60);}
