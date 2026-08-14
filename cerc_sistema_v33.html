@@ -623,13 +623,17 @@ body::after{
 .cal-toolbar-title{font-size:20px;font-weight:700;flex:1}
 .cal-nav-btn{background:none;border:1px solid var(--border);cursor:pointer;padding:4px 9px;font-size:14px;color:var(--text2);border-radius:6px;transition:background .1s;line-height:1}
 .cal-nav-btn:hover{background:var(--border)}
+.cal-arrow-btn{background:none;border:none;cursor:pointer;width:30px;height:30px;border-radius:50%;font-size:15px;color:var(--text2);transition:background .12s;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.cal-arrow-btn:hover{background:var(--border)}
+.cal-today-btn{background:none;border:1px solid var(--border);cursor:pointer;padding:6px 14px;font-size:12px;font-weight:600;color:var(--text2);border-radius:20px;transition:background .12s}
+.cal-today-btn:hover{background:var(--border)}
 .cal-view-grp{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden}
 .cal-view-btn{background:none;border:none;border-right:1px solid var(--border);padding:5px 13px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text2);transition:all .12s;white-space:nowrap}
 .cal-view-btn:last-child{border-right:none}
 .cal-view-btn.active{background:var(--accent);color:#fff}
 /* ── grade mensal ── */
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));flex:1;align-content:stretch}
-.cal-day-hd{text-align:center;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:10px 4px;background:var(--bg);border-right:1px solid var(--border);border-bottom:2px solid var(--border)}
+.cal-day-hd{text-align:center;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;padding:8px 4px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
 .cal-day-hd:last-child{border-right:none}
 .cal-day{min-height:130px;height:100%;overflow:hidden;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 7px;background:var(--surface);cursor:pointer;transition:background .1s;position:relative}
 .cal-day:nth-child(7n){border-right:none}
@@ -638,8 +642,15 @@ body::after{
 .cal-day.other-month{background:var(--surface2)}
 .cal-day.other-month .cal-day-num{opacity:.4}
 .cal-day-num{font-size:14px;font-weight:700;color:var(--text2);width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
-.cal-event{pointer-events:auto;cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;border-radius:4px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;line-height:1.4;border-left:3px solid transparent}
-.cal-event:hover{filter:brightness(.92)}
+/* Evento no mês: estilo "ponto + texto" do Google Calendar (sem fundo preenchido) */
+.cal-event{pointer-events:auto;cursor:pointer;font-size:11px;font-weight:500;padding:1px 3px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px;line-height:1.6;color:var(--text2)}
+.cal-event:hover{background:var(--bg);filter:brightness(.94)}
+.cal-event-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cal-event-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Variante para eventos de múltiplos dias: barra colorida contínua entre células (como no Google) */
+.cal-event-bar{padding:2px 6px;border-left:3px solid transparent;font-weight:600}
+.cal-more-link{font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;padding:1px 4px;margin-top:1px}
+.cal-more-link:hover{color:var(--accent);text-decoration:underline}
 /* ── grade semanal ── */
 .cal-week-outer{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .cal-week-hd-row{display:grid;grid-template-columns:52px repeat(7,1fr);border-bottom:2px solid var(--border);flex-shrink:0}
@@ -7782,40 +7793,44 @@ function renderCalendario() {
   });
 
   // ── Helpers ───────────────────────────────────────────────────────
+  // Evento no mês: estilo "ponto + texto" do Google Calendar (sem fundo preenchido, exceto eventos de múltiplos dias)
   function evtDemHtml(d){
     var isFech=d._tipo==='fechamento';
     var sc=STATUS_CFG[d.status];
-    var bg=isFech?'#FEF3C7':(sc?sc.dot+'18':'#EDE9FE');
-    var c=isFech?'#92400E':(sc?sc.dot:'#7C3AED');
-    var border=isFech?'#D97706':(sc?sc.dot:'#7C3AED');
-    return '<div class="cal-event" style="background:'+bg+';color:'+c+';border-left-color:'+border+'" onclick="event.stopPropagation();openModalEdit(\''+d.id+'\')" title="'+(isFech?'📋':'📞')+' '+(d.servico||'')+(d.cliente?' — '+d.cliente:'')+'">'+(isFech?'📋 ':'📞 ')+(d.servico||'').slice(0,15)+'</div>';
+    var dot=isFech?'#D97706':(sc?sc.dot:'#7C3AED');
+    return '<div class="cal-event" onclick="event.stopPropagation();openModalEdit(\''+d.id+'\')" title="'+(isFech?'📋':'📞')+' '+(d.servico||'')+(d.cliente?' — '+d.cliente:'')+'">'+
+      '<span class="cal-event-dot" style="background:'+dot+'"></span>'+
+      '<span class="cal-event-txt">'+(isFech?'📋 ':'📞 ')+(d.servico||'').slice(0,15)+'</span>'+
+    '</div>';
   }
   function evtCustomHtmlMon(ev){
     var cfg=TIPO_EVT_CFG[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌',border:'#6B7280'};
     var hora=ev.horaInicio?ev.horaInicio+' ':'';
     var isTarefa=ev.tipo==='Tarefa';
     var conc=isTarefa&&ev.concluida;
-    var ico=isTarefa?(conc?'☑':'☐'):cfg.ico;
-    var lbl=ev._multi?(ev._isFirst?ico+' '+hora+(ev.titulo||'').slice(0,12):'· '+(ev.titulo||'').slice(0,12)):ico+' '+hora+(ev.titulo||'').slice(0,14);
-    var strikeStyle=conc?'text-decoration:line-through;opacity:0.6;':'';
-    var brL=ev._multi&&!ev._isFirst?'0':'4px',brR=ev._multi&&!ev._isLast?'0':'4px';
-    var checkBtn=isTarefa?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\')" style="margin-right:3px;cursor:pointer;font-size:13px" title="'+(conc?'Marcar como pendente':'Marcar como concluída')+'">'+(conc?'☑':'☐')+'</span>':'';
-    var titleLbl=(ev._multi?(ev._isFirst?hora+(ev.titulo||'').slice(0,12):'· '+(ev.titulo||'').slice(0,12)):hora+(ev.titulo||'').slice(0,14));
-    if(isTarefa){
-      lbl='<span style="'+strikeStyle+'">'+checkBtn+titleLbl+'</span>';
+    var strikeStyle=conc?'text-decoration:line-through;opacity:0.6':'';
+    var checkBtn=isTarefa?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\')" style="margin-right:2px;cursor:pointer;font-size:11px" title="'+(conc?'Marcar como pendente':'Marcar como concluída')+'">'+(conc?'☑':'☐')+'</span>':'';
+    if(ev._multi){
+      // Evento de múltiplos dias: barra colorida contínua entre as células (como no Google)
+      var bg=conc?'#D1FAE5':cfg.bg, border=conc?'#10B981':cfg.border;
+      var brL=ev._isFirst?'4px':'0', brR=ev._isLast?'4px':'0';
+      var titleLbl=ev._isFirst?checkBtn+'<span style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,12)+'</span>':'';
+      return '<div class="cal-event cal-event-bar" style="background:'+bg+';color:'+cfg.c+';border-left-color:'+border+';border-radius:'+brL+' '+brR+' '+brR+' '+brL+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+titleLbl+'</div>';
     }
-    var bg=conc?'#D1FAE5':cfg.bg;
-    var border=conc?'#10B981':cfg.border;
-    var brL2=ev._multi&&!ev._isFirst?'0':'4px',brR2=ev._multi&&!ev._isLast?'0':'4px';
-    return '<div class="cal-event" style="background:'+bg+';color:'+cfg.c+';border-left-color:'+border+';border-radius:'+brL2+' '+brR2+' '+brR2+' '+brL2+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+lbl+'</div>';
+    return '<div class="cal-event" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+
+      '<span class="cal-event-dot" style="background:'+cfg.border+'"></span>'+
+      checkBtn+
+      '<span class="cal-event-txt" style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,15)+'</span>'+
+    '</div>';
   }
 
   function evtGoogleHtml(ev){
     var hora=ev.allDay?'':(ev.inicio.slice(11,16)+' ');
-    var lbl='🗓 '+hora+(ev.titulo||'').slice(0,20);
     // data-gcid evita problemas com caracteres especiais no onclick inline
-    return '<div class="cal-event" style="background:#E8F0FE;color:#1A73E8;border-left-color:#1A73E8;border-left-width:3px" '+
-      'data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" onclick="event.stopPropagation();_openGcById(this,event)" title="'+ev.titulo+(hora?' · '+hora:'')+' (Google Calendar)">'+lbl+'</div>';
+    return '<div class="cal-event" data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" onclick="event.stopPropagation();_openGcById(this,event)" title="'+ev.titulo+(hora?' · '+hora:'')+' (Google Calendar)">'+
+      '<span class="cal-event-dot" style="background:#1A73E8"></span>'+
+      '<span class="cal-event-txt">'+hora+(ev.titulo||'').slice(0,18)+'</span>'+
+    '</div>';
   }
   // ── Mini calendário (sempre o mês de calAno/calMes) ──────────────
   var miniFirstDay=new Date(calAno,calMes,1).getDay();
@@ -7937,8 +7952,8 @@ function renderCalendario() {
       for(var _i=0;_i<evts.length&&shown<MAX_CELL;_i++){eh+=evtDemHtml(evts[_i]);shown++;}
       for(var _i=0;_i<cEvts.length&&shown<MAX_CELL;_i++){eh+=evtCustomHtmlMon(cEvts[_i]);shown++;}
       for(var _i=0;_i<gEvts.length&&shown<MAX_CELL;_i++){eh+=evtGoogleHtml(gEvts[_i]);shown++;}
-      if(tot>MAX_CELL) eh+='<div class="cal-more-btn" onclick="event.stopPropagation();calShowMore(\''+ds+'\',this)" style="font-size:11px;font-weight:700;color:var(--accent);padding:2px 6px;cursor:pointer;border-radius:4px;background:var(--accent-l);display:inline-block;margin-top:2px">+'+(tot-shown)+' mais</div>';
-      cells+='<div class="cal-day'+(isToday?' today':'')+'" data-day-evts="" onclick="if(event.target.closest(\'.cal-event\')||event.target.closest(\'.cal-more-btn\')) return; openModalEvento(null,\''+ds+'\')">' +
+      if(tot>MAX_CELL) eh+='<div class="cal-more-link" onclick="event.stopPropagation();calShowMore(\''+ds+'\',this)">+'+(tot-shown)+' mais</div>';
+      cells+='<div class="cal-day'+(isToday?' today':'')+'" data-day-evts="" onclick="if(event.target.closest(\'.cal-event\')||event.target.closest(\'.cal-more-link\')) return; openModalEvento(null,\''+ds+'\')">' +
         '<div class="cal-day-num">'+day+'</div>'+eh+'</div>';
     }
     gridHtml='<div style="flex:1;overflow-y:auto;overflow-x:hidden"><div class="cal-grid">'+hdCells+cells+'</div></div>';
@@ -8079,9 +8094,9 @@ function renderCalendario() {
   var toolbar=
     '<div class="cal-toolbar">'+
       '<span class="cal-toolbar-title">'+titleTxt+'</span>'+
-      '<button class="cal-nav-btn" onclick="calPrev()">‹</button>'+
-      '<button class="cal-nav-btn" onclick="calHoje()" style="font-size:11px;font-weight:700;padding:5px 10px">Hoje</button>'+
-      '<button class="cal-nav-btn" onclick="calNext()">›</button>'+
+      '<button class="cal-arrow-btn" onclick="calPrev()">‹</button>'+
+      '<button class="cal-today-btn" onclick="calHoje()">Hoje</button>'+
+      '<button class="cal-arrow-btn" onclick="calNext()">›</button>'+
       '<div class="cal-view-grp" style="margin-left:10px">'+
         '<button class="cal-view-btn'+(calView==='month'?' active':'')+'" onclick="setCalView(\'month\')">Mês</button>'+
         '<button class="cal-view-btn'+(calView==='week'?' active':'')+'" onclick="setCalView(\'week\')">Semana</button>'+
