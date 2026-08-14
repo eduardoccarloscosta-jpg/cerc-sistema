@@ -646,7 +646,7 @@ body::after{
 .cal-event{pointer-events:auto;cursor:pointer;font-size:11px;font-weight:500;padding:1px 3px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px;line-height:1.6;color:var(--text2)}
 .cal-event:hover{background:var(--bg);filter:brightness(.94)}
 .cal-event-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.cal-event-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-event-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Variante para eventos de múltiplos dias: barra colorida contínua entre células (como no Google) */
 .cal-event-bar{padding:2px 6px;border-left:3px solid transparent;font-weight:600}
 .cal-more-link{font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;padding:1px 4px;margin-top:1px}
@@ -7808,7 +7808,7 @@ function renderCalendario() {
     var dot=isFech?'#D97706':(sc?sc.dot:'#7C3AED');
     return '<div class="cal-event" onclick="event.stopPropagation();openModalEdit(\''+d.id+'\')" title="'+(isFech?'📋':'📞')+' '+(d.servico||'')+(d.cliente?' — '+d.cliente:'')+'">'+
       '<span class="cal-event-dot" style="background:'+dot+'"></span>'+
-      '<span class="cal-event-txt">'+(isFech?'📋 ':'📞 ')+(d.servico||'').slice(0,15)+'</span>'+
+      '<span class="cal-event-txt">'+(isFech?'📋 ':'📞 ')+(d.servico||'').slice(0,60)+'</span>'+
     '</div>';
   }
   function evtCustomHtmlMon(ev){
@@ -7822,13 +7822,13 @@ function renderCalendario() {
       // Evento de múltiplos dias: barra colorida contínua entre as células (como no Google)
       var bg=conc?'#D1FAE5':cfg.bg, border=conc?'#10B981':cfg.border;
       var brL=ev._isFirst?'4px':'0', brR=ev._isLast?'4px':'0';
-      var titleLbl=ev._isFirst?checkBtn+'<span style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,12)+'</span>':'';
+      var titleLbl=ev._isFirst?checkBtn+'<span style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,60)+'</span>':'';
       return '<div class="cal-event cal-event-bar" style="background:'+bg+';color:'+cfg.c+';border-left-color:'+border+';border-radius:'+brL+' '+brR+' '+brR+' '+brL+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+titleLbl+'</div>';
     }
     return '<div class="cal-event" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+
       '<span class="cal-event-dot" style="background:'+cfg.border+'"></span>'+
       checkBtn+
-      '<span class="cal-event-txt" style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,15)+'</span>'+
+      '<span class="cal-event-txt" style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,60)+'</span>'+
     '</div>';
   }
 
@@ -7837,7 +7837,7 @@ function renderCalendario() {
     // data-gcid evita problemas com caracteres especiais no onclick inline
     return '<div class="cal-event" data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" onclick="event.stopPropagation();_openGcById(this,event)" title="'+ev.titulo+(hora?' · '+hora:'')+' (Google Calendar)">'+
       '<span class="cal-event-dot" style="background:#1A73E8"></span>'+
-      '<span class="cal-event-txt">'+hora+(ev.titulo||'').slice(0,18)+'</span>'+
+      '<span class="cal-event-txt">'+hora+(ev.titulo||'').slice(0,60)+'</span>'+
     '</div>';
   }
   // ── Mini calendário (sempre o mês de calAno/calMes) ──────────────
@@ -8022,8 +8022,8 @@ function renderCalendario() {
         var bd2=isFech?'#D97706':(sc2?sc2.dot:'#7C3AED');
         var topPx=(9-HOURS_START)*SLOT_H+di*46;
         return '<div class="cal-week-event" style="top:'+topPx+'px;height:42px;background:'+bg2+';color:'+c2+';border-left-color:'+bd2+'" onclick="event.stopPropagation();openModalEdit(\''+dv.id+'\')">' +
-          '<div class="cal-week-event-title">'+(isFech?'📋 ':'📞 ')+(dv.servico||'').slice(0,18)+'</div>'+
-          '<div class="cal-week-event-sub">'+(dv.cliente||'').slice(0,18)+'</div></div>';
+          '<div class="cal-week-event-title">'+(isFech?'📋 ':'📞 ')+(dv.servico||'')+'</div>'+
+          '<div class="cal-week-event-sub">'+(dv.cliente||'')+'</div></div>';
       }).join('');
 
       evHtml+=custEvts.map(function(ev,ei){
@@ -8046,7 +8046,7 @@ function renderCalendario() {
         var checkSpanW=isTarefaW?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\')" style="cursor:pointer;margin-right:2px" title="'+(concW?'Reabrir':'Concluir')+'">'+icoW+'</span> ':''+icoW+' ';
         return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;background:'+bgW+';color:'+cfg2.c+';border-left-color:'+borderW+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)">' +
           '<div class="cal-week-event-title">'+checkSpanW+titleW+'</div>'+
-          '<div class="cal-week-event-sub">'+(ev.horaInicio?ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):(ev.descricao||'').slice(0,20))+'</div></div>';
+          '<div class="cal-week-event-sub">'+(ev.horaInicio?ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):(ev.descricao||''))+'</div></div>';
       }).join('');
 
       // Eventos importados do Google Calendar (faltavam na visão Semana — só apareciam na visão Mês)
@@ -8062,7 +8062,7 @@ function renderCalendario() {
         }
         var horaSub=ev.allDay?'Dia todo':ev.inicio.slice(11,16)+(ev.fim?' – '+ev.fim.slice(11,16):'');
         return '<div class="cal-week-event" data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" style="top:'+topPx2+'px;height:'+heightPx2+'px;background:#E8F0FE;color:#1A73E8;border-left-color:#1A73E8" onclick="event.stopPropagation();_openGcById(this,event)">'+
-          '<div class="cal-week-event-title">🗓 '+(ev.titulo||'').slice(0,18)+'</div>'+
+          '<div class="cal-week-event-title">🗓 '+(ev.titulo||'')+'</div>'+
           '<div class="cal-week-event-sub">'+horaSub+'</div></div>';
       }).join('');
 
