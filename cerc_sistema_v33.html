@@ -25,6 +25,7 @@
   --s-exe:#0891B2;--s-exe-l:#CFFAFE;
   --s-con:#16A34A;--s-con-l:#DCFCE7;
   --s-per:#DC2626;--s-per-l:#FEE2E2;
+  --s-arq:#57534E;--s-arq-l:#F5F5F4;
   /* Tipos vivos */
   --t-tre:#2563EB;--t-tre-l:#DBEAFE;
   --t-per:#D97706;--t-per-l:#FEF3C7;
@@ -45,7 +46,7 @@ html[data-theme="dark"]{
   --text:#F9FAFB;--text2:#D1D5DB;--text3:#6B7280;
   --accent:#8B5CF6;--accent-l:#2E1065;--accent2:#7C3AED;
   --s-lead-l:#1E3A5F;--s-neg-l:#431407;--s-fec-l:#1F2937;--s-rev-l:#2E1065;
-  --s-exe-l:#0C4A6E;--s-con-l:#052E16;--s-per-l:#450A0A;
+  --s-exe-l:#0C4A6E;--s-con-l:#052E16;--s-per-l:#450A0A;--s-arq-l:#292524;
   --t-tre-l:#1E3A5F;--t-per-l:#451A03;--t-ins-l:#2E1065;--t-lau-l:#052E16;
   --t-pro-l:#450A0A;--t-rt-l:#0C4A6E;
   --green-l:#052E16;--amber-l:#451A03;--red-l:#450A0A;--blue-l:#1E3A5F;
@@ -163,6 +164,7 @@ a{text-decoration:none}
 .b-exe{background:var(--s-exe-l);color:var(--s-exe)}
 .b-con{background:var(--s-con-l);color:var(--s-con)}
 .b-per{background:var(--s-per-l);color:var(--s-per)}
+.b-arq{background:var(--s-arq-l);color:var(--s-arq)}
 
 /* TIPO BADGES vivos */
 .tb{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
@@ -1374,7 +1376,7 @@ body::after{
 </div>
 
 <!-- VISUALIZADOR DE ARQUIVO IN-APP -->
-<div id="file-viewer-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9500;flex-direction:column" onclick="if(event.target===this)closeFileViewer()">
+<div id="file-viewer-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9500;flex-direction:column" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)closeFileViewer()">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#1a1a2e;flex-shrink:0">
     <span id="file-viewer-title" style="color:#fff;font-size:13px;font-weight:600"></span>
     <div style="display:flex;gap:8px">
@@ -1388,7 +1390,7 @@ body::after{
 </div>
 
 <!-- MODAL DEMANDA -->
-<div class="overlay" id="modal-demanda" style="display:none" onclick="if(event.target===this)closeModal()">
+<div class="overlay" id="modal-demanda" style="display:none" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)closeModal()">
 <div class="modal modal-demanda-wrap" style="max-width:1280px">
   <div class="modal-hd">
     <div class="modal-hd-row">
@@ -1564,16 +1566,20 @@ body::after{
           </div>
         </div>
         <div id="parcial-box" class="parcial-box" style="display:none">
+          <div style="background:var(--amber-l);border:1.5px solid #FCD34D;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+              <div><div style="font-size:10px;color:var(--amber);font-weight:600">✅ Recebido (bruto)</div><div id="pp-recebido" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--s-con)">R$ 0,00</div></div>
+              <div><div style="font-size:10px;color:var(--amber);font-weight:600">⏳ Restante</div><div id="pp-restante" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--amber)">R$ 0,00</div></div>
+            </div>
+            <div id="pp-lista" style="display:flex;flex-direction:column;gap:4px"></div>
+          </div>
           <div class="fgrid2">
-            <div class="fg"><label style="color:var(--amber)">Valor Recebido (R$)</label>
-              <input class="finput" id="f-valor-pago" type="number" step="0.01" oninput="calcRestante()" style="border-color:#FCD34D"/></div>
-            <div class="fg"><label style="color:var(--amber)">Restante</label>
-              <input class="finput" id="f-restante" type="number" readonly style="background:var(--amber-l);border-color:#FCD34D;color:var(--amber);font-weight:600"/></div>
+            <div class="fg"><label style="color:var(--amber)">Valor do Pagamento (R$)</label>
+              <input class="finput" id="pp-novo-valor" type="number" step="0.01" placeholder="0,00" style="border-color:#FCD34D"/></div>
+            <div class="fg"><label style="color:var(--amber)">Data do Pagamento</label>
+              <input class="finput" id="pp-nova-data" type="date" style="border-color:#FCD34D"/></div>
           </div>
-          <div class="fg" style="margin-top:6px">
-            <label style="color:var(--amber)">Data do Pagamento Parcial <span style="font-size:10px;color:var(--text3)">(computa no financeiro do mês)</span></label>
-            <input class="finput" type="date" id="f-data-pagamento-parcial" style="border-color:#FCD34D"/>
-          </div>
+          <button class="btn btn-sm" onclick="addPagamentoParcial()" style="margin-top:6px;background:#D97706;color:#fff;border-color:#D97706;width:100%;justify-content:center">+ Adicionar Pagamento</button>
         </div>
         <!-- PARCELADO BOX -->
         <div id="parcelado-box" style="display:none;margin-top:10px">
@@ -1761,7 +1767,7 @@ body::after{
 </div>
 
 <!-- MODAL PMOC -->
-<div class="overlay" id="modal-pmoc" style="display:none" onclick="if(event.target===this)closePmocModal()">
+<div class="overlay" id="modal-pmoc" style="display:none" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)closePmocModal()">
 <div class="modal" style="max-width:1180px;width:97vw;max-height:94vh;display:flex;flex-direction:column">
   <div class="modal-hd">
     <div class="modal-hd-row">
@@ -1890,7 +1896,7 @@ body::after{
 </div>
 
 <!-- MODAL CLIENTE -->
-<div class="overlay" id="modal-cliente" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+<div class="overlay" id="modal-cliente" style="display:none" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.style.display='none'">
 <div class="modal" style="max-width:660px">
   <div class="modal-hd">
     <div class="modal-hd-row">
@@ -1951,7 +1957,7 @@ body::after{
 </div>
 
 <!-- MODAL DESPESA -->
-<div class="overlay" id="modal-despesa" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+<div class="overlay" id="modal-despesa" style="display:none" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.style.display='none'">
 <div class="modal modal-sm">
   <div class="modal-hd">
     <div class="modal-hd-row">
@@ -2004,7 +2010,7 @@ body::after{
 </div>
 
 <!-- MODAL DIAGNÓSTICO DE PERDA -->
-<div class="overlay" id="modal-perda" style="display:none" onclick="if(event.target===this)closePerdaModal(true)">
+<div class="overlay" id="modal-perda" style="display:none" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)closePerdaModal(true)">
 <div class="modal modal-perda">
   <div class="modal-hd">
     <div class="modal-hd-row">
@@ -2142,7 +2148,8 @@ var OPS_DEFAULT = [
   {id:'o12',desc:'Terceirização',tipo:'uni.',custo:0,qtd:0,editCusto:true,hasObs:true,obs:''},
   {id:'o13',desc:'Pedágio',tipo:'uni.',custo:300,qtd:0,editCusto:true},
   {id:'o14',desc:'Materiais Operacionais',tipo:'uni.',custo:0,qtd:0,editCusto:true,hasObs:true,obs:''},
-  {id:'o15',desc:'Aluguel de Carro',tipo:'Diária',custo:600,qtd:0,editCusto:true}
+  {id:'o15',desc:'Aluguel de Carro',tipo:'Diária',custo:600,qtd:0,editCusto:true},
+  {id:'o16',desc:'Software / Licenças',tipo:'uni.',custo:0,qtd:0,editCusto:true,hasObs:true,obs:''}
 ];
 
 // ══ CUSTOM STATUS DROPDOWN ═══════════════════════════════════════
@@ -2153,7 +2160,8 @@ var STATUS_OPTS = [
   {v:'Em Revisão',    dot:'#7C3AED', bg:'#EDE9FE', c:'#6D28D9'},
   {v:'Em Execução',   dot:'#0891B2', bg:'#CFFAFE', c:'#0E7490'},
   {v:'Concluído',     dot:'#16A34A', bg:'#DCFCE7', c:'#15803D'},
-  {v:'Perdido',       dot:'#DC2626', bg:'#FEE2E2', c:'#B91C1C'}
+  {v:'Perdido',       dot:'#DC2626', bg:'#FEE2E2', c:'#B91C1C'},
+  {v:'Arquivado',     dot:'#78716C', bg:'#F5F5F4', c:'#57534E'}
 ];
 
 function buildStatusMenu(){
@@ -2222,7 +2230,8 @@ var STATUS_CFG = {
   'Em Revisão':{cls:'b-rev',color:'var(--s-rev)',dot:'#7C3AED'},
   'Em Execução':{cls:'b-exe',color:'var(--s-exe)',dot:'#0891B2'},
   Concluído:{cls:'b-con',color:'var(--s-con)',dot:'#16A34A'},
-  Perdido:{cls:'b-per',color:'var(--s-per)',dot:'#DC2626'}
+  Perdido:{cls:'b-per',color:'var(--s-per)',dot:'#DC2626'},
+  Arquivado:{cls:'b-arq',color:'var(--s-arq)',dot:'#78716C'}
 };
 var TIPO_CLS = {Treinamento:'tt',Perícia:'tp',Inspeção:'ti',Laudo:'tl',Projeto:'tpr','Responsabilidade Técnica':'trt'};
 
@@ -2350,6 +2359,7 @@ function demandaToDb(d) {
     log: d.log||[], subtarefas: d.subtarefas||[], comentarios: d.comentarios||[],
     docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip)};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
     parcelas: d.parcelas||[],
+    pagamentos_parciais: d.pagamentosParciais||[],
     total_parcelas: parseInt(d.totalParcelas)||0,
     valor_parcela: parseFloat(d.valorParcela)||0,
     data_primeira_parcela: d.dataPrimeiraParcela||'',
@@ -2386,6 +2396,7 @@ function dbToDemanda(r) {
       return {nfs:df.nf?[df.nf]:[],boletos:df.boleto?[df.boleto]:[],laudos:[]};
     })(r.docs_fiscais),
     parcelas: r.parcelas||[],
+    pagamentosParciais: r.pagamentos_parciais||[],
     totalParcelas: parseInt(r.total_parcelas)||0,
     valorParcela: parseFloat(r.valor_parcela)||0,
     dataPrimeiraParcela: r.data_primeira_parcela||'',
@@ -3236,7 +3247,7 @@ function renderDashboard() {
   var byS={};
   d.forEach(function(x){byS[x.status]=(byS[x.status]||0)+1;});
   function valS(s){return d.filter(function(x){return x.status===s;}).reduce(function(a,b){return a+(b.valorBruto||0);},0);}
-  var STATUSES=['Lead','Negociação','Fechado','Em Revisão','Em Execução','Concluído','Perdido'];
+  var STATUSES=['Lead','Negociação','Fechado','Em Revisão','Em Execução','Concluído','Perdido','Arquivado'];
   var pipeline=d.filter(function(x){return ['Lead','Negociação','Fechado','Em Revisão','Em Execução'].indexOf(x.status)>=0;}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
   var totNeg=valS('Negociação'),totExe=valS('Em Execução'),totCon=valS('Concluído');
   var ativos=d.filter(function(x){return ['Lead','Negociação','Fechado','Em Revisão','Em Execução'].indexOf(x.status)>=0;}).length;
@@ -3270,7 +3281,7 @@ function renderDashboard() {
   var today=new Date(); today.setHours(0,0,0,0);
   var alerts=[];
   state.demandas.forEach(function(dem){
-    if(['Perdido','Concluído','Em Execução'].indexOf(dem.status)>=0){
+    if(['Perdido','Arquivado','Concluído','Em Execução'].indexOf(dem.status)>=0){
       if(dem.status==='Em Execução'&&dem.dataCriacao){
         var dc2=new Date(dem.dataCriacao+'T12:00');
         var dias2=Math.round((today-dc2)/(1000*60*60*24));
@@ -3417,7 +3428,7 @@ function renderDemandas() {
   if(fDataAte) d=d.filter(function(x){return x.dataCriacao<=fDataAte;});
   var totB=d.reduce(function(a,b){return a+(b.valorBruto||0);},0);
   var totL=d.reduce(function(a,b){return a+(b.valorLiquido||0);},0);
-  var STATUSES=['Lead','Negociação','Fechado','Em Revisão','Em Execução','Concluído','Perdido'];
+  var STATUSES=['Lead','Negociação','Fechado','Em Revisão','Em Execução','Concluído','Perdido','Arquivado'];
   var tipoOpts=['Treinamento','Perícia','Inspeção','Laudo','Projeto','Responsabilidade Técnica'].map(function(t){return '<option'+(fTipo===t?' selected':'')+'>'+t+'</option>';}).join('');
   // Chips de status
   var chipsHtml=STATUSES.map(function(s){
@@ -3508,7 +3519,7 @@ function renderDemandas() {
   var today=new Date(); today.setHours(0,0,0,0);
   var alerts=[];
   state.demandas.forEach(function(dem){
-    if(['Perdido','Concluído','Em Execução'].indexOf(dem.status)>=0){
+    if(['Perdido','Arquivado','Concluído','Em Execução'].indexOf(dem.status)>=0){
       if(dem.status==='Em Execução'&&dem.dataCriacao){
         var dc2=new Date(dem.dataCriacao+'T12:00');
         var dias2=Math.round((today-dc2)/(1000*60*60*24));
@@ -3826,6 +3837,7 @@ function recalcCascata(){
   var pctEl=document.getElementById('f-desconto-pct');
   if(pctEl&&b>0&&desc>0) pctEl.value=(desc/b*100).toFixed(1);
   updateDespesasBox();
+  if(document.getElementById('f-pagamento')&&document.getElementById('f-pagamento').value==='Parcial') renderPagamentosParciais();
 }
 
 function syncDescontoR(){
@@ -3841,8 +3853,39 @@ function syncDescontoPct(){
   recalcCascata();
 }
 function toggleParcial(){togglePagamento();}
-function togglePagamento(){var v=document.getElementById('f-pagamento').value;document.getElementById('parcial-box').style.display=v==='Parcial'?'block':'none';document.getElementById('parcelado-box').style.display=v==='Parcelado'?'block':'none';if(v==='Parcelado')renderParcelasBox();}
-function calcRestante(){var l=parseValorBR('f-liquido'),p=parseFloat(document.getElementById('f-valor-pago').value)||0;document.getElementById('f-restante').value=Math.max(0,l-p).toFixed(2);}
+function togglePagamento(){var v=document.getElementById('f-pagamento').value;document.getElementById('parcial-box').style.display=v==='Parcial'?'block':'none';document.getElementById('parcelado-box').style.display=v==='Parcelado'?'block':'none';if(v==='Parcelado')renderParcelasBox();if(v==='Parcial')renderPagamentosParciais();}
+/* ══ PAGAMENTOS PARCIAIS (múltiplas datas) ══════════════ */
+var modalPagamentosParciais=[];
+function addPagamentoParcial(){
+  var v=parseFloat(document.getElementById('pp-novo-valor').value)||0;
+  var d=document.getElementById('pp-nova-data').value;
+  if(v<=0){toast('Informe um valor válido');return;}
+  modalPagamentosParciais.push({valor:v,data:d||new Date().toISOString().slice(0,10),obs:''});
+  document.getElementById('pp-novo-valor').value='';
+  document.getElementById('pp-nova-data').value='';
+  renderPagamentosParciais();
+}
+function removePagamentoParcial(idx){
+  modalPagamentosParciais.splice(idx,1);
+  renderPagamentosParciais();
+}
+function renderPagamentosParciais(){
+  var lista=document.getElementById('pp-lista'); if(!lista) return;
+  var bruto=parseValorBR('f-bruto'),desc=parseValorBR('f-desconto-r');
+  var brutoEfetivo=Math.max(0,bruto-desc);
+  var recebido=modalPagamentosParciais.reduce(function(a,p){return a+(p.valor||0);},0);
+  var restante=Math.max(0,brutoEfetivo-recebido);
+  document.getElementById('pp-recebido').textContent=fR(recebido);
+  document.getElementById('pp-restante').textContent=fR(restante);
+  var ordenados=modalPagamentosParciais.map(function(p,idx){return {p:p,idx:idx};}).sort(function(a,b){return (a.p.data||'').localeCompare(b.p.data||'');});
+  lista.innerHTML=!ordenados.length?'<div style="font-size:11px;color:var(--text3)">Nenhum pagamento registrado ainda.</div>':ordenados.map(function(x){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-radius:6px;padding:5px 9px;font-size:12px">'+
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:600">'+fR(x.p.valor)+'</span>'+
+      '<span style="color:var(--text3)">'+(x.p.data?fD(x.p.data):'—')+'</span>'+
+      '<button class="btn btn-danger btn-sm btn-icon" style="width:20px;height:20px;font-size:10px" onclick="removePagamentoParcial('+x.idx+')">✕</button>'+
+    '</div>';
+  }).join('');
+}
 /* ══ PARCELAMENTO ══════════════════════════════════════ */
 var modalParcelas=[];
 function onChangeParcelas(){var b=parseValorBR('f-bruto'),t=parseInt(document.getElementById('f-total-parcelas').value)||0;if(b>0&&t>0)document.getElementById('f-valor-parcela').value=(b/t).toFixed(2);}
@@ -3852,6 +3895,12 @@ function renderParcelasBox(){var ov=document.getElementById('parcelas-overview')
 function pagarParcela(idx){if(!modalParcelas[idx])return;modalParcelas[idx].status='Pago';modalParcelas[idx].dataPagamento=new Date().toISOString().slice(0,10);renderParcelasBox();toast('Parcela '+(idx+1)+' marcada como paga!','success');}
 function estornarParcela(idx){if(!modalParcelas[idx])return;modalParcelas[idx].status='Pendente';modalParcelas[idx].dataPagamento='';renderParcelasBox();toast('Parcela '+(idx+1)+' estornada.','info');}
 function calcParcelasStats(){return{vpago:modalParcelas.filter(function(p){return p.status==='Pago';}).reduce(function(a,b){return a+b.valor;},0)};}
+// Lista efetiva de pagamentos parciais de uma demanda: usa pagamentosParciais se houver, senão migra em memória os campos legados valorPago/dataPagamentoParcial
+function pagamentosEfetivos(dem){
+  if(dem.pagamentosParciais&&dem.pagamentosParciais.length) return dem.pagamentosParciais;
+  if(dem.dataPagamentoParcial||dem.dataPagamento) return [{valor:dem.valorPago||0,data:dem.dataPagamentoParcial||dem.dataPagamento,obs:''}];
+  return [];
+}
 var _prevStatus = null;
 var _perdaCategSel = null;
 var _perdaTempData = null; // dados temporários para nova demanda
@@ -4072,14 +4121,15 @@ function openModalNew() {
   modalDocsFiscais={nfs:[],boletos:[],laudos:[]}; modalLinkFiles={'pdf-prop':null,art:null,contrato:null}; modalLinkPropostas=[];
   _commentPendingFiles=[]; var _cac=document.getElementById('comment-anexo-chips');if(_cac)_cac.innerHTML='';
   document.getElementById('modal-title').textContent='Nova Demanda';
-  ['f-servico','f-tipo','f-cliente','f-contato','f-email','f-telefone','f-ultimo-contato','f-fechamento','f-retorno','f-bruto','f-desconto-r','f-desconto-pct','f-imposto','f-custo-op','f-liquido','f-art','f-canva','f-gdrive','f-extra-link','f-extra-desc','f-data-pagamento','f-data-pagamento-parcial'].forEach(function(id){setF(id,'');});
+  ['f-servico','f-tipo','f-cliente','f-contato','f-email','f-telefone','f-ultimo-contato','f-fechamento','f-retorno','f-bruto','f-desconto-r','f-desconto-pct','f-imposto','f-custo-op','f-liquido','f-art','f-canva','f-gdrive','f-extra-link','f-extra-desc','f-data-pagamento'].forEach(function(id){setF(id,'');});
   renderLinkPropostas();
   setF('f-status','Negociação'); setF('f-proposta',nextPR()); setF('f-pagamento','Pendente');
   // Lock proposta field for new demandas
   var fpNew=document.getElementById('f-proposta');
   if(fpNew){fpNew.setAttribute('readonly','readonly');fpNew.style.background='var(--surface2)';fpNew.style.cursor='default';fpNew.style.color='var(--text2)';fpNew.style.fontWeight='600';}
   var lockBadgeNew=document.getElementById('prec-lock-icon');
-  if(lockBadgeNew){lockBadgeNew.textContent='🔒 automático';lockBadgeNew.style.color='var(--text3)';} setF('f-valor-pago',''); setF('f-restante','');
+  if(lockBadgeNew){lockBadgeNew.textContent='🔒 automático';lockBadgeNew.style.color='var(--text3)';}
+  modalPagamentosParciais=[];setF('pp-novo-valor','');setF('pp-nova-data','');
   modalParcelas=[];setF('f-total-parcelas','');setF('f-valor-parcela','');setF('f-data-primeira-parcela','');
   document.getElementById('parcelado-box').style.display='none';
   if(document.getElementById('parcelas-overview'))document.getElementById('parcelas-overview').style.display='none';
@@ -4122,9 +4172,11 @@ function openModalEdit(id) {
   setValorBR('f-bruto',dem.valorBruto||0);setValorBR('f-desconto-r',dem.desconto||0);setF('f-desconto-pct',dem.valorBruto&&dem.desconto?(dem.desconto/dem.valorBruto*100).toFixed(1):'');setValorBR('f-imposto',dem.impostoEstimado||0);setValorBR('f-custo-op',dem.custoOperacional||0);setValorBR('f-liquido',dem.valorLiquido||0);
   setF('f-pagamento',dem.statusPagamento||'Pendente');
   // Exibir seção de perda se status=Perdido
-  updatePerdaSection(dem);setF('f-valor-pago',dem.valorPago||'');setF('f-data-pagamento',dem.dataPagamento||'');setF('f-data-pagamento-parcial',dem.dataPagamentoParcial||'');
+  updatePerdaSection(dem);setF('f-data-pagamento',dem.dataPagamento||'');
   document.getElementById('parcial-box').style.display=dem.statusPagamento==='Parcial'?'block':'none';
-  if(dem.statusPagamento==='Parcial') calcRestante();
+  // Migração não-destrutiva: se não há lista de pagamentos parciais mas há um valorPago legado, popula em memória com uma única entrada
+  modalPagamentosParciais=pagamentosEfetivos(dem).slice();
+  if(dem.statusPagamento==='Parcial') renderPagamentosParciais();
   modalParcelas=(dem.parcelas||[]).slice();
   setF('f-total-parcelas',dem.totalParcelas||'');setF('f-valor-parcela',dem.valorParcela||'');setF('f-data-primeira-parcela',dem.dataPrimeiraParcela||'');
   document.getElementById('parcelado-box').style.display=dem.statusPagamento==='Parcelado'?'block':'none';
@@ -4908,12 +4960,13 @@ function _saveDemandaImpl() {
   var cop=parseValorBR('f-custo-op');
   var liq=parseValorBR('f-liquido')||Math.max(0,bruto-desc-imp-cop);
   var pag=document.getElementById('f-pagamento').value;
-  var vpago=pag==='Parcial'?(parseFloat(document.getElementById('f-valor-pago').value)||0):pag==='Pago'?Math.max(0,bruto-desc):pag==='Parcelado'?calcParcelasStats().vpago:0;
+  var vpago=pag==='Parcial'?modalPagamentosParciais.reduce(function(a,p){return a+(p.valor||0);},0):pag==='Pago'?Math.max(0,bruto-desc):pag==='Parcelado'?calcParcelasStats().vpago:0;
+  var dataParcialDerivada=pag==='Parcial'&&modalPagamentosParciais.length?modalPagamentosParciais.slice().sort(function(a,b){return (a.data||'').localeCompare(b.data||'');}).pop().data:'';
 
   var fStatus=document.getElementById('f-status').value;
   // Se status mudou de Perdido para outro, limpar campos de perda
   var old2=editingId?state.demandas.find(function(x){return x.id===editingId;}):null;
-  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:document.getElementById('f-data-pagamento-parcial').value||'',parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].url||''):''),linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkGdrive:document.getElementById('f-gdrive').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkPropostas:modalLinkPropostas.slice(),linkFilesPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].arquivo||null):null),linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nfs:(modalDocsFiscais.nfs||[]).slice(),boletos:(modalDocsFiscais.boletos||[]).slice(),laudos:(modalDocsFiscais.laudos||[]).slice()},marcos:modalMarcos.map(function(m){return JSON.parse(JSON.stringify(m));}),
+  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:dataParcialDerivada,pagamentosParciais:pag==='Parcial'?modalPagamentosParciais.slice():[],parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].url||''):''),linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkGdrive:document.getElementById('f-gdrive').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkPropostas:modalLinkPropostas.slice(),linkFilesPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].arquivo||null):null),linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nfs:(modalDocsFiscais.nfs||[]).slice(),boletos:(modalDocsFiscais.boletos||[]).slice(),laudos:(modalDocsFiscais.laudos||[]).slice()},marcos:modalMarcos.map(function(m){return JSON.parse(JSON.stringify(m));}),
     motivoPerda:   fStatus==='Perdido'?(old2?old2.motivoPerda||'':(_perdaTempData?_perdaTempData.motivoPerda||'':'')):''   ,
     categoriaPerda:fStatus==='Perdido'?(old2?old2.categoriaPerda||'':(_perdaTempData?_perdaTempData.categoriaPerda||'':'')):''  ,
     planoAcaoPerda:fStatus==='Perdido'?(old2?old2.planoAcaoPerda||'':(_perdaTempData?_perdaTempData.planoAcaoPerda||'':'')):'' ,
@@ -4937,7 +4990,7 @@ function _saveDemandaImpl() {
         addLog(old,'fin','Pagamento: Pago ('+fR(bruto)+')'+(dpag?' em '+fD(dpag):''));
       }
       if(pag==='Parcial'&&vpago!==(old.valorPago||0)) {
-        var dpagp=document.getElementById('f-data-pagamento-parcial').value||document.getElementById('f-data-pagamento').value;
+        var dpagp=dataParcialDerivada||document.getElementById('f-data-pagamento').value;
         addLog(old,'fin','Pagamento parcial: '+fR(vpago)+' recebido'+(dpagp?' em '+fD(dpagp):''));
       }
       if(pag==='Parcelado'&&old.statusPagamento!=='Parcelado'){var ntp=parseInt(document.getElementById('f-total-parcelas').value)||0,nvp=parseFloat(document.getElementById('f-valor-parcela').value)||0;addLog(old,'fin','\u{1F4B3} Parcelamento configurado: '+ntp+'x de '+fR(nvp));}
@@ -5170,7 +5223,7 @@ function openClienteDetalhe(id) {
       '<td style="font-size:12px;color:var(--text3)">'+fD(d.dataCriacao)+'</td>' +
       '</tr>';
   }).join('');
-  var html2='<div class="overlay overlay-dynamic" id="cli-detalhe-overlay" style="z-index:2000" onclick="if(event.target===this)document.getElementById(\'cli-detalhe-overlay\').remove()">' +
+  var html2='<div class="overlay overlay-dynamic" id="cli-detalhe-overlay" style="z-index:2000" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)document.getElementById(\'cli-detalhe-overlay\').remove()">' +
     '<div class="modal" style="max-width:820px">' +
       '<div class="modal-hd"><div class="modal-hd-row">' +
         '<div style="display:flex;align-items:center;gap:12px">' +
@@ -5259,7 +5312,7 @@ function openModalReceita(editId) {
   var ex = editId ? state.demandas.find(function(d){return d.id===editId;}) : null;
   var hoje=new Date().toISOString().slice(0,10);
   var html=
-    '<div id="modal-receita" class="overlay" onclick="if(event.target===this)this.remove()">' +
+    '<div id="modal-receita" class="overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()">' +
     '<div class="modal modal-sm"><div class="modal-hd"><div class="modal-hd-row">' +
       '<div class="modal-title">'+(ex?'✏️ Editar Receita':'+ Receita Avulsa')+'</div>' +
       '<button class="btn btn-ghost btn-icon" onclick="document.getElementById(\'modal-receita\').remove()">✕</button>' +
@@ -5343,7 +5396,7 @@ function _loadScript(src,cb){
 
 function openEditPiso(){
   var cur=state.pisoSalarial||0;
-  var html='<div id="modal-piso" class="overlay" onclick="if(event.target===this)this.remove()">' +
+  var html='<div id="modal-piso" class="overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()">' +
     '<div class="modal" style="max-width:360px">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">' +
         '<div class="modal-title">🎯 Piso Salarial</div>' +
@@ -5382,7 +5435,7 @@ function openModalRelatorio(){
   var ex=JSON.parse(localStorage.getItem('cerc_profile_extra')||'{}');
   var empresa=(_sbProfile&&_sbProfile.empresa)||ex.empresa||'CERC';
   var html=
-    '<div id="modal-relatorio" class="overlay" onclick="if(event.target===this)this.remove()">'+
+    '<div id="modal-relatorio" class="overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()">'+
     '<div class="modal" style="max-width:440px">'+
     '<div class="modal-hd"><div class="modal-hd-row">'+
       '<div class="modal-title">📊 Relatório Financeiro</div>'+
@@ -5712,10 +5765,10 @@ function renderFinanceiro() {
     return inMes(x.dataPagamento||x.dataCriacao,finMes,finAno);
   }).reduce(function(a,b){return a+Math.max(0,(b.valorBruto||0)-(b.desconto||0));},0)
   +recAvulsaRecMes.filter(function(x){return x.recebidoMeses&&x.recebidoMeses[mesKey];}).reduce(function(a,b){return a+Math.max(0,(b.valorBruto||0)-(b.desconto||0));},0);
-  var recParcialMes=d.filter(function(x){
-    if(x.statusPagamento!=='Parcial') return false;
-    return inMes(x.dataPagamentoParcial||x.dataPagamento||x.dataCriacao,finMes,finAno);
-  }).reduce(function(a,b){return a+(b.valorPago||0);},0);
+  var recParcialMes=d.filter(function(x){return x.statusPagamento==='Parcial';}).reduce(function(a,b){
+    var pags=pagamentosEfetivos(b);
+    return a+pags.filter(function(p){return inMes(p.data||b.dataCriacao,finMes,finAno);}).reduce(function(s,p){return s+(p.valor||0);},0);
+  },0);
   var recParceladoMes=d.filter(function(x){if(x.statusPagamento!=='Parcelado')return false;return(x.parcelas||[]).some(function(p){return p.status==='Pago'&&p.dataPagamento&&inMes(p.dataPagamento,finMes,finAno);});}).reduce(function(a,b){return a+(b.parcelas||[]).filter(function(p){return p.status==='Pago'&&p.dataPagamento&&inMes(p.dataPagamento,finMes,finAno);}).reduce(function(s,p){return s+p.valor;},0);},0);
   // A Receber: usa dataPagamento programada (se definida) como referência de mês — não mais só dataCriacao
   var _statusAtivos=['Em Execução','Em Revisão','Fechado','Concluído'];
@@ -5770,7 +5823,7 @@ function renderFinanceiro() {
   var inadimplentes=d.filter(function(x){return x.statusPagamento==='Inadimplente';}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
 
   // ── Snap para relatórios ─────────────────────────────
-  var _snapRec=d.filter(function(x){return ['Lead','Perdido'].indexOf(x.status)<0&&x.tipo!=='Receita Avulsa'&&(inMes(x.dataCriacao,finMes,finAno)||inMes(x.dataPagamento||'',finMes,finAno)||(x.statusPagamento==='Parcelado'&&(x.parcelas||[]).some(function(p){return inMes(p.dataPrev||'',finMes,finAno)||inMes(p.dataPagamento||'',finMes,finAno);})));}).concat(recAvulsaRecMes);
+  var _snapRec=d.filter(function(x){return ['Lead','Perdido','Arquivado'].indexOf(x.status)<0&&x.tipo!=='Receita Avulsa'&&(inMes(x.dataCriacao,finMes,finAno)||inMes(x.dataPagamento||'',finMes,finAno)||(x.statusPagamento==='Parcelado'&&(x.parcelas||[]).some(function(p){return inMes(p.dataPrev||'',finMes,finAno)||inMes(p.dataPagamento||'',finMes,finAno);})));}).concat(recAvulsaRecMes);
   var _snapParc=[];
   d.filter(function(x){return x.statusPagamento==='Parcelado'&&(x.parcelas||[]).length;}).forEach(function(dem){
     (dem.parcelas||[]).forEach(function(p,idx){
@@ -5854,7 +5907,10 @@ function renderFinanceiro() {
     var rowsAtivasComPagamento=d.filter(function(x){
       if(x.status==='Concluído') return false; // já cobertas acima
       if(x.tipo==='Receita Avulsa') return false; // tratadas na seção de recorrentes
-      if(x.statusPagamento==='Parcial') return inMes(x.dataPagamentoParcial||x.dataPagamento||x.dataCriacao,finMes,finAno);
+      if(x.statusPagamento==='Parcial'){
+        var _pags=pagamentosEfetivos(x);
+        return _pags.some(function(p){return inMes(p.data||x.dataCriacao,finMes,finAno);});
+      }
       if(x.statusPagamento==='Parcelado') return (x.parcelas||[]).some(function(p){return p.status==='Pago'&&(inMes(p.dataPrev||'',finMes,finAno)||inMes(p.dataPagamento||'',finMes,finAno));});
       if(x.statusPagamento==='Pago') return inMes(x.dataPagamento||x.dataCriacao,finMes,finAno);
       return false;
@@ -5897,10 +5953,24 @@ function renderFinanceiro() {
             parcelasInfo='<div style="font-size:10px;color:var(--text3)">'+pp+'/'+pt+' parcelas pagas</div>';
           }
         }
+        if(dem.statusPagamento==='Parcial'){
+          var pagsAll=pagamentosEfetivos(dem);
+          var pagsMes=pagsAll.filter(function(p){return inMes(p.data||'',finMes,finAno);});
+          if(pagsMes.length){
+            displayBruto=pagsMes.reduce(function(s,p){return s+(p.valor||0);},0);
+            displayLiquido=dem.valorBruto>0?displayBruto*(dem.valorLiquido/dem.valorBruto):displayBruto;
+            if(pagsMes.length>1) parcelasInfo='<div style="font-size:10px;color:var(--text3)">'+pagsMes.length+' pagamentos neste mês</div>';
+          }
+        }
         // Data do pagamento — exibida junto ao status, igual ao que é feito nas despesas
         var demDataPag='';
         if(dem.statusPagamento==='Pago'&&dem.dataPagamento) demDataPag=dem.dataPagamento;
-        else if(dem.statusPagamento==='Parcial'&&(dem.dataPagamentoParcial||dem.dataPagamento)) demDataPag=dem.dataPagamentoParcial||dem.dataPagamento;
+        else if(dem.statusPagamento==='Parcial'){
+          var _pagsAll=pagamentosEfetivos(dem);
+          var _pagsMes=_pagsAll.filter(function(p){return inMes(p.data||'',finMes,finAno);});
+          var _pagsRef=_pagsMes.length?_pagsMes:_pagsAll;
+          if(_pagsRef.length) demDataPag=_pagsRef.slice().sort(function(a,b){return (a.data||'').localeCompare(b.data||'');}).pop().data;
+        }
         else if(dem.statusPagamento==='Parcelado'){
           var _pagas=(dem.parcelas||[]).filter(function(p){return p.status==='Pago'&&p.dataPagamento;});
           if(_pagas.length) demDataPag=_pagas[_pagas.length-1].dataPagamento;
@@ -5937,7 +6007,7 @@ function renderFinanceiro() {
     var recFutura=d.filter(function(x){return ['Lead','Negociação','Fechado','Em Revisão'].indexOf(x.status)>=0;}).reduce(function(a,b){return a+(b.valorLiquido||0);},0);
     // ── Contas a Receber pendentes (todos os status com dataPagamento definida) ──
     var contasReceber=d.filter(function(x){
-      if(['Pago','Recorrente','Parcelado'].indexOf(x.statusPagamento)>=0||['Lead','Perdido'].indexOf(x.status)>=0) return false;
+      if(['Pago','Recorrente','Parcelado'].indexOf(x.statusPagamento)>=0||['Lead','Perdido','Arquivado'].indexOf(x.status)>=0) return false;
       return true;
     }).map(function(x){return {id:x.id,proposta:x.proposta,servico:x.servico,cliente:x.cliente,valor:x.valorBruto,dataPrev:x.dataPagamento||x.dataCriacao,status:x.statusPagamento,demStatus:x.status};}).sort(function(a,b){return new Date(a.dataPrev)-new Date(b.dataPrev);}).slice(0,15);
     // Parcelas pendentes próximas
@@ -6165,7 +6235,29 @@ function _applyDespPago(id,btn,mk,dataPag){
 }
 
 // ══ PRECIFICAÇÃO ═════════════════════════════════════════
-var precState={pessoal:[{prof:'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:2000};
+var precState={pessoal:[{prof:'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),pacotes:[],complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:2000};
+var _precCliList=[]; // cache ordenado {i:índice original em state.clientes, c:cliente} para busca/seleção da Precificação
+var _precCliQuery=''; // busca atual, persistida para sobreviver a re-renders disparados por outras edições da tela
+function precCliOptsHtml(list){
+  return list.map(function(item){var c=item.c;var loc=(c.cidade||c.uf)?' ['+((c.cidade||'')+(c.cidade&&c.uf?' — ':'')+( c.uf||''))+']':'';return '<option value="'+item.i+'"'+(String(item.i)===String(precState.cliIdx)?' selected':'')+'>'+c.empresa+loc+(c.contato?' — '+c.contato:'')+'</option>';}).join('');
+}
+function filterPrecClienteList(list,q){
+  q=(q||'').trim().toLowerCase();
+  return !q?list:list.filter(function(item){return (item.c.empresa||'').toLowerCase().indexOf(q)>=0;});
+}
+function filterPrecClientes(q){
+  var sel=document.getElementById('prec-cli-sel'); if(!sel) return;
+  _precCliQuery=q||'';
+  var filtered=filterPrecClienteList(_precCliList,_precCliQuery);
+  var cur=sel.value;
+  sel.innerHTML='<option value="">— selecione —</option>'+precCliOptsHtml(filtered);
+  if(filtered.some(function(item){return String(item.i)===cur;})) sel.value=cur;
+  else if(cur!==''){
+    // cliente selecionado saiu do filtro: limpa seleção para não ficar dessincronizado com precState.cliIdx
+    precState.cliIdx='';
+    var infoEl=document.getElementById('prec-cli-info'); if(infoEl) infoEl.innerHTML='';
+  }
+}
 
 function getProfRate(nome) {
   var sv=state.servicos.find(function(s){return s.nome===nome;});
@@ -6195,11 +6287,28 @@ function renderPrecificacao() {
     var customOpts=Object.keys(cats).map(function(cat){return '<optgroup label="★ '+cat+'">'+cats[cat].map(function(s){return '<option'+(cur===s.nome?' selected':'')+' value="'+s.nome+'">'+s.nome+' — '+fR(s.valorBase)+'/'+(s.unidade||'uni')+'</option>';}).join('')+'</optgroup>';}).join('');
     return stdOpts+customOpts;
   }
-  var pesHtml=precState.pessoal.map(function(p,i){return '<div class="prec-pes-row"><select class="finput" style="font-size:12px;padding:5px 7px" onchange="precState.pessoal['+i+'].prof=this.value;renderPrecificacao()">'+profOpts(p.prof)+'</select><input class="finput" type="number" min="0" step="0.5" style="font-size:12px;padding:5px;text-align:center" value="'+p.qtd+'" onfocus="this.select()" oninput="precState.pessoal['+i+'].qtd=parseFloat(this.value)||0" onchange="precState.pessoal['+i+'].qtd=parseFloat(this.value)||0;renderPrecificacao()"/><input class="finput" type="number" min="1" style="font-size:12px;padding:5px;text-align:center" value="'+(p.pessoas||1)+'" onfocus="this.select()" oninput="precState.pessoal['+i+'].pessoas=parseInt(this.value)||1" onchange="precState.pessoal['+i+'].pessoas=parseInt(this.value)||1;renderPrecificacao()"/><span style="font-size:11px;color:var(--text3);text-align:center">'+(PROF_UNID[p.prof]||(state.servicos.find(function(s){return s.nome===p.prof;})||{}).unidade||'uni')+'</span><span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;text-align:right">'+fR((p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0))+'</span><input class="finput" type="text" placeholder="Referência..." style="font-size:12px;padding:5px 7px" value="'+(p.obs||'')+'" oninput="precState.pessoal['+i+'].obs=this.value"/><button class="btn btn-danger btn-sm btn-icon" onclick="precState.pessoal.splice('+i+',1);renderPrecificacao()">✕</button></div>';}).join('');
+  function pessoalRowHtml(p,i){return '<div class="prec-pes-row"><select class="finput" style="font-size:12px;padding:5px 7px" onchange="precState.pessoal['+i+'].prof=this.value;renderPrecificacao()">'+profOpts(p.prof)+'</select><input class="finput" type="number" min="0" step="0.5" style="font-size:12px;padding:5px;text-align:center" value="'+p.qtd+'" onfocus="this.select()" oninput="precState.pessoal['+i+'].qtd=parseFloat(this.value)||0" onchange="precState.pessoal['+i+'].qtd=parseFloat(this.value)||0;renderPrecificacao()"/><input class="finput" type="number" min="1" style="font-size:12px;padding:5px;text-align:center" value="'+(p.pessoas||1)+'" onfocus="this.select()" oninput="precState.pessoal['+i+'].pessoas=parseInt(this.value)||1" onchange="precState.pessoal['+i+'].pessoas=parseInt(this.value)||1;renderPrecificacao()"/><span style="font-size:11px;color:var(--text3);text-align:center">'+(PROF_UNID[p.prof]||(state.servicos.find(function(s){return s.nome===p.prof;})||{}).unidade||'uni')+'</span><span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;text-align:right">'+fR((p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0))+'</span><input class="finput" type="text" placeholder="Referência..." style="font-size:12px;padding:5px 7px" value="'+(p.obs||'')+'" oninput="precState.pessoal['+i+'].obs=this.value"/><button class="btn btn-danger btn-sm btn-icon" onclick="precState.pessoal.splice('+i+',1);renderPrecificacao()">✕</button></div>';}
+  var pesColHd='<div class="prec-pes-hd"><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Profissional</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">QTD/HH</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">Pessoas</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">Und.</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:right">Total</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Referência</span><span></span></div>';
+  var pacotes=precState.pacotes||[];
+  var pacotesHtml=pacotes.map(function(pac){
+    var itensPac=precState.pessoal.map(function(p,i){return {p:p,i:i};}).filter(function(x){return x.p.pacoteId===pac.id;});
+    var subtotalPac=itensPac.reduce(function(a,x){return a+(x.p.qtd||0)*(x.p.pessoas||1)*(getProfRate(x.p.prof)||0);},0);
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:'+(itensPac.length?'8px':'0')+'">'+
+        '<input class="finput" style="font-size:12px;font-weight:700;padding:5px 8px;flex:1" value="'+(pac.nome||'')+'" placeholder="Nome do pacote/etapa" oninput="setPacoteNome(\''+pac.id+'\',this.value)"/>'+
+        '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;white-space:nowrap" onclick="addLinhaPacote(\''+pac.id+'\')">+ Linha</button>'+
+        '<button class="btn btn-danger btn-sm btn-icon" title="Remover pacote" onclick="removePacote(\''+pac.id+'\')">✕</button>'+
+      '</div>'+
+      (itensPac.length?pesColHd+itensPac.map(function(x){return pessoalRowHtml(x.p,x.i);}).join(''):'<div style="font-size:11px;color:var(--text3)">Nenhuma linha ainda — clique em "+ Linha"</div>')+
+      (itensPac.length?'<div style="text-align:right;padding-top:6px;border-top:1px solid var(--border);margin-top:2px;font-size:11px;color:var(--text2)">Subtotal do pacote: <strong style="font-family:\'JetBrains Mono\',monospace">'+fR(subtotalPac)+'</strong></div>':'')+
+    '</div>';
+  }).join('');
+  var itensSemPacote=precState.pessoal.map(function(p,i){return {p:p,i:i};}).filter(function(x){return !x.p.pacoteId;});
+  var pesHtml=itensSemPacote.map(function(x){return pessoalRowHtml(x.p,x.i);}).join('');
   var opsHtml=precState.ops.map(function(op,i){
     var isCustom=op.isCustom;
     return '<div style="margin-bottom:'+(op.hasObs?'3':'5')+'px"><div style="display:grid;grid-template-columns:'+(isCustom?'minmax(120px,1.4fr) 55px 68px 130px 80px 26px':'minmax(120px,1.4fr) 55px 68px 130px 80px')+';gap:5px;align-items:center">' +
-      (isCustom?'<input class="finput" style="font-size:12px;padding:3px 6px" value="'+op.desc+'" oninput="precState.ops['+i+'].desc=this.value;renderPrecificacao()"/>':'<span style="font-size:12px;color:'+(op.qtd>0?'var(--text)':'var(--text2)')+';font-weight:'+(op.qtd>0?'500':'400')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+op.desc+'</span>') +
+      (isCustom?'<input class="finput" style="font-size:12px;padding:3px 6px" value="'+op.desc+'" oninput="precState.ops['+i+'].desc=this.value"/>':'<span style="font-size:12px;color:'+(op.qtd>0?'var(--text)':'var(--text2)')+';font-weight:'+(op.qtd>0?'500':'400')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+op.desc+'</span>') +
       (isCustom?'<input class="finput" style="font-size:11px;padding:3px 5px;text-align:center" value="'+op.tipo+'" placeholder="uni." oninput="precState.ops['+i+'].tipo=this.value"/>':'<span style="font-size:11px;color:var(--text3);text-align:center">'+op.tipo+'</span>') +
       '<input class="finput" type="number" min="0" step="0.5" style="font-size:12px;padding:3px 5px;text-align:center" value="'+op.qtd+'" onfocus="this.select()" oninput="precState.ops['+i+'].qtd=parseFloat(this.value)||0" onchange="precState.ops['+i+'].qtd=parseFloat(this.value)||0;renderPrecificacao()"/>'+
       '<div style="display:flex;align-items:center;gap:4px"><span style="font-size:11px;color:var(--text3);font-weight:600;flex-shrink:0">R$</span><input class="finput" type="number" min="0" step="0.01" style="font-size:12px;padding:4px 6px;text-align:right;width:100%" value="'+op.custo+'" onfocus="this.select()" oninput="precState.ops['+i+'].custo=parseFloat(this.value)||0" onchange="precState.ops['+i+'].custo=parseFloat(this.value)||0;renderPrecificacao()" placeholder="0,00"/></div>'+
@@ -6209,18 +6318,22 @@ function renderPrecificacao() {
   }).join('');
 
   // LEFT column: Cliente first, then custo pessoal, operacional, margem
-  var cliOpts=state.clientes.map(function(c,i){var loc=(c.cidade||c.uf)?' ['+((c.cidade||'')+(c.cidade&&c.uf?' — ':'')+( c.uf||''))+']':'';return '<option value="'+i+'">'+c.empresa+loc+(c.contato?' — '+c.contato:'')+'</option>';}).join('');
+  // Ordena por nome para exibição, mas preserva o índice original de state.clientes como value
+  // (compatibilidade com precDados já salvos, que guardam cliIdx como índice original)
+  _precCliList = state.clientes.map(function(c,i){return {i:i,c:c};}).sort(function(a,b){return (a.c.empresa||'').localeCompare(b.c.empresa||'','pt-BR',{sensitivity:'base'});});
+  var cliOpts=precCliOptsHtml(filterPrecClienteList(_precCliList,_precCliQuery));
   var leftCol=
     // 1. CLIENTE (primeiro)
     '<div class="prec-sec"><div class="prec-hd">1. Referência — Cliente</div><div class="prec-body">' +
+      '<div class="fg" style="margin-bottom:6px"><input class="finput" type="text" id="prec-cli-search" placeholder="🔍 Buscar cliente..." value="'+_precCliQuery.replace(/"/g,'&quot;')+'" oninput="filterPrecClientes(this.value)"/></div>' +
       '<div class="fg" style="margin-bottom:8px"><label>Selecione do cadastro</label><select class="finput" id="prec-cli-sel" onchange="precState.cliIdx=this.value;showPrecClient(this.value)"><option value="">— selecione —</option>'+cliOpts+'</select></div>' +
       '<div id="prec-cli-info" style="font-size:12px;color:var(--text2)"></div>' +
     '</div></div>' +
     // 2. CUSTO PESSOAL
-    '<div class="prec-sec"><div class="prec-hd">2. Custo de Pessoal / Serviço <button class="btn btn-ghost btn-sm" onclick="precState.pessoal.push({prof:\'\',qtd:0,pessoas:1,obs:\'\'});renderPrecificacao()">+ Linha</button></div>' +
+    '<div class="prec-sec"><div class="prec-hd">2. Custo de Pessoal / Serviço <div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="addPacote()">+ Pacote</button><button class="btn btn-ghost btn-sm" onclick="precState.pessoal.push({prof:\'\',qtd:0,pessoas:1,obs:\'\'});renderPrecificacao()">+ Linha</button></div></div>' +
     '<div class="prec-body">' +
-      '<div class="prec-pes-hd"><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Profissional</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">QTD/HH</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">Pessoas</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center">Und.</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:right">Total</span><span style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase">Referência</span><span></span></div>' +
-      pesHtml +
+      pacotesHtml +
+      (itensSemPacote.length?pesColHd+pesHtml:(pacotes.length?'':pesColHd)) +
       '<div style="text-align:right;padding-top:7px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)">Subtotal: <strong style="font-family:\'JetBrains Mono\',monospace">'+fR(res.cp)+'</strong></div>' +
     '</div></div>' +
     // 3 e 4. CUSTO OPERACIONAL + MARGEM (lado a lado)
@@ -6321,13 +6434,35 @@ function renderPrecificacao() {
   if(precState.cliIdx!==''){setTimeout(function(){showPrecClient(precState.cliIdx);},10);}
 }
 
+function addPacote(){
+  precState.pacotes=precState.pacotes||[];
+  var id=uid();
+  precState.pacotes.push({id:id,nome:'Novo Pacote'});
+  precState.pessoal.push({prof:'',qtd:0,pessoas:1,obs:'',pacoteId:id});
+  renderPrecificacao();
+}
+function addLinhaPacote(pacId){
+  precState.pessoal.push({prof:'',qtd:0,pessoas:1,obs:'',pacoteId:pacId});
+  renderPrecificacao();
+}
+function removePacote(pacId){
+  precState.pacotes=(precState.pacotes||[]).filter(function(p){return p.id!==pacId;});
+  precState.pessoal=precState.pessoal.filter(function(p){return p.pacoteId!==pacId;});
+  renderPrecificacao();
+}
+function setPacoteNome(pacId,val){
+  var pac=(precState.pacotes||[]).find(function(p){return p.id===pacId;});
+  if(pac) pac.nome=val;
+}
+
 var _precEditingDemandaId = null; // id da demanda que está sendo editada na precif
 var _pendingPrecDados = null;    // precDados a salvar ao criar nova demanda via precificação
 
 function novaPrec() {
   if(!confirm('Limpar a precificação atual e começar do zero?')) return;
-  precState={pessoal:[{prof:'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:precState.teto||2000};
+  precState={pessoal:[{prof:'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),pacotes:[],complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:precState.teto||2000};
   _precEditingDemandaId=null;
+  _precCliQuery='';
   renderPrecificacao();
   toast('Precificação limpa. Pode começar do zero!','success');
 }
@@ -6336,14 +6471,21 @@ function editarNaPrec(demId) {
   // Salva a demanda atual antes de sair do modal
   var dem = demId ? state.demandas.find(function(d){return d.id===demId;}) : null;
   _precEditingDemandaId = demId || null;
+  _precCliQuery='';
   // Carrega dados da demanda na precificação se disponíveis
   if(dem && dem.precDados){
     try { precState = JSON.parse(JSON.stringify(dem.precDados)); } catch(e){}
+    // Merge aditivo: acrescenta itens padrão novos (ex: Software) que a precificação salva ainda não tinha, sem alterar valores já existentes
+    if(!Array.isArray(precState.ops)) precState.ops=[];
+    if(!Array.isArray(precState.pacotes)) precState.pacotes=[];
+    var _existingOpIds=precState.ops.map(function(o){return o.id;});
+    OPS_DEFAULT.forEach(function(o){ if(_existingOpIds.indexOf(o.id)<0) precState.ops.push(Object.assign({},o)); });
   } else {
     // Preenche pelo menos os valores financeiros existentes
     if(dem){
       precState.pessoal = [{prof:'Engenheiro Pleno',qtd:0,pessoas:1}];
       precState.ops     = OPS_DEFAULT.map(function(o){return Object.assign({},o);});
+      precState.pacotes = []; // evita pacotes órfãos de uma precificação anterior não salva
     }
   }
   closeModal();
@@ -6598,7 +6740,7 @@ function openServicoModal(id) {
   editServicoId=id;
   var s=id?state.servicos.find(function(x){return x.id===id;}):{};
   var catOpts=CAT_SERVICOS.map(function(c){return '<option'+(s.categoria===c?' selected':'')+'>'+c+'</option>';}).join('');
-  var html='<div class="overlay" id="sv-overlay" onclick="if(event.target===this)this.remove()"><div class="modal modal-sm">' +
+  var html='<div class="overlay" id="sv-overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()"><div class="modal modal-sm">' +
     '<div class="modal-hd"><div class="modal-hd-row"><span class="modal-title">'+(id?'Editar Serviço':'Novo Serviço')+'</span><button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById(\'sv-overlay\').remove()">✕</button></div></div>' +
     '<div class="modal-body" style="padding-top:14px">' +
       '<div class="fg"><label>Nome do Serviço</label><input class="finput" id="sv-nome" value="'+(s.nome||'')+'" placeholder="Ex: Apreciação de Risco NR-12"/></div>' +
@@ -6795,11 +6937,20 @@ function carregarLogoCliente(input) {
 }
 
 function puxarPrecificacao() {
-  if(!precState || !precState.itens) { toast('Abra a Precificação primeiro'); return; }
+  if(!precState || !precState.pessoal || !precState.pessoal.length) { toast('Abra a Precificação primeiro'); return; }
   var res = calcPrec();
-  propState.itens = precState.pessoal
-    .filter(function(p){return p.qtd>0 && p.prof;})
+  var itensValidos = precState.pessoal.filter(function(p){return p.qtd>0 && p.prof;});
+  var pacotes = precState.pacotes||[];
+  propState.itens = itensValidos
+    .filter(function(p){return !p.pacoteId;})
     .map(function(p){ return {desc: p.prof+' ('+p.qtd+' '+( p.pessoas>1?p.pessoas+'×':'')+(PROF_UNID[p.prof]||'uni')+')', valor: (p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0)}; });
+  // Cada pacote (ex: etapas de uma NR-12) vira um único item de proposta, com o valor já separado
+  pacotes.forEach(function(pac){
+    var itensPac = itensValidos.filter(function(p){return p.pacoteId===pac.id;});
+    if(!itensPac.length) return;
+    var valorPac = itensPac.reduce(function(a,p){return a+(p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0);},0);
+    propState.itens.push({desc: pac.nome||'Pacote', valor: valorPac});
+  });
   if(res.co>0) propState.itens.push({desc:'Custos Operacionais', valor: res.co});
   propState.itens.push({desc:'Despesas, NF e Impostos (ISS 10,5%)', valor: res.iss});
   renderPropostaOverlay();
@@ -8067,7 +8218,7 @@ function openNovoContrato() {
   var cliOpts=state.clientes.map(function(c){return '<option value="'+c.id+'">'+c.empresa+'</option>';}).join('');
   var demOpts='<option value="">— Nenhuma —</option>'+state.demandas.filter(function(d){return ['Fechado','Em Execução','Concluído'].indexOf(d.status)>=0;}).map(function(d){return '<option value="'+d.id+'">'+(d.proposta||'')+(d.cliente?' — '+d.cliente:'')+' | '+fR(d.valorBruto)+'</option>';}).join('');
   var html=
-    '<div id="novo-contrato-overlay" class="overlay" onclick="if(event.target===this)fecharNovoContrato()">' +
+    '<div id="novo-contrato-overlay" class="overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)fecharNovoContrato()">' +
     '<div class="modal" style="max-width:680px"><div class="modal-hd"><div class="modal-hd-row">'+
       '<div class="modal-title">📄 Gerar Novo Contrato com IA</div>'+
       '<button class="btn btn-ghost btn-icon" onclick="fecharNovoContrato()">✕</button>'+
@@ -8416,7 +8567,7 @@ function verContrato(id) {
   var sc=STATUS_CONTRATO[ct.status]||STATUS_CONTRATO.Rascunho;
   var conteudoFormatado = formatarContratoHTML(ct.conteudo);
   var html=
-    '<div id="ver-contrato-overlay" class="overlay" onclick="if(event.target===this)document.getElementById(\'ver-contrato-overlay\').remove()" style="align-items:flex-start;padding:20px">' +
+    '<div id="ver-contrato-overlay" class="overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)document.getElementById(\'ver-contrato-overlay\').remove()" style="align-items:flex-start;padding:20px">' +
     '<div class="modal" style="max-width:860px;height:93vh;display:flex;flex-direction:column">' +
       '<div class="modal-hd" style="flex-shrink:0"><div class="modal-hd-row">'+
         '<div style="display:flex;align-items:center;gap:10px">'+
@@ -8493,7 +8644,7 @@ function openAutentiqueModal(id) {
   var ct=(state.contratos||[]).find(function(c){return c.id===id;}); if(!ct) return;
   var cli=state.clientes.find(function(c){return c.id===ct.clienteId;})||{};
   var html=
-    '<div id="autentique-modal" class="overlay" onclick="if(event.target===this)this.remove()">' +
+    '<div id="autentique-modal" class="overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()">' +
     '<div class="modal modal-sm"><div class="modal-hd"><div class="modal-hd-row">'+
       '<div class="modal-title">✍️ Enviar para Assinatura</div>'+
       '<button class="btn btn-ghost btn-icon" onclick="document.getElementById(\'autentique-modal\').remove()">✕</button>'+
@@ -8633,7 +8784,7 @@ function openModalEvento(id, preData) {
   var horaFimSel = ev&&ev.horaFim    ? selHora(ev.horaFim,horaOpts)    : (gcHoraFim?selHora(gcHoraFim,horaOpts):horaOpts);
   var gcBanner = gcFill ? '<div style="background:#E8F0FE;border:1px solid #1A73E8;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#1A73E8;display:flex;align-items:center;gap:8px">🗓 <strong>Importado do Google Calendar</strong> — edite e salve para registrar no sistema</div>' : '';
   var html =
-    '<div id="modal-evento" class="overlay" onclick="if(event.target===this)closeModalEvento()">' +
+    '<div id="modal-evento" class="overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)closeModalEvento()">' +
     '<div class="modal modal-sm"><div class="modal-hd"><div class="modal-hd-row">' +
       '<div class="modal-title" style="display:flex;align-items:center;gap:8px">' +
         '<span style="font-size:18px">'+(ev?'✏️':(gcFill?'🗓':'📅'))+'</span>'+(ev?'Editar':(gcFill?'Importar':'Novo'))+' Evento / Lembrete'+
@@ -8909,7 +9060,7 @@ function getNotifs() {
   var today=new Date(); today.setHours(0,0,0,0);
   var notifs=[];
   state.demandas.forEach(function(d){
-    if(['Perdido','Concluído'].indexOf(d.status)>=0) return;
+    if(['Perdido','Arquivado','Concluído'].indexOf(d.status)>=0) return;
     if(d.dataRetorno){
       var dr=new Date(d.dataRetorno+'T12:00'); dr.setHours(0,0,0,0);
       var diff=Math.round((today-dr)/(1000*60*60*24));
@@ -8998,7 +9149,7 @@ function verHistoricoPreco(id) {
     '</div>';
   }).join(''):'<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">Sem alterações registradas.</div>';
   
-  var panelHtml='<div class="overlay" id="hp-overlay" onclick="if(event.target===this)this.remove()">' +
+  var panelHtml='<div class="overlay" id="hp-overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()">' +
     '<div class="modal modal-sm">' +
       '<div class="modal-hd"><div class="modal-hd-row"><span class="modal-title">Histórico — '+sv.nome+'</span>' +
       '<button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById(\'hp-overlay\').remove()">✕</button></div></div>' +
@@ -9413,7 +9564,7 @@ function pmocAddManutencao() {
   var equips = _pmocEquipamentos.map(function(e){return e.tag;});
   var equipOpts = equips.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join('');
   var tipoOpts = PMOC_MANT_TIPOS.map(function(t){return '<option>'+t.label+'</option>';}).join('');
-  var html = '<div class="overlay" id="modal-pmoc-manut" style="display:flex;z-index:1100" onclick="if(event.target===this)this.remove()">'
+  var html = '<div class="overlay" id="modal-pmoc-manut" style="display:flex;z-index:1100" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()">'
     +'<div class="modal modal-sm" style="max-width:480px">'
     +'<div class="modal-hd"><div class="modal-hd-row"><span class="modal-title">Registrar Manutenção</span><button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById(\'modal-pmoc-manut\').remove()">✕</button></div></div>'
     +'<div class="modal-bd">'
@@ -12441,7 +12592,8 @@ function _showExportModal() {
   h += '<button onclick="_runExportPDF()" style="padding:8px 18px;border-radius:6px;border:none;background:#1e3a5f;color:#fff;cursor:pointer;font-size:12px;font-weight:700">📄 Gerar PDF</button>';
   h += '</div></div>';
   ov.innerHTML = h;
-  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  ov.addEventListener('mousedown', function(e){ ov._downSelf=(e.target===ov); });
+  ov.addEventListener('click', function(e){ if(e.target===ov&&ov._downSelf) ov.remove(); });
   document.body.appendChild(ov);
 }
 
@@ -12960,7 +13112,7 @@ initAuth();
 </div>
 
 <!-- ══ MODAL MÁQUINA NR-12 ══════════════════════════════════ -->
-<div id="modal-nr12-maq" class="overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+<div id="modal-nr12-maq" class="overlay" style="display:none" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.style.display='none'">
   <div class="modal" style="max-width:780px">
     <div class="modal-hd">
       <div class="modal-hd-row">
@@ -13156,7 +13308,7 @@ initAuth();
 </div>
 
 <!-- ══ MODAL RISCO NR-12 ══════════════════════════════════ -->
-<div id="modal-nr12-risco" class="overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+<div id="modal-nr12-risco" class="overlay" style="display:none" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.style.display='none'">
   <div class="modal" style="max-width:700px">
     <div class="modal-hd">
       <div class="modal-hd-row">
