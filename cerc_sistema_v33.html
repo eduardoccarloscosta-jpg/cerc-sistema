@@ -7563,8 +7563,6 @@ function calShowMore(ds, btn) {
   pop.id='cal-more-pop';
   pop.dataset.ds=ds;
   pop.style.cssText='position:fixed;z-index:9999;background:var(--bg);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);width:280px;max-height:400px;overflow-y:auto;padding:12px 14px';
-  pop.style.top=(rect.bottom+6)+'px';
-  pop.style.left=Math.min(rect.left,window.innerWidth-295)+'px';
 
   // Header
   var hd=document.createElement('div');
@@ -7628,6 +7626,13 @@ function calShowMore(ds, btn) {
   });
 
   document.body.appendChild(pop);
+  // Posiciona só depois de anexado ao DOM, para usar a altura real (variável conforme a quantidade de eventos)
+  // e nunca deixar o popup nascer parcialmente fora da tela — onde não há como rolar até ele (evita o bug relatado)
+  var ph=pop.offsetHeight;
+  var top=Math.min(rect.bottom+6, window.innerHeight-ph-8);
+  top=Math.max(8, top);
+  pop.style.top=top+'px';
+  pop.style.left=Math.min(rect.left,window.innerWidth-295)+'px';
   setTimeout(function(){
     document.addEventListener('click',function h(e){if(!pop.contains(e.target)){pop.remove(); document.removeEventListener('click',h);}});
   },50);
@@ -7972,7 +7977,7 @@ function renderCalendario() {
       cells+='<div class="cal-day'+(isToday?' today':'')+'" data-day-evts="" onclick="if(event.target.closest(\'.cal-event\')||event.target.closest(\'.cal-more-btn\')) return; openModalEvento(null,\''+ds+'\')">' +
         '<div class="cal-day-num">'+day+'</div>'+eh+'</div>';
     }
-    gridHtml='<div style="flex:1;overflow:hidden"><div class="cal-grid">'+hdCells+cells+'</div></div>';
+    gridHtml='<div style="flex:1;overflow-y:auto;overflow-x:hidden"><div class="cal-grid">'+hdCells+cells+'</div></div>';
 
   // ── VIEW: SEMANA ─────────────────────────────────────────────────
   } else {
