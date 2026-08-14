@@ -608,7 +608,7 @@ body::after{
 /* CALENDÁRIO — Layout Google */
 /* ── layout geral ── */
 .cal-shell{display:flex;gap:0;background:var(--surface);border-radius:var(--rxl);border:1px solid var(--border);overflow:hidden;height:calc(100vh - 90px);min-height:520px;max-width:100%;width:100%}
-.cal-left{width:220px;min-width:220px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg);padding:12px 10px;gap:14px}
+.cal-left{width:220px;min-width:220px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg);padding:12px 10px;gap:14px;overflow-y:auto}
 .cal-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
 /* ── mini calendário ── */
 .cal-mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
@@ -8060,6 +8060,23 @@ function renderCalendario() {
         return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;background:'+bgW+';color:'+cfg2.c+';border-left-color:'+borderW+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)">' +
           '<div class="cal-week-event-title">'+checkSpanW+titleW+'</div>'+
           '<div class="cal-week-event-sub">'+(ev.horaInicio?ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):(ev.descricao||'').slice(0,20))+'</div></div>';
+      }).join('');
+
+      // Eventos importados do Google Calendar (faltavam na visão Semana — só apareciam na visão Mês)
+      var gEvts3=gcEvents.filter(function(ev){return ev.inicio&&ev.inicio.slice(0,10)===ds3;});
+      evHtml+=gEvts3.map(function(ev,gi){
+        var hStart2=8;
+        if(!ev.allDay&&ev.inicio){var pi=ev.inicio.slice(11,16).split(':');hStart2=parseInt(pi[0])+(parseInt(pi[1]||0)/60);}
+        var topPx2=(hStart2-HOURS_START)*SLOT_H+gi*4;
+        var heightPx2=SLOT_H;
+        if(!ev.allDay&&ev.fim){
+          var pf=ev.fim.slice(11,16).split(':');var hEnd2=parseInt(pf[0])+(parseInt(pf[1]||0)/60);
+          heightPx2=Math.max(SLOT_H,(hEnd2-hStart2)*SLOT_H);
+        }
+        var horaSub=ev.allDay?'Dia todo':ev.inicio.slice(11,16)+(ev.fim?' – '+ev.fim.slice(11,16):'');
+        return '<div class="cal-week-event" data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" style="top:'+topPx2+'px;height:'+heightPx2+'px;background:#E8F0FE;color:#1A73E8;border-left-color:#1A73E8" onclick="event.stopPropagation();_openGcById(this,event)">'+
+          '<div class="cal-week-event-title">🗓 '+(ev.titulo||'').slice(0,18)+'</div>'+
+          '<div class="cal-week-event-sub">'+horaSub+'</div></div>';
       }).join('');
 
       // Percentagem da posição: célula tem largura = 100%/7 da área, mas left calculada depois via JS
