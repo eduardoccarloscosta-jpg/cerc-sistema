@@ -7390,18 +7390,26 @@ var TIPO_EVT_CFG={
 var DIAS_PT_FULL=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 
 function getWeekStart(d){var dt=new Date(d);dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-dt.getDay());return dt;}
+// gcFetchEvents() busca só o mês visível no momento do fetch — sem re-chamar ao navegar,
+// os eventos do Google ficam presos ao mês em que "Atualizar" foi clicado por último.
+function calSyncGoogleIfNeeded(){ if(gcIsConnected()) gcFetchEvents(); }
 function calPrev(){
   if(calView==='week'){calWeekStart=calWeekStart||getWeekStart(new Date());calWeekStart.setDate(calWeekStart.getDate()-7);}
   else{calMes--;if(calMes<0){calMes=11;calAno--;}}
   renderCalendario();
+  calSyncGoogleIfNeeded();
 }
 function calNext(){
   if(calView==='week'){calWeekStart=calWeekStart||getWeekStart(new Date());calWeekStart.setDate(calWeekStart.getDate()+7);}
   else{calMes++;if(calMes>11){calMes=0;calAno++;}}
   renderCalendario();
+  calSyncGoogleIfNeeded();
 }
-function calHoje(){calAno=new Date().getFullYear();calMes=new Date().getMonth();calWeekStart=getWeekStart(new Date());renderCalendario();}
-function setCalView(v){calView=v;if(v==='week'&&!calWeekStart)calWeekStart=getWeekStart(new Date());renderCalendario();}
+function calHoje(){calAno=new Date().getFullYear();calMes=new Date().getMonth();calWeekStart=getWeekStart(new Date());renderCalendario();calSyncGoogleIfNeeded();}
+// Navegação do mini-calendário: sempre por mês, independente da visão principal (Mês/Semana)
+function calMiniPrev(){calMes--;if(calMes<0){calMes=11;calAno--;}renderCalendario();calSyncGoogleIfNeeded();}
+function calMiniNext(){calMes++;if(calMes>11){calMes=0;calAno++;}renderCalendario();calSyncGoogleIfNeeded();}
+function setCalView(v){calView=v;if(v==='week'&&!calWeekStart)calWeekStart=getWeekStart(new Date());renderCalendario();calSyncGoogleIfNeeded();}
 // ══════════════════════════════════════════════════════════════════════════════
 // GOOGLE CALENDAR INTEGRATION
 // ══════════════════════════════════════════════════════════════════════════════
@@ -7851,9 +7859,9 @@ function renderCalendario() {
   var miniCal=
     '<div style="margin-bottom:4px">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-      '<button class="cal-nav-btn" onclick="calMes--;if(calMes<0){calMes=11;calAno--;}renderCalendario()" style="padding:2px 7px;border:none">‹</button>'+
+      '<button class="cal-nav-btn" onclick="calMiniPrev()" style="padding:2px 7px;border:none">‹</button>'+
       '<span style="font-size:11px;font-weight:700;color:var(--text)">'+MESES_PT[calMes]+' '+calAno+'</span>'+
-      '<button class="cal-nav-btn" onclick="calMes++;if(calMes>11){calMes=0;calAno++;}renderCalendario()" style="padding:2px 7px;border:none">›</button>'+
+      '<button class="cal-nav-btn" onclick="calMiniNext()" style="padding:2px 7px;border:none">›</button>'+
     '</div>'+
     '<div class="cal-mini-grid">'+miniHd+miniCells+'</div></div>';
 
