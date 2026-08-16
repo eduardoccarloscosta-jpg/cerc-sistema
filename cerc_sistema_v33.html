@@ -623,6 +623,10 @@ body::after{
 /* Chips de dia da semana (recorrência semanal personalizada) */
 .ev-day-chip{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);color:var(--text2);flex-shrink:0;transition:all .12s}
 .ev-day-chip.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* Dropdown de horários pré-configurados (editável livremente + sugestões, sem rolagem infinita) */
+.ev-hora-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.14);z-index:2100;max-height:170px;overflow-y:auto}
+.ev-hora-opt{padding:6px 10px;font-size:12px;cursor:pointer;color:var(--text)}
+.ev-hora-opt:hover{background:var(--bg)}
 /* ── mini calendário ── */
 .cal-mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
 .cal-mini-hd{text-align:center;font-size:9px;font-weight:700;color:var(--text3);padding:2px 0}
@@ -7412,6 +7416,8 @@ var calWeekStart=null; // Date do início da semana atual
 var MESES_PT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var DIAS_PT=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 // Mapa único de cor/ícone por tipo de evento customizado — usado na grade (mês/semana), no popup "+N mais" e no popover de evento
+// Horários pré-configurados (15 em 15 min) para o seletor de hora do evento — igual ao Google
+var HORA_PRESETS=(function(){var out=[];for(var h=0;h<24;h++){['00','15','30','45'].forEach(function(m){out.push((h<10?'0'+h:h)+':'+m);});}return out;})();
 var TIPO_EVT_CFG={
   'Evento':  {bg:'#DBEAFE',c:'#1D4ED8',ico:'📅',border:'#2563EB'},
   'Lembrete':{bg:'#FEF3C7',c:'#92400E',ico:'🔔',border:'#D97706'},
@@ -9161,8 +9167,6 @@ function openModalEvento(id, preData) {
   var horaIniVal = ev&&ev.horaInicio ? ev.horaInicio : (gcHoraIni||'');
   var horaFimVal = ev&&ev.horaFim    ? ev.horaFim    : (gcHoraFim||'');
   // Lista de horários pré-configurados (00:00–23:30, sem rolagem infinita) — o campo continua editável livremente
-  var horaOptsList='';
-  for(var _hh=0;_hh<24;_hh++){['00','15','30','45'].forEach(function(_mm){var _v=(_hh<10?'0'+_hh:_hh)+':'+_mm;horaOptsList+='<option value="'+_v+'">';});}
   var gcBanner = gcFill ? '<div style="background:#E8F0FE;border:1px solid #1A73E8;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#1A73E8;display:flex;align-items:center;gap:8px">🗓 <strong>Importado do Google Calendar</strong> — edite e salve para registrar no sistema</div>' : '';
 
   // ── Cor do evento (paleta do Google Calendar) ─────────────────────
@@ -9226,8 +9230,8 @@ function openModalEvento(id, preData) {
       '</div>' +
       repeteSelectHtml + repeteCustomHtml + repeteEndHtml +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">' +
-        '<div class="fg"><label>⏰ Hora Início</label><input type="text" id="ev-hora-ini" class="finput" style="font-size:12px" placeholder="--:--" autocomplete="off" list="ev-hora-ini-opts" value="'+horaIniVal+'" onblur="evNormalizaHora(this)"/><datalist id="ev-hora-ini-opts">'+horaOptsList+'</datalist></div>' +
-        '<div class="fg"><label>⏰ Hora Fim</label><input type="text" id="ev-hora-fim" class="finput" style="font-size:12px" placeholder="--:--" autocomplete="off" list="ev-hora-fim-opts" value="'+horaFimVal+'" onblur="evNormalizaHora(this)"/><datalist id="ev-hora-fim-opts">'+horaOptsList+'</datalist></div>' +
+        '<div class="fg"><label>⏰ Hora Início</label><div style="position:relative"><input type="text" id="ev-hora-ini" class="finput" style="font-size:12px" placeholder="--:--" autocomplete="off" value="'+horaIniVal+'" onfocus="evShowHoraDropdown(this)" oninput="evFilterHoraDropdown(this)" onblur="evNormalizaHora(this);evHideHoraDropdown(this.id)"/><div id="ev-hora-ini-dd" class="ev-hora-dropdown" style="display:none"></div></div></div>' +
+        '<div class="fg"><label>⏰ Hora Fim</label><div style="position:relative"><input type="text" id="ev-hora-fim" class="finput" style="font-size:12px" placeholder="--:--" autocomplete="off" value="'+horaFimVal+'" onfocus="evShowHoraDropdown(this)" oninput="evFilterHoraDropdown(this)" onblur="evNormalizaHora(this);evHideHoraDropdown(this.id)"/><div id="ev-hora-fim-dd" class="ev-hora-dropdown" style="display:none"></div></div></div>' +
         '<div class="fg"><label>Tipo</label><select id="ev-tipo" class="finput" onchange="evTipoChange()">' +
           ['Evento','Lembrete','Prazo','Reunião','Vistoria','Tarefa'].map(function(t){return '<option'+(ev&&ev.tipo===t?' selected':'')+'>'+t+'</option>';}).join('') +
         '</select></div>' +
@@ -9592,6 +9596,43 @@ function evNormalizaHora(el){
     return;
   }
   el.value=(h<10?'0'+h:h)+':'+(m<10?'0'+m:m);
+}
+// Dropdown de horários pré-configurados (15 em 15 min) — sempre editável livremente, sem rolagem infinita
+function _evHoraOptsHtml(list, inputId){
+  return list.map(function(h){
+    return '<div class="ev-hora-opt" onmousedown="event.preventDefault();evPickHora(\''+inputId+'\',\''+h+'\')">'+h+'</div>';
+  }).join('');
+}
+function evShowHoraDropdown(inputEl){
+  var dd=document.getElementById(inputEl.id+'-dd');
+  if(!dd) return;
+  dd.innerHTML=_evHoraOptsHtml(HORA_PRESETS, inputEl.id);
+  dd.style.display='block';
+  var cur=inputEl.value.trim();
+  if(cur){
+    var idx=HORA_PRESETS.indexOf(cur);
+    if(idx>=0 && dd.children[idx]) dd.children[idx].scrollIntoView({block:'center'});
+  }
+}
+function evFilterHoraDropdown(inputEl){
+  var dd=document.getElementById(inputEl.id+'-dd');
+  if(!dd) return;
+  var q=inputEl.value.trim();
+  var qNorm=q.replace(/^0/,'');
+  var list=q ? HORA_PRESETS.filter(function(h){return h.indexOf(q)===0 || h.replace(/^0/,'').indexOf(qNorm)===0;}) : HORA_PRESETS;
+  if(!list.length) list=HORA_PRESETS;
+  dd.innerHTML=_evHoraOptsHtml(list, inputEl.id);
+  dd.style.display='block';
+}
+function evPickHora(inputId, val){
+  var el=document.getElementById(inputId);
+  if(el) el.value=val;
+  evHideHoraDropdown(inputId);
+  if(inputId==='ev-hora-ini') evUpdateRepeteLabels();
+}
+function evHideHoraDropdown(inputId){
+  var dd=document.getElementById(inputId+'-dd');
+  if(dd) dd.style.display='none';
 }
 
 function delEvento(id, fromModal) {
