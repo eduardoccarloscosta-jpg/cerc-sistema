@@ -3893,6 +3893,12 @@ function renderPagamentosParciais(){
       '<button class="btn btn-danger btn-sm btn-icon" style="width:20px;height:20px;font-size:10px" onclick="removePagamentoParcial('+x.idx+')">✕</button>'+
     '</div>';
   }).join('');
+  // Ao atingir o valor total via pagamentos parciais, o sistema entende como quitado — sobe o status para "Pago" automaticamente
+  var pagSel=document.getElementById('f-pagamento');
+  if(pagSel && pagSel.value==='Parcial' && brutoEfetivo>0 && restante<=0.01){
+    pagSel.value='Pago';
+    toast('✅ Valor total recebido — status atualizado para Pago','success');
+  }
 }
 /* ══ PARCELAMENTO ══════════════════════════════════════ */
 var modalParcelas=[];
@@ -3909,6 +3915,16 @@ function pagamentosEfetivos(dem){
   if(dem.dataPagamentoParcial||dem.dataPagamento) return [{valor:dem.valorPago||0,data:dem.dataPagamentoParcial||dem.dataPagamento,obs:''}];
   return [];
 }
+// Deriva se uma demanda "Parcial" já recebeu o valor total (bruto - desconto), mesmo que o campo statusPagamento
+// ainda não tenha sido atualizado — migração não-destrutiva de leitura (não altera o registro armazenado)
+function pagamentoQuitado(dem){
+  if(dem.statusPagamento!=='Parcial') return false;
+  var alvo=Math.max(0,(dem.valorBruto||0)-(dem.desconto||0));
+  if(alvo<=0) return false;
+  var recebido=pagamentosEfetivos(dem).reduce(function(a,p){return a+(p.valor||0);},0);
+  return recebido>=alvo-0.01;
+}
+function statusPagamentoEfetivo(dem){ return pagamentoQuitado(dem) ? 'Pago' : dem.statusPagamento; }
 var _prevStatus = null;
 var _perdaCategSel = null;
 var _perdaTempData = null; // dados temporários para nova demanda
@@ -5984,6 +6000,7 @@ function renderFinanceiro() {
           if(_pagas.length) demDataPag=_pagas[_pagas.length-1].dataPagamento;
         }
         var demDataPagStr=demDataPag?'<div style="font-size:10px;color:var(--s-con);margin-top:2px">'+fD(demDataPag)+'</div>':'';
+        var _statusExib=statusPagamentoEfetivo(dem);
         return '<tr>'+
           '<td style="font-size:11px;color:var(--text3)">'+fD(dem.dataCriacao)+'</td>'+
           '<td><span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--text3)">'+(dem.proposta||'—')+'</span></td>'+
@@ -5991,8 +6008,8 @@ function renderFinanceiro() {
           '<td>'+sBadge(dem.status)+'</td>'+
           '<td class="cn" style="color:var(--s-con);font-weight:600">'+fR(displayBruto)+(dem.statusPagamento==='Parcelado'?'<div style="font-size:9px;color:var(--text3);font-weight:400">de '+fR(dem.valorBruto)+'</div>':'')+'</td>'+
           '<td class="cn" style="color:var(--accent);font-weight:600">'+fR(displayLiquido)+'</td>'+
-          '<td><select style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;background:var(--surface);cursor:pointer" onchange="updatePag(\''+dem.id+'\',this.value)">'+['Pendente','Parcial','Parcelado','Pago','Inadimplente'].map(function(p){return '<option'+(dem.statusPagamento===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+demDataPagStr+parcelasInfo+'</td>'+
-          '<td class="cn" style="color:'+(dem.statusPagamento==='Pago'?'var(--s-con)':'var(--amber)')+'">'+(dem.valorPago?fR(dem.valorPago):'—')+'</td>'+
+          '<td><select style="font-size:11px;border:1px solid var(--border);border-radius:4px;padding:3px 6px;background:var(--surface);cursor:pointer" onchange="updatePag(\''+dem.id+'\',this.value)">'+['Pendente','Parcial','Parcelado','Pago','Inadimplente'].map(function(p){return '<option'+(_statusExib===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+demDataPagStr+parcelasInfo+'</td>'+
+          '<td class="cn" style="color:'+(_statusExib==='Pago'?'var(--s-con)':'var(--amber)')+'">'+(dem.valorPago?fR(dem.valorPago):(pagamentoQuitado(dem)?fR(pagamentosEfetivos(dem).reduce(function(a,p){return a+(p.valor||0);},0)):'—'))+'</td>'+
           '<td style="display:flex;gap:3px">'+
             (dem.tipo==='Receita Avulsa'?'<button class="btn btn-ghost btn-sm btn-icon" title="Editar receita" onclick="openModalReceita(\''+dem.id+'\')">✏️</button>':'')+
             '<button class="btn btn-ghost btn-sm btn-icon" title="Abrir demanda" onclick="openModalEdit(\''+dem.id+'\')">📋</button>'+
