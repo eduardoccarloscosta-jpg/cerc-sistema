@@ -112,7 +112,10 @@ a{text-decoration:none}
 .prec-main-grid{display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
 
 /* SIDEBAR */
-.sb{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;box-shadow:2px 0 8px rgba(0,0,0,.04)}
+.sb{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;box-shadow:2px 0 8px rgba(0,0,0,.04);overflow:hidden;transition:width .18s ease,min-width .18s ease,box-shadow .18s ease}
+.app.sb-collapsed .sb{width:0;min-width:0;border-right:none;box-shadow:none}
+.sb-toggle-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;background:transparent;color:var(--text2);border-radius:var(--r);cursor:pointer;flex-shrink:0;transition:background .12s}
+.sb-toggle-btn:hover{background:var(--bg);color:var(--text)}
 .sb-logo{padding:16px 14px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
 .sb-mark{width:34px;height:34px;background:linear-gradient(135deg,#7C3AED,#5B21B6);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;letter-spacing:.5px;flex-shrink:0}
 .sb-info{min-width:0}
@@ -494,6 +497,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{position:absolute;left:0;t
   /* ── Calendário ── */
   .cal-shell{flex-direction:column!important}
   .cal-left{width:100%!important;border-right:none;border-bottom:1px solid var(--border);padding:8px}
+  .cal-shell.cal-left-collapsed .cal-left{width:100%!important;height:0!important;min-height:0;padding:0!important;opacity:0;border-bottom:none;overflow:hidden}
   .cal-day{min-height:56px}
   .cal-day-hd{font-size:9px;padding:5px 2px}
   .cal-week-body{max-height:380px}
@@ -608,8 +612,17 @@ body::after{
 /* CALENDÁRIO — Layout Google */
 /* ── layout geral ── */
 .cal-shell{display:flex;gap:0;background:var(--surface);border-radius:var(--rxl);border:1px solid var(--border);overflow:hidden;height:calc(100vh - 90px);min-height:520px;max-width:100%;width:100%}
-.cal-left{width:220px;min-width:220px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg);padding:12px 10px;gap:14px;overflow-y:auto}
+.cal-left{width:220px;min-width:220px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg);padding:12px 10px;gap:14px;overflow-y:auto;transition:width .18s ease,min-width .18s ease,padding .18s ease,opacity .18s ease}
+.cal-shell.cal-left-collapsed .cal-left{width:0;min-width:0;padding:12px 0;opacity:0;border-right:none;overflow:hidden}
 .cal-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.cal-toggle-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;background:transparent;color:var(--text2);border-radius:var(--r);cursor:pointer;flex-shrink:0;margin-right:4px;transition:background .12s}
+.cal-toggle-btn:hover{background:var(--bg);color:var(--text)}
+/* Seletor de cor do evento (paleta do Google Calendar) */
+.ev-color-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;box-sizing:border-box;border:1px solid rgba(0,0,0,.08);box-shadow:0 0 0 0 transparent;transition:box-shadow .12s;flex-shrink:0}
+.ev-color-swatch.selected{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--text2)}
+/* Chips de dia da semana (recorrência semanal personalizada) */
+.ev-day-chip{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);color:var(--text2);flex-shrink:0;transition:all .12s}
+.ev-day-chip.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* ── mini calendário ── */
 .cal-mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
 .cal-mini-hd{text-align:center;font-size:9px;font-weight:700;color:var(--text3);padding:2px 0}
@@ -1332,6 +1345,9 @@ body::after{
 </aside>
 <main class="main">
   <div class="topbar">
+    <button class="sb-toggle-btn" onclick="toggleMainSidebar()" title="Mostrar/ocultar menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    </button>
     <span class="topbar-title" id="topbar-title">Dashboard</span>
     <div style="position:relative;flex:1;max-width:320px;margin:0 12px">
       <input id="global-search-input" type="text" placeholder="🔍 Buscar demandas, clientes, contratos..." autocomplete="off"
@@ -2282,6 +2298,7 @@ function eventoToDb(e) {
     hora_inicio: e.horaInicio||'', hora_fim: e.horaFim||'',
     data_fim: e.dataFim||'', descricao: e.descricao||'',
     concluida: e.concluida||false,
+    cor: e.cor||'', repetir: e.repetir||null,
     gc_event_id: e.gcEventId||'',
     updated_at: e.updatedAt||_now()
   };
@@ -2293,6 +2310,7 @@ function dbToEvento(r) {
     horaInicio: r.hora_inicio||'', horaFim: r.hora_fim||'',
     dataFim: r.data_fim||null, descricao: r.descricao||'',
     concluida: r.concluida||false,
+    cor: r.cor||'', repetir: r.repetir||null,
     gcEventId: r.gc_event_id||'',
     updatedAt: r.updated_at||''
   };
@@ -3118,6 +3136,21 @@ function renderLog(log) {
 
 // ══ NAV ══════════════════════════════════════════════════
 var currentPage="dashboard";
+// ── Menu principal (sidebar): recolher/expandir, independente do painel do Calendário ──
+function toggleMainSidebar() {
+  var app=document.getElementById('app-root');
+  var collapsed=app.classList.toggle('sb-collapsed');
+  localStorage.setItem('cerc_sbCollapsed', collapsed?'1':'0');
+}
+(function(){
+  if(localStorage.getItem('cerc_sbCollapsed')==='1'){
+    document.addEventListener('DOMContentLoaded',function(){
+      var app=document.getElementById('app-root');
+      if(app) app.classList.add('sb-collapsed');
+    });
+  }
+})();
+
 function showPage(pg) {
   currentPage=pg;
   // Calendário precisa de padding=0 no content para não cortar colunas
@@ -7389,6 +7422,147 @@ var TIPO_EVT_CFG={
 };
 var DIAS_PT_FULL=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 
+// Paleta de cores de evento — igual à do Google Calendar (11 cores fixas)
+var EVENT_COLORS=[
+  {id:'tomato',    name:'Tomate',     hex:'#D50000'},
+  {id:'flamingo',  name:'Flamingo',   hex:'#E67C73'},
+  {id:'tangerine', name:'Tangerina',  hex:'#F4511E'},
+  {id:'banana',    name:'Banana',     hex:'#F6BF26'},
+  {id:'sage',      name:'Sálvia',     hex:'#33B679'},
+  {id:'basil',     name:'Manjericão', hex:'#0B8043'},
+  {id:'peacock',   name:'Pavão',      hex:'#039BE5'},
+  {id:'blueberry', name:'Mirtilo',    hex:'#3F51B5'},
+  {id:'lavender',  name:'Lavanda',    hex:'#7986CB'},
+  {id:'grape',     name:'Uva',        hex:'#8E24AA'},
+  {id:'graphite',  name:'Grafite',    hex:'#616161'}
+];
+function evtColorHex(corId){var c=EVENT_COLORS.find(function(x){return x.id===corId;});return c?c.hex:null;}
+// Resolve o estilo visual de um evento: cor manual (ev.cor) tem prioridade; senão cai no padrão do Tipo
+function evtCfg(ev){
+  var base=TIPO_EVT_CFG[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌',border:'#6B7280'};
+  var hex=ev.cor?evtColorHex(ev.cor):null;
+  if(!hex) return base;
+  return {bg:'color-mix(in srgb,'+hex+' 16%, white)',c:hex,border:hex,ico:base.ico};
+}
+
+// ── Recorrência ("Se repete") ────────────────────────────────────────
+// Expande a regra ev.repetir em ocorrências dentro de [rangeStart,rangeEnd] (Date, 00:00).
+// Retorna [{data:'YYYY-MM-DD', dataFim:'YYYY-MM-DD'|null}, ...] em ordem cronológica.
+function expandRecorrencia(ev, rangeStart, rangeEnd){
+  function pad2(n){return n<10?'0'+n:''+n;}
+  function dkey(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+  var out=[];
+  var r=ev.repetir; if(!r||!ev.data) return out;
+  var dtStart=new Date(ev.data+'T00:00:00'); dtStart.setHours(0,0,0,0);
+  if(dtStart>rangeEnd) return out;
+  var durMs = ev.dataFim ? (new Date(ev.dataFim+'T00:00:00').getTime()-dtStart.getTime()) : 0;
+  var interval=Math.max(1,(r.freq==='custom'?r.interval:1)||1);
+  var kind = r.freq==='custom' ? (r.unit||'day') : (r.freq==='daily'?'day':r.freq==='weekly'?'week':r.freq==='monthly'?'month':r.freq==='yearly'?'year':'weekday');
+  var endType=(r.end&&r.end.type)||'never';
+  var untilDate=(endType==='until'&&r.end.until)?new Date(r.end.until+'T23:59:59'):null;
+  var maxCount=endType==='count'?Math.max(1,parseInt(r.end.count,10)||1):Infinity;
+  var exSet={}; (r.exdatas||[]).forEach(function(d){exSet[d]=true;});
+  var count=0;
+  function emit(d){
+    count++;
+    if(count>maxCount) return false;
+    if(untilDate&&d>untilDate) return false;
+    if(d>=rangeStart&&d<=rangeEnd){
+      var key=dkey(d);
+      if(!exSet[key]){
+        var fim=durMs>0?new Date(d.getTime()+durMs):null;
+        out.push({data:key, dataFim:fim?dkey(fim):null});
+      }
+    }
+    return true;
+  }
+  var MAX_ITER=2000;
+  if(kind==='week'){
+    var byDay=(r.byDay&&r.byDay.length)?r.byDay.slice().sort(function(a,b){return a-b;}):[dtStart.getDay()];
+    var weekStart0=new Date(dtStart); weekStart0.setDate(weekStart0.getDate()-weekStart0.getDay());
+    var weekBlock=0;
+    if(endType!=='count'&&rangeStart>weekStart0){
+      var weeksDiff=Math.floor((rangeStart.getTime()-weekStart0.getTime())/(7*86400000));
+      weekBlock=Math.max(0,Math.floor(weeksDiff/interval)*interval-interval);
+    }
+    var iter=0, stop=false;
+    while(!stop&&iter++<MAX_ITER){
+      if(weekBlock%interval===0){
+        for(var oi=0;oi<byDay.length&&!stop;oi++){
+          var d=new Date(weekStart0); d.setDate(d.getDate()+weekBlock*7+byDay[oi]);
+          if(d<dtStart) continue;
+          if(!emit(d)) stop=true;
+        }
+      }
+      weekBlock++;
+      var nextEarliest=new Date(weekStart0); nextEarliest.setDate(nextEarliest.getDate()+weekBlock*7);
+      if(nextEarliest>rangeEnd) break;
+    }
+  } else if(kind==='weekday'){
+    var cur=new Date(dtStart);
+    if(endType!=='count'&&rangeStart>cur){
+      var daysDiff=Math.floor((rangeStart.getTime()-cur.getTime())/86400000);
+      cur.setDate(cur.getDate()+Math.floor(daysDiff/7)*7);
+    }
+    var iter2=0;
+    while(iter2++<MAX_ITER){
+      if(cur.getDay()!==0&&cur.getDay()!==6){ if(!emit(new Date(cur))) break; }
+      cur.setDate(cur.getDate()+1);
+      if(cur>rangeEnd) break;
+    }
+  } else {
+    var cur2=new Date(dtStart);
+    if(endType!=='count'&&rangeStart>cur2){
+      if(kind==='day'){
+        var stepsMs=interval*86400000;
+        var steps=Math.floor((rangeStart.getTime()-cur2.getTime())/stepsMs);
+        if(steps>0) cur2=new Date(cur2.getTime()+steps*stepsMs);
+      } else if(kind==='month'){
+        var diffM=(rangeStart.getFullYear()-cur2.getFullYear())*12+(rangeStart.getMonth()-cur2.getMonth());
+        var stepsM=Math.floor(diffM/interval);
+        if(stepsM>0) cur2.setMonth(cur2.getMonth()+stepsM*interval);
+      } else if(kind==='year'){
+        var stepsY=Math.floor((rangeStart.getFullYear()-cur2.getFullYear())/interval);
+        if(stepsY>0) cur2.setFullYear(cur2.getFullYear()+stepsY*interval);
+      }
+    }
+    var iter3=0;
+    while(iter3++<MAX_ITER){
+      if(!emit(new Date(cur2))) break;
+      if(kind==='day') cur2.setDate(cur2.getDate()+interval);
+      else if(kind==='month') cur2.setMonth(cur2.getMonth()+interval);
+      else if(kind==='year') cur2.setFullYear(cur2.getFullYear()+interval);
+      if(cur2>rangeEnd) break;
+    }
+  }
+  return out;
+}
+// Texto legível de um resumo de recorrência (usado no seletor "Repetir" e no popover)
+var DIAS_SEMANA_PREP=['no domingo','na segunda-feira','na terça-feira','na quarta-feira','na quinta-feira','na sexta-feira','no sábado'];
+function repetirResumoTxt(r, dataBase){
+  if(!r) return 'Não se repete';
+  var d=dataBase?new Date(dataBase+'T12:00'):null;
+  var diaSemanaTxt=d?DIAS_SEMANA_PREP[d.getDay()]:'';
+  var kind=r.freq==='custom'?(r.unit||'day'):(r.freq==='daily'?'day':r.freq==='weekly'?'week':r.freq==='monthly'?'month':r.freq==='yearly'?'year':'weekday');
+  var interval=Math.max(1,(r.freq==='custom'?r.interval:1)||1);
+  var txt;
+  if(r.freq==='weekday') txt='Todos os dias úteis (seg a sex)';
+  else if(r.freq==='custom'){
+    var unitLbl={day:['dia','dias'],week:['semana','semanas'],month:['mês','meses'],year:['ano','anos']}[kind];
+    txt='A cada '+interval+' '+(interval===1?unitLbl[0]:unitLbl[1]);
+    if(kind==='week'&&r.byDay&&r.byDay.length) txt+=' em '+r.byDay.slice().sort(function(a,b){return a-b;}).map(function(i){return DIAS_PT[i];}).join(', ');
+  }
+  else if(kind==='day') txt='Diariamente';
+  else if(kind==='week') txt='Semanalmente '+diaSemanaTxt;
+  else if(kind==='month') txt='Mensalmente'+(d?' no dia '+d.getDate():'');
+  else if(kind==='year') txt='Anualmente'+(d?' em '+d.getDate()+' de '+MESES_PT[d.getMonth()]:'');
+  if(r.end){
+    if(r.end.type==='until'&&r.end.until) txt+=' · até '+fD(r.end.until);
+    if(r.end.type==='count'&&r.end.count) txt+=' · '+r.end.count+'x';
+  }
+  return txt;
+}
+
 function getWeekStart(d){var dt=new Date(d);dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-dt.getDay());return dt;}
 // gcFetchEvents() busca só o mês visível no momento do fetch — sem re-chamar ao navegar,
 // os eventos do Google ficam presos ao mês em que "Atualizar" foi clicado por último.
@@ -7410,6 +7584,12 @@ function calHoje(){calAno=new Date().getFullYear();calMes=new Date().getMonth();
 function calMiniPrev(){calMes--;if(calMes<0){calMes=11;calAno--;}renderCalendario();calSyncGoogleIfNeeded();}
 function calMiniNext(){calMes++;if(calMes>11){calMes=0;calAno++;}renderCalendario();calSyncGoogleIfNeeded();}
 function setCalView(v){calView=v;if(v==='week'&&!calWeekStart)calWeekStart=getWeekStart(new Date());renderCalendario();calSyncGoogleIfNeeded();}
+// Painel esquerdo do Calendário (mini calendário, retornos, eventos): recolher/expandir, independente do menu principal
+function toggleCalSidebar(){
+  var collapsed = localStorage.getItem('cerc_calLeftCollapsed')==='1';
+  localStorage.setItem('cerc_calLeftCollapsed', collapsed?'0':'1');
+  renderCalendario();
+}
 // ══════════════════════════════════════════════════════════════════════════════
 // GOOGLE CALENDAR INTEGRATION
 // ══════════════════════════════════════════════════════════════════════════════
@@ -7552,7 +7732,8 @@ function calShowMore(ds, btn) {
     if(d.dataFechamento){var k2=d.dataFechamento; if(!evtMap2[k2])evtMap2[k2]=[]; evtMap2[k2].push({_tipo:'fechamento',servico:d.servico,cliente:d.cliente,id:d.id,status:d.status});}
   });
   var evts2=evtMap2[ds]||[];
-  var cEvts2=(state.eventos||[]).filter(function(ev){return ev.data===ds||((ev.dataFim||ev.data)>=ds&&ev.data<=ds);});
+  // Reaproveita o mapa já expandido (inclui ocorrências de eventos recorrentes) montado em renderCalendario()
+  var cEvts2=(window._calEvtCustomMap&&window._calEvtCustomMap[ds])||[];
   // Exclui eventos do Google que já existem localmente (sincronizados via gcSyncEvent/gcSyncRetornoDemanda) — evita duplicidade
   var _localGcIds2={}, _localTitleDates2={};
   (state.eventos||[]).forEach(function(e){
@@ -7612,7 +7793,7 @@ function calShowMore(ds, btn) {
 
   // Eventos customizados
   cEvts2.forEach(function(ev){
-    var cfg=TIPO_EVT_CFG[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌'};
+    var cfg=evtCfg(ev);
     var el=document.createElement('div');
     el.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer';
     el.innerHTML='<div style="width:26px;height:26px;border-radius:6px;background:'+cfg.bg+';display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">'+cfg.ico+'</div>'+
@@ -7817,8 +7998,32 @@ function renderCalendario() {
     if(!gcEvtMap[ds]) gcEvtMap[ds]=[];
     gcEvtMap[ds].push(ev);
   });
+  // ── Janela visível (usada para expandir eventos recorrentes) ─────
+  var _rgStart,_rgEnd;
+  if(calView==='week'){
+    var _rgWs=calWeekStart||getWeekStart(today);
+    _rgStart=new Date(_rgWs);_rgStart.setHours(0,0,0,0);
+    _rgEnd=new Date(_rgWs);_rgEnd.setDate(_rgEnd.getDate()+6);_rgEnd.setHours(0,0,0,0);
+  } else {
+    _rgStart=new Date(calAno,calMes,1);_rgStart.setHours(0,0,0,0);
+    _rgEnd=new Date(calAno,calMes+1,0);_rgEnd.setHours(0,0,0,0);
+  }
   (state.eventos||[]).forEach(function(ev){
     if(!ev.data) return;
+    if(ev.repetir){
+      expandRecorrencia(ev,_rgStart,_rgEnd).forEach(function(oc){
+        var dI2=new Date(oc.data+'T12:00');dI2.setHours(0,0,0,0);
+        var dF2=oc.dataFim?new Date(oc.dataFim+'T12:00'):new Date(dI2);dF2.setHours(0,0,0,0);
+        var cur2=new Date(dI2);
+        while(cur2<=dF2){
+          var k2=cur2.toISOString().slice(0,10);
+          if(!evtCustomMap[k2])evtCustomMap[k2]=[];
+          evtCustomMap[k2].push(Object.assign({},ev,{data:oc.data,dataFim:oc.dataFim,_isFirst:k2===oc.data,_isLast:k2===(oc.dataFim||oc.data),_multi:oc.dataFim&&oc.dataFim!==oc.data,_isRecorrencia:true,_occDate:oc.data}));
+          cur2.setDate(cur2.getDate()+1);
+        }
+      });
+      return;
+    }
     var dI=new Date(ev.data+'T12:00');dI.setHours(0,0,0,0);
     var dF=ev.dataFim?new Date(ev.dataFim+'T12:00'):new Date(dI);dF.setHours(0,0,0,0);
     var cur=new Date(dI);
@@ -7829,6 +8034,7 @@ function renderCalendario() {
       cur.setDate(cur.getDate()+1);
     }
   });
+  window._calEvtCustomMap = evtCustomMap; // reaproveitado por calShowMore() para não duplicar a lógica de expansão
 
   // ── Helpers ───────────────────────────────────────────────────────
   // Evento no mês: estilo "ponto + texto" do Google Calendar (sem fundo preenchido, exceto eventos de múltiplos dias)
@@ -7842,7 +8048,7 @@ function renderCalendario() {
     '</div>';
   }
   function evtCustomHtmlMon(ev){
-    var cfg=TIPO_EVT_CFG[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌',border:'#6B7280'};
+    var cfg=evtCfg(ev);
     var hora=ev.horaInicio?ev.horaInicio+' ':'';
     var isTarefa=ev.tipo==='Tarefa';
     var conc=isTarefa&&ev.concluida;
@@ -7853,9 +8059,9 @@ function renderCalendario() {
       var bg=conc?'#D1FAE5':cfg.bg, border=conc?'#10B981':cfg.border;
       var brL=ev._isFirst?'4px':'0', brR=ev._isLast?'4px':'0';
       var titleLbl=ev._isFirst?checkBtn+'<span style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,60)+'</span>':'';
-      return '<div class="cal-event cal-event-bar" style="background:'+bg+';color:'+cfg.c+';border-left-color:'+border+';border-radius:'+brL+' '+brR+' '+brR+' '+brL+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+titleLbl+'</div>';
+      return '<div class="cal-event cal-event-bar" style="background:'+bg+';color:'+cfg.c+';border-left-color:'+border+';border-radius:'+brL+' '+brR+' '+brR+' '+brL+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+titleLbl+'</div>';
     }
-    return '<div class="cal-event" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+
+    return '<div class="cal-event" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+
       '<span class="cal-event-dot" style="background:'+cfg.border+'"></span>'+
       checkBtn+
       '<span class="cal-event-txt" style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,60)+'</span>'+
@@ -7955,7 +8161,7 @@ function renderCalendario() {
       '<button onclick="openModalEvento(null)" style="background:var(--accent);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:16px;cursor:pointer;line-height:1;font-weight:300;display:flex;align-items:center;justify-content:center">+</button>'+
     '</div>'+
     (proxEvts.length?proxEvts.map(function(ev){
-      var cfg=TIPO_EVT_CFG[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌'};
+      var cfg=evtCfg(ev);
       var d2=new Date(ev.data+'T12:00');d2.setHours(0,0,0,0);
       var dff=Math.round((d2-agora)/(1000*60*60*24));
       return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openModalEvento(\''+ev.id+'\')">' +
@@ -8057,7 +8263,7 @@ function renderCalendario() {
       }).join('');
 
       evHtml+=custEvts.map(function(ev,ei){
-        var cfg2=TIPO_EVT_CFG[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌',border:'#6B7280'};
+        var cfg2=evtCfg(ev);
         // Calcula posição pela hora ou usa padrão 10h + offset
         var hStart=10;
         if(ev.horaInicio){var parts=ev.horaInicio.split(':');hStart=parseInt(parts[0])+(parseInt(parts[1]||0)/60);}
@@ -8074,7 +8280,7 @@ function renderCalendario() {
         var bgW=concW?'#D1FAE5':cfg2.bg;
         var borderW=concW?'#10B981':cfg2.border;
         var checkSpanW=isTarefaW?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\')" style="cursor:pointer;margin-right:2px" title="'+(concW?'Reabrir':'Concluir')+'">'+icoW+'</span> ':''+icoW+' ';
-        return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;background:'+bgW+';color:'+cfg2.c+';border-left-color:'+borderW+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event)">' +
+        return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;background:'+bgW+';color:'+cfg2.c+';border-left-color:'+borderW+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')">' +
           '<div class="cal-week-event-title">'+checkSpanW+titleW+'</div>'+
           '<div class="cal-week-event-sub">'+(ev.horaInicio?ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):(ev.descricao||''))+'</div></div>';
       }).join('');
@@ -8138,6 +8344,9 @@ function renderCalendario() {
 
   var toolbar=
     '<div class="cal-toolbar">'+
+      '<button class="cal-toggle-btn" onclick="toggleCalSidebar()" title="Mostrar/ocultar painel">'+
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>'+
+      '</button>'+
       '<span class="cal-toolbar-title">'+titleTxt+'</span>'+
       '<button class="cal-arrow-btn" onclick="calPrev()">‹</button>'+
       '<button class="cal-today-btn" onclick="calHoje()">Hoje</button>'+
@@ -8150,8 +8359,9 @@ function renderCalendario() {
 
   // ── Monta shell ──────────────────────────────────────────────────
   // padding:0 no page-content → altura sem os 40px de padding vertical
+  var calLeftCollapsed = localStorage.getItem('cerc_calLeftCollapsed')==='1';
   var calShell=
-    '<div class="cal-shell" style="height:calc(100vh - 56px);border-radius:0;border-left:none;border-right:none;border-top:none">'+
+    '<div class="cal-shell'+(calLeftCollapsed?' cal-left-collapsed':'')+'" style="height:calc(100vh - 56px);border-radius:0;border-left:none;border-right:none;border-top:none">'+
       '<div class="cal-left">'+sideCriar+miniCal+sideGc+sideRet+sideEvt+'</div>'+
       '<div class="cal-main">'+toolbar+gridHtml+'</div>'+
     '</div>';
@@ -8838,6 +9048,51 @@ function openModalEvento(id, preData) {
   var horaIniSel = ev&&ev.horaInicio ? selHora(ev.horaInicio,horaOpts) : (gcHoraIni?selHora(gcHoraIni,horaOpts):horaOpts);
   var horaFimSel = ev&&ev.horaFim    ? selHora(ev.horaFim,horaOpts)    : (gcHoraFim?selHora(gcHoraFim,horaOpts):horaOpts);
   var gcBanner = gcFill ? '<div style="background:#E8F0FE;border:1px solid #1A73E8;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#1A73E8;display:flex;align-items:center;gap:8px">🗓 <strong>Importado do Google Calendar</strong> — edite e salve para registrar no sistema</div>' : '';
+
+  // ── Cor do evento (paleta do Google Calendar) ─────────────────────
+  var curCor = ev&&ev.cor ? ev.cor : '';
+  var colorPickerHtml = '<div class="fg"><label>Cor do evento</label><div id="ev-color-picker" style="display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:2px 0 6px">' +
+    '<div class="ev-color-swatch'+(!curCor?' selected':'')+'" data-cor="" onclick="evPickColor(\'\')" title="Automática (cor do Tipo)" style="background:repeating-conic-gradient(#d1d5db 0deg 90deg,#f3f4f6 90deg 180deg)">'+(!curCor?'✓':'')+'</div>' +
+    EVENT_COLORS.map(function(c){
+      return '<div class="ev-color-swatch'+(curCor===c.id?' selected':'')+'" data-cor="'+c.id+'" onclick="evPickColor(\''+c.id+'\')" title="'+c.name+'" style="background:'+c.hex+'">'+(curCor===c.id?'✓':'')+'</div>';
+    }).join('') +
+  '</div></div>';
+
+  // ── Repetir (recorrência) ──────────────────────────────────────────
+  var rep = ev&&ev.repetir ? ev.repetir : null;
+  var repFreq = rep ? rep.freq : '';
+  var repInterval = rep&&rep.freq==='custom' ? (rep.interval||1) : 1;
+  var repUnit = rep&&rep.freq==='custom' ? (rep.unit||'day') : 'day';
+  var repByDay = rep&&rep.byDay ? rep.byDay : [];
+  var repEndType = rep&&rep.end ? rep.end.type : 'never';
+  var repEndUntil = rep&&rep.end&&rep.end.until ? rep.end.until : '';
+  var repEndCount = rep&&rep.end&&rep.end.count ? rep.end.count : 10;
+  var freqOpts=[['','Não se repete'],['daily','Diariamente'],['weekly','Semanalmente'],['monthly','Mensalmente'],['yearly','Anualmente'],['weekday','Todos os dias úteis (seg a sex)'],['custom','Personalizado...']];
+  var repeteSelectHtml = '<div class="fg"><label>🔁 Repetir</label><select id="ev-repete-freq" class="finput" onchange="evRepeteFreqChange()">' +
+    freqOpts.map(function(o){return '<option value="'+o[0]+'"'+(repFreq===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('') +
+  '</select></div>';
+  var dayChipsHtml = [0,1,2,3,4,5,6].map(function(i){
+    return '<div class="ev-day-chip'+(repByDay.indexOf(i)>=0?' selected':'')+'" data-day="'+i+'" onclick="evToggleRepeteDay('+i+')">'+DIAS_PT[i].slice(0,1)+'</div>';
+  }).join('');
+  var repeteCustomHtml = '<div id="ev-repete-custom" style="display:'+(repFreq==='custom'?'block':'none')+';padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:12px">' +
+    '<div style="display:flex;align-items:center;gap:8px">' +
+      '<span style="font-size:12px;color:var(--text2)">Repetir a cada</span>' +
+      '<input type="number" id="ev-repete-interval" class="finput" min="1" value="'+repInterval+'" style="width:56px;padding:6px 8px"/>' +
+      '<select id="ev-repete-unit" class="finput" style="width:auto;padding:6px 8px" onchange="evRepeteUnitChange()">' +
+        ['day','week','month','year'].map(function(u){var lbl={day:'dia(s)',week:'semana(s)',month:'mês(es)',year:'ano(s)'}[u];return '<option value="'+u+'"'+(repUnit===u?' selected':'')+'>'+lbl+'</option>';}).join('') +
+      '</select>' +
+    '</div>' +
+    '<div id="ev-repete-byday-row" style="display:'+(repUnit==='week'?'flex':'none')+';gap:5px;margin-top:8px">'+dayChipsHtml+'</div>' +
+  '</div>';
+  var repeteEndHtml = '<div id="ev-repete-end-row" style="display:'+(repFreq?'block':'none')+';padding:0 2px 12px">' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Termina</div>' +
+    '<div style="display:flex;flex-direction:column;gap:7px">' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer"><input type="radio" name="ev-repete-end" value="never" onchange="evRepeteEndChange()"'+(repEndType==='never'?' checked':'')+'/> Nunca</label>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer"><input type="radio" name="ev-repete-end" value="until" onchange="evRepeteEndChange()"'+(repEndType==='until'?' checked':'')+'/> Em <input type="date" id="ev-repete-end-until" class="finput" value="'+repEndUntil+'" style="width:150px;padding:5px 8px"'+(repEndType!=='until'?' disabled':'')+'/></label>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer"><input type="radio" name="ev-repete-end" value="count" onchange="evRepeteEndChange()"'+(repEndType==='count'?' checked':'')+'/> Após <input type="number" id="ev-repete-end-count" class="finput" min="1" value="'+repEndCount+'" style="width:60px;padding:5px 8px"'+(repEndType!=='count'?' disabled':'')+'/> ocorrência(s)</label>' +
+    '</div>' +
+  '</div>';
+
   var html =
     '<div id="modal-evento" class="overlay" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)closeModalEvento()">' +
     '<div class="modal modal-sm"><div class="modal-hd"><div class="modal-hd-row">' +
@@ -8853,6 +9108,7 @@ function openModalEvento(id, preData) {
         '<div class="fg"><label>Data Início *</label><input id="ev-data" type="date" class="finput" value="'+(ev?ev.data:preData||hoje)+'" onchange="evAjustaFim()"/></div>' +
         '<div class="fg"><label>Data Fim <span style="font-size:10px;color:var(--text3)">(opcional)</span></label><input id="ev-data-fim" type="date" class="finput" value="'+(ev&&ev.dataFim?ev.dataFim:(gcFill&&gcFill.fim?gcFill.fim.slice(0,10):''))+'"/></div>' +
       '</div>' +
+      repeteSelectHtml + repeteCustomHtml + repeteEndHtml +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">' +
         '<div class="fg"><label>⏰ Hora Início</label><select id="ev-hora-ini" class="finput" style="font-size:12px">'+horaIniSel+'</select></div>' +
         '<div class="fg"><label>⏰ Hora Fim</label><select id="ev-hora-fim" class="finput" style="font-size:12px">'+horaFimSel+'</select></div>' +
@@ -8860,6 +9116,7 @@ function openModalEvento(id, preData) {
           ['Evento','Lembrete','Prazo','Reunião','Vistoria','Tarefa'].map(function(t){return '<option'+(ev&&ev.tipo===t?' selected':'')+'>'+t+'</option>';}).join('') +
         '</select></div>' +
       '</div>' +
+      colorPickerHtml +
       '<div class="fg"><label>Descrição / Observação</label><textarea id="ev-desc" class="finput" rows="2" placeholder="Detalhes do evento...">'+(ev?ev.descricao||'':'')+'</textarea></div>' +
       '<div id="ev-tarefa-row" style="display:'+(ev&&ev.tipo==='Tarefa'||(!ev&&false)?'flex':'none')+';align-items:center;gap:10px;padding:10px 12px;background:#ECFDF5;border:1px solid #10B981;border-radius:8px;margin-bottom:12px">' +
         '<input type="checkbox" id="ev-concluida" style="width:16px;height:16px;accent-color:#10B981;cursor:pointer"'+(ev&&ev.concluida?' checked':'')+'/>' +
@@ -8870,7 +9127,7 @@ function openModalEvento(id, preData) {
       '</select></div>' +
     '</div>' +
     '<div class="modal-ft">' +
-      (ev?'<button class="btn btn-danger" onclick="delEvento(\''+id+'\',true)">🗑 Excluir</button>'+'<button class="btn btn-ghost btn-sm" onclick="gcExportEvent(\''+id+'\')" style="color:#1A73E8">🗓 Google</button>':'<div></div>') +
+      (ev?'<button class="btn btn-danger" onclick="delEvento(\''+id+'\',true)">🗑 '+(ev.repetir?'Excluir série':'Excluir')+'</button>'+'<button class="btn btn-ghost btn-sm" onclick="gcExportEvent(\''+id+'\')" style="color:#1A73E8">🗓 Google</button>':'<div></div>') +
       '<div style="display:flex;gap:6px">' +
         '<button class="btn btn-ghost" onclick="closeModalEvento()">Cancelar</button>' +
         '<button class="btn btn-primary" onclick="saveEvento()">'+(ev?'💾 Salvar':'📅 Criar Evento')+'</button>' +
@@ -8881,6 +9138,7 @@ function openModalEvento(id, preData) {
   if(existing) existing.remove();
   document.body.insertAdjacentHTML('beforeend', html);
   document.getElementById('ev-titulo').focus();
+  evUpdateRepeteLabels();
 }
 
 function closeModalEvento() {
@@ -8894,17 +9152,24 @@ function _closeEventPopover() {
   if(p) p.remove();
 }
 
-function openEventPopover(id, e) {
+function openEventPopover(id, e, occDate) {
   _closeEventPopover();
-  var ev = (state.eventos||[]).find(function(x){return x.id===id;});
-  if(!ev) return;
-  var cfg=TIPO_EVT_CFG[ev.tipo]||{bg:'#F3F4F6',c:'#374151',ico:'📌'};
+  var ev0 = (state.eventos||[]).find(function(x){return x.id===id;});
+  if(!ev0) return;
+  // Se veio de uma ocorrência de série recorrente, exibe a data/fim daquela ocorrência específica (a série em si não muda)
+  var ev = (occDate && ev0.repetir) ? Object.assign({},ev0,{data:occDate, dataFim:_occDataFim(ev0,occDate)}) : ev0;
+  var cfg=evtCfg(ev);
   var icoDisp=(ev.tipo==='Tarefa'?(ev.concluida?'☑':'☐'):cfg.ico);
   var horaTxt=ev.horaInicio?(ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:'')):'Dia inteiro';
   var dataTxt=fD(ev.data)+(ev.dataFim&&ev.dataFim!==ev.data?' → '+fD(ev.dataFim):'');
   var demanda=ev.demandaId?(state.demandas||[]).find(function(d){return d.id===ev.demandaId;}):null;
   var gcBtn=ev.gcEventId?'<a href="https://calendar.google.com/calendar/event?eid='+btoa(ev.gcEventId)+'" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#1A73E8;font-weight:600;text-decoration:none;padding:4px 8px;border:1px solid #1A73E8;border-radius:6px">🗓 Ver no Google</a>':'';
   var tarefaBtn=ev.tipo==='Tarefa'?'<button onclick="_closeEventPopover();toggleTarefaConcluida(\''+id+'\')" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid #10B981;color:#065F46;background:#ECFDF5;cursor:pointer">'+(ev.concluida?'↩ Reabrir':'☑ Concluir')+'</button>':'';
+  var repeteTxt=ev0.repetir?'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text2)"><span>🔁</span><span>'+repetirResumoTxt(ev0.repetir,ev0.data)+'</span></div>':'';
+  var delBtn = (ev0.repetir && occDate)
+    ? '<button onclick="_closeEventPopover();delEventoOcorrencia(\''+id+'\',\''+occDate+'\')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid #FECACA;color:var(--red);background:#FEF2F2;cursor:pointer">🗑 Esta ocorrência</button>'
+      + '<button onclick="_closeEventPopover();delEvento(\''+id+'\',false)" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:6px 10px;border-radius:6px;border:none;color:var(--text3);background:none;cursor:pointer" title="Excluir toda a série">Série toda</button>'
+    : '<button onclick="_closeEventPopover();delEvento(\''+id+'\',false)" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid #FECACA;color:var(--red);background:#FEF2F2;cursor:pointer">🗑 Excluir</button>';
   var pop='<div id="ev-popover" style="position:fixed;z-index:2000;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);width:300px;font-family:inherit">'+
     '<div style="background:'+cfg.bg+';border-radius:12px 12px 0 0;padding:14px 16px 12px;border-bottom:1px solid var(--border)">'+
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+
@@ -8920,13 +9185,14 @@ function openEventPopover(id, e) {
     '</div>'+
     '<div style="padding:14px 16px">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text2)"><span>📅</span><span>'+dataTxt+'</span></div>'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(ev.descricao||demanda?'8px':'0')+'px;font-size:12px;color:var(--text2)"><span>⏰</span><span>'+horaTxt+'</span></div>'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(ev.descricao||demanda||repeteTxt?'8px':'0')+'px;font-size:12px;color:var(--text2)"><span>⏰</span><span>'+horaTxt+'</span></div>'+
+      repeteTxt+
       (ev.descricao?'<div style="font-size:12px;color:var(--text2);margin-bottom:8px;padding:8px;background:var(--bg);border-radius:6px;line-height:1.5">'+ev.descricao+'</div>':'')+
       (demanda?'<div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:8px">📋 '+demanda.servico+(demanda.cliente?' — '+demanda.cliente:'')+'</div>':'')+
       '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">'+tarefaBtn+gcBtn+'</div>'+
     '</div>'+
     '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:10px 16px;border-top:1px solid var(--border);border-radius:0 0 12px 12px;background:var(--bg)">'+
-      '<button onclick="_closeEventPopover();delEvento(\''+id+'\',false)" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid #FECACA;color:var(--red);background:#FEF2F2;cursor:pointer">🗑 Excluir</button>'+
+      delBtn+
       '<button onclick="_closeEventPopover();openModalEvento(\''+id+'\')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:none;color:#fff;background:var(--accent);cursor:pointer">✏️ Editar</button>'+
     '</div>'+
   '</div>';
@@ -9038,6 +9304,61 @@ function evTipoChange() {
   if(row) row.style.display = tipo === 'Tarefa' ? 'flex' : 'none';
 }
 
+// ── Modal de evento: cor + recorrência ("Repetir") ─────────────────
+function evPickColor(cor){
+  document.querySelectorAll('#ev-color-picker .ev-color-swatch').forEach(function(el){
+    var isSel = el.getAttribute('data-cor')===cor;
+    el.classList.toggle('selected', isSel);
+    el.textContent = isSel ? '✓' : '';
+  });
+}
+function evToggleRepeteDay(i){
+  var el=document.querySelector('.ev-day-chip[data-day="'+i+'"]');
+  if(!el) return;
+  // não permite desmarcar o último dia selecionado — recorrência semanal precisa de ao menos 1 dia
+  if(el.classList.contains('selected') && document.querySelectorAll('.ev-day-chip.selected').length<=1) return;
+  el.classList.toggle('selected');
+}
+function evRepeteFreqChange(){
+  var v=document.getElementById('ev-repete-freq').value;
+  var customEl=document.getElementById('ev-repete-custom');
+  var endEl=document.getElementById('ev-repete-end-row');
+  if(customEl) customEl.style.display = v==='custom' ? 'block' : 'none';
+  if(endEl) endEl.style.display = v ? 'block' : 'none';
+  if(v==='custom') evRepeteUnitChange();
+}
+function evRepeteUnitChange(){
+  var u=document.getElementById('ev-repete-unit').value;
+  var row=document.getElementById('ev-repete-byday-row');
+  if(row) row.style.display = u==='week' ? 'flex' : 'none';
+  if(u==='week' && !document.querySelector('.ev-day-chip.selected')){
+    var dv=document.getElementById('ev-data').value;
+    if(dv){
+      var chip=document.querySelector('.ev-day-chip[data-day="'+new Date(dv+'T12:00').getDay()+'"]');
+      if(chip) chip.classList.add('selected');
+    }
+  }
+}
+function evRepeteEndChange(){
+  var checked=document.querySelector('input[name="ev-repete-end"]:checked');
+  if(!checked) return;
+  document.getElementById('ev-repete-end-until').disabled = checked.value!=='until';
+  document.getElementById('ev-repete-end-count').disabled = checked.value!=='count';
+}
+// Atualiza os rótulos dinâmicos do seletor "Repetir" (ex: "Semanalmente na terça-feira") conforme a Data Início
+function evUpdateRepeteLabels(){
+  var sel=document.getElementById('ev-repete-freq');
+  var dv=document.getElementById('ev-data')?document.getElementById('ev-data').value:'';
+  if(!sel||!dv) return;
+  var d=new Date(dv+'T12:00');
+  var optW=sel.querySelector('option[value="weekly"]');
+  if(optW) optW.textContent='Semanalmente '+DIAS_SEMANA_PREP[d.getDay()];
+  var optM=sel.querySelector('option[value="monthly"]');
+  if(optM) optM.textContent='Mensalmente no dia '+d.getDate();
+  var optY=sel.querySelector('option[value="yearly"]');
+  if(optY) optY.textContent='Anualmente em '+d.getDate()+' de '+MESES_PT[d.getMonth()];
+}
+
 function toggleTarefaConcluida(id) {
   var ev = (state.eventos||[]).find(function(e){return e.id===id;});
   if(!ev) return;
@@ -9048,6 +9369,29 @@ function toggleTarefaConcluida(id) {
   toast(ev.concluida ? '✅ Tarefa concluída!' : '↩ Tarefa reaberta', 'success');
 }
 
+// Lê a regra de recorrência do formulário do modal de evento (null se "Não se repete")
+function getRepetirFromForm(data){
+  var freqEl=document.getElementById('ev-repete-freq');
+  var freq=freqEl?freqEl.value:'';
+  if(!freq) return null;
+  var r={freq:freq};
+  if(freq==='custom'){
+    r.interval=Math.max(1,parseInt(document.getElementById('ev-repete-interval').value,10)||1);
+    r.unit=document.getElementById('ev-repete-unit').value;
+    if(r.unit==='week'){
+      r.byDay=Array.prototype.map.call(document.querySelectorAll('.ev-day-chip.selected'),function(el){return parseInt(el.getAttribute('data-day'),10);});
+      if(!r.byDay.length) r.byDay=[new Date(data+'T12:00').getDay()];
+    }
+  } else if(freq==='weekly'){
+    r.byDay=[new Date(data+'T12:00').getDay()];
+  }
+  var endChecked=document.querySelector('input[name="ev-repete-end"]:checked');
+  var endType=endChecked?endChecked.value:'never';
+  r.end={type:endType};
+  if(endType==='until') r.end.until=document.getElementById('ev-repete-end-until').value||null;
+  if(endType==='count') r.end.count=Math.max(1,parseInt(document.getElementById('ev-repete-end-count').value,10)||1);
+  return r;
+}
 function saveEvento() {
   var titulo  = document.getElementById('ev-titulo').value.trim();
   var data    = document.getElementById('ev-data').value;
@@ -9058,11 +9402,20 @@ function saveEvento() {
   if(!state.eventos) state.eventos=[];
   var tipo = document.getElementById('ev-tipo').value;
   var concluidaEl = document.getElementById('ev-concluida');
+  var corEl = document.querySelector('#ev-color-picker .ev-color-swatch.selected');
+  var repetir = getRepetirFromForm(data);
+  if(repetir && editingEventoId){
+    // preserva ocorrências já removidas individualmente ("excluir esta ocorrência") ao reeditar a série
+    var oldEv=state.eventos.find(function(e){return e.id===editingEventoId;});
+    if(oldEv && oldEv.repetir && oldEv.repetir.exdatas) repetir.exdatas=oldEv.repetir.exdatas.slice();
+  }
   var obj = {
     titulo:titulo, data:data, dataFim:dataFim||null,
     horaInicio: document.getElementById('ev-hora-ini').value||'',
     horaFim:    document.getElementById('ev-hora-fim').value||'',
     tipo: tipo,
+    cor: corEl ? (corEl.getAttribute('data-cor')||'') : '',
+    repetir: repetir,
     descricao: document.getElementById('ev-desc').value.trim(),
     demandaId: document.getElementById('ev-demanda').value,
     concluida: tipo==='Tarefa' && concluidaEl ? concluidaEl.checked : false,
@@ -9093,17 +9446,39 @@ function evAjustaFim(){
   var di=document.getElementById('ev-data').value;
   var df=document.getElementById('ev-data-fim').value;
   if(df && df < di) document.getElementById('ev-data-fim').value=di;
+  evUpdateRepeteLabels();
 }
 
 function delEvento(id, fromModal) {
-  if(!confirm('Excluir este evento?')) return;
-  // Deletar do Google Calendar se sincronizado
   var ev = (state.eventos||[]).find(function(e){ return e.id===id; });
+  if(!confirm(ev&&ev.repetir?'Excluir toda a série "'+ev.titulo+'" (todas as ocorrências)?':'Excluir este evento?')) return;
+  // Deletar do Google Calendar se sincronizado
   if(ev && ev.gcEventId) gcDeleteGEvent(ev.gcEventId);
   state.eventos=(state.eventos||[]).filter(function(e){return e.id!==id;});
   saveState(); toast('Evento excluído');
   if(_sbUser) sbDeleteRecord('eventos',id);
   if(fromModal) closeModalEvento();
+  renderCalendario();
+}
+
+// Calcula a data-fim de uma ocorrência específica de uma série, preservando a duração original do evento
+function _occDataFim(ev0, occDate){
+  if(!ev0.dataFim) return null;
+  var dur=new Date(ev0.dataFim+'T00:00:00').getTime()-new Date(ev0.data+'T00:00:00').getTime();
+  var d=new Date(occDate+'T00:00:00'); d.setTime(d.getTime()+dur);
+  function pad2(n){return n<10?'0'+n:''+n;}
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+}
+// Remove apenas uma ocorrência de uma série recorrente (a série continua para as demais datas)
+function delEventoOcorrencia(id, occDate) {
+  var ev=(state.eventos||[]).find(function(e){return e.id===id;});
+  if(!ev||!ev.repetir) return;
+  if(!confirm('Remover apenas esta ocorrência ('+fD(occDate)+')?\nA série continua normalmente nas demais datas.')) return;
+  if(!ev.repetir.exdatas) ev.repetir.exdatas=[];
+  if(ev.repetir.exdatas.indexOf(occDate)<0) ev.repetir.exdatas.push(occDate);
+  ev.updatedAt=_now();
+  saveState(); toast('Ocorrência removida');
+  if(_sbUser) sbUpsertEvento(ev);
   renderCalendario();
 }
 
