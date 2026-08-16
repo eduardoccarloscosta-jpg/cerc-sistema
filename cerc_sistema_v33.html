@@ -3479,7 +3479,7 @@ function renderDemandas() {
     var collapsed=state.collapseStatus[s];
     var totalV=items.reduce(function(a,b){
       var bruto=Math.max(0,(b.valorBruto||0)-(b.desconto||0)); // bruto efetivo (após desconto)
-      var pag=b.statusPagamento||'Pendente';
+      var pag=statusPagamentoEfetivo(b)||'Pendente';
       if(pag==='Pago') return a;
       if(pag==='Parcial') return a+Math.max(0,bruto-(b.valorPago||0));
       if(pag==='Parcelado'){var paid=(b.parcelas||[]).filter(function(p){return p.status==='Pago';}).reduce(function(s,p){return s+(p.valor||0);},0);return a+Math.max(0,bruto-paid);}
@@ -3487,7 +3487,7 @@ function renderDemandas() {
     },0);
     var rows=items.map(function(dem){
       var done=(dem.subtarefas||[]).filter(function(s){return s.concluido;}).length,total=(dem.subtarefas||[]).length||13;
-      var pag=dem.statusPagamento||'Pendente';
+      var pag=statusPagamentoEfetivo(dem)||'Pendente';
       var pagCls={Pago:'b-con',Inadimplente:'b-per',Parcial:'b-rev',Parcelado:'b-exe',Pendente:'b-neg'}[pag]||'b-neg';var pagExtra='';if(pag==='Parcial'&&dem.valorPago)pagExtra='<div style="font-size:10px;color:var(--amber)">'+fR(dem.valorPago)+'</div>';if(pag==='Parcelado'&&dem.parcelas&&dem.parcelas.length){var _pp=dem.parcelas.filter(function(x){return x.status==='Pago';}).length,_pt=dem.parcelas.length,_at=dem.parcelas.filter(function(x){return x.status==='Atrasada';}).length;pagExtra='<div style="font-size:10px;margin-top:3px"><span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;color:var(--s-exe)">'+_pp+'/'+_pt+'</span><span style="color:var(--text3)"> ('+Math.round(_pp/_pt*100)+'%)</span>'+(_at>0?'<span style="color:var(--red);font-weight:700"> ⚠️'+_at+'</span>':'')+'</div>';}
       return '<div class="list-row" onclick="openModalEdit(\''+dem.id+'\')">' +
         (function(){var foto=(_sbProfile&&_sbProfile.avatar_base64)||localStorage.getItem('cerc_profile_foto');var nome=(_sbProfile&&_sbProfile.nome)||'CE';var ini=nome.trim().split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase()||'CE';return '<div class="avatar avatar-sm" title="'+nome+'" style="overflow:hidden;padding:0">'+(foto?'<img src="'+foto+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>':ini)+'</div>';})() +
