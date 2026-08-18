@@ -3694,7 +3694,7 @@ function switchTab(tab) {
   document.querySelectorAll('.modal-tab').forEach(function(el,i){el.classList.toggle('active',MTABS[i]===tab);});
   if(tab==='progresso'){ renderSubList(); renderChecklistLev(); renderChecklistCustom(); }
   if(tab==='historico') renderHistorico();
-  if(tab==='financeiro'){renderDocsFiscais();setTimeout(updateDespesasBox,50);}
+  if(tab==='financeiro'){renderDocsFiscais();setTimeout(function(){updateDespesasBox();renderCascataBox();},50);}
   if(tab==='links'){ setTimeout(renderAllLinkChips,50); setTimeout(renderLinkPropostas,50); }
   if(tab==='projeto') renderMarcosTab();
 }
@@ -3809,28 +3809,22 @@ function autoCalcLiq(){
   setValorBR('f-liquido',Math.max(0,b-desc-i-c));
 }
 
-// Recalcula ISS, Líquido e DespesasBox em cascata após qualquer mudança de valor
-function recalcCascata(){
+// Atualiza apenas a exibição do card "Composição do Valor" a partir dos valores atuais dos campos,
+// sem recalcular/sobrescrever ISS ou Líquido (usado tanto após digitação quanto ao reabrir/reexibir a demanda)
+function renderCascataBox(){
   var b   = parseValorBR('f-bruto');
   var desc= parseValorBR('f-desconto-r');
-  var base= Math.max(0, b - desc); // base cobrada após desconto
-  // ISS: 10,5% sobre a base
-  var novoISS = base * 0.105;
-  setValorBR('f-imposto', novoISS);
-  // Hint atualizado
+  var base= Math.max(0, b - desc);
+  var iss = parseValorBR('f-imposto');
+  var cop = parseValorBR('f-custo-op');
+  var liq = parseValorBR('f-liquido');
   var hint = document.getElementById('iss-hint');
   if(hint) hint.textContent = '(10,5% de ' + fR(base) + ')';
-  // Custo Operacional: mantém valor atual
-  var cop = parseValorBR('f-custo-op');
-  // Valor líquido: base - ISS - CustoOp
-  var liq = Math.max(0, base - novoISS - cop);
-  setValorBR('f-liquido', liq);
-  // Atualiza card visual de cascata
   var cb = document.getElementById('cascata-box');
   if(cb && b>0) {
     cb.style.display='block';
     document.getElementById('cc-bruto').textContent=fR(b);
-    document.getElementById('cc-iss').textContent='-'+fR(novoISS);
+    document.getElementById('cc-iss').textContent='-'+fR(iss);
     document.getElementById('cc-liq').textContent=fR(liq);
     var dr=document.getElementById('cc-desc-row'), br=document.getElementById('cc-base-row');
     if(desc>0){
@@ -3841,6 +3835,22 @@ function recalcCascata(){
     if(cop>0){cr.style.display='flex';document.getElementById('cc-cop').textContent='-'+fR(cop);}
     else cr.style.display='none';
   } else if(cb) { cb.style.display='none'; }
+}
+
+// Recalcula ISS, Líquido e DespesasBox em cascata após qualquer mudança de valor
+function recalcCascata(){
+  var b   = parseValorBR('f-bruto');
+  var desc= parseValorBR('f-desconto-r');
+  var base= Math.max(0, b - desc); // base cobrada após desconto
+  // ISS: 10,5% sobre a base
+  var novoISS = base * 0.105;
+  setValorBR('f-imposto', novoISS);
+  // Custo Operacional: mantém valor atual
+  var cop = parseValorBR('f-custo-op');
+  // Valor líquido: base - ISS - CustoOp
+  var liq = Math.max(0, base - novoISS - cop);
+  setValorBR('f-liquido', liq);
+  renderCascataBox();
   // sincroniza % do desconto se mudou pelo bruto
   var pctEl=document.getElementById('f-desconto-pct');
   if(pctEl&&b>0&&desc>0) pctEl.value=(desc/b*100).toFixed(1);
