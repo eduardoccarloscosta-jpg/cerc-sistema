@@ -3286,51 +3286,16 @@ function renderDashboard() {
   }).join('');
 
   // ── Build alerts ──
-  var today=new Date(); today.setHours(0,0,0,0);
-  var alerts=[];
-  state.demandas.forEach(function(dem){
-    if(['Perdido','Arquivado','Concluído','Em Execução'].indexOf(dem.status)>=0){
-      if(dem.status==='Em Execução'&&dem.dataCriacao){
-        var dc2=new Date(dem.dataCriacao+'T12:00');
-        var dias2=Math.round((today-dc2)/(1000*60*60*24));
-        var progresso=(dem.subtarefas||[]).filter(function(s){return s.concluido;}).length;
-        if(dias2>30&&progresso<5) alerts.push({tipo:'urgent',icone:'🔴',msg:'<strong>Execução parada</strong> — '+dem.servico+' ('+dem.cliente+') — '+progresso+'/13 etapas',id:dem.id,tipoAlerta:'exec'});
-      }
-      return;
-    }
-    // Follow-up vencido (só Lead/Negociação/Fechado/Em Revisão)
-    if(dem.dataRetorno){
-      var dr=new Date(dem.dataRetorno+'T12:00'); dr.setHours(0,0,0,0);
-      var diff=Math.round((today-dr)/(1000*60*60*24));
-      if(diff>0) alerts.push({tipo:'urgent',icone:'⚠️',msg:'<strong>Follow-up vencido há '+diff+' dia'+(diff>1?'s':'')+'</strong> — '+dem.servico+' ('+dem.cliente+')',id:dem.id,tipoAlerta:'followup'});
-      else if(diff===0) alerts.push({tipo:'warn',icone:'📅',msg:'<strong>Follow-up hoje</strong> — '+dem.servico+' ('+dem.cliente+')',id:dem.id,tipoAlerta:'followup'});
-    }
-    // Sem resposta há mais de 7 dias
-    if(['Lead','Negociação'].indexOf(dem.status)>=0&&dem.dataCriacao&&!dem.dataRetorno){
-      var dc=new Date(dem.dataCriacao+'T12:00');
-      var dias=Math.round((today-dc)/(1000*60*60*24));
-      if(dias>7) alerts.push({tipo:'warn',icone:'💬',msg:'<strong>Sem follow-up há '+dias+' dias</strong> — '+dem.servico+' ('+dem.cliente+')',id:dem.id,tipoAlerta:'semfollowup'});
-    }
-  });
+  var alerts=buildAlertas();
   var alertsHtml='';
   if(alerts.length){
     alertsHtml='<div class="card" style="margin-bottom:14px;border-left:4px solid var(--red)">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
         '<div style="font-size:13px;font-weight:700;color:var(--red)">⚠️ Alertas ('+alerts.length+')</div>' +
-        '<button class="btn btn-ghost btn-sm" onclick="showPage(\'demandas\')">Ver todas →</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="abrirAlertasModal()">Ver todas →</button>' +
       '</div>' +
-      alerts.slice(0,5).map(function(a){
-        var btnBaixa=(a.tipoAlerta==='followup'||a.tipoAlerta==='semfollowup')
-          ?'<button class="alert-baixa-btn" onclick="event.stopPropagation();darBaixaAlerta(\''+a.id+'\')" title="Marcar follow-up como concluído">✓ Dar baixa</button>'
-          :'';
-        return '<div class="alert-card alert-'+a.tipo+'" style="cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:space-between">' +
-          '<div style="display:flex;align-items:center;gap:8px;flex:1" onclick="openModalEdit(\''+a.id+'\')">' +
-            '<span style="font-size:14px">'+a.icone+'</span>' +
-            '<div style="font-size:12px">'+a.msg+'</div>' +
-          '</div>'+btnBaixa+
-        '</div>';
-      }).join('')+
-      (alerts.length>5?'<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px">+' +(alerts.length-5)+' alertas adicionais</div>':'')+
+      alerts.slice(0,5).map(function(a){return alertaRowHtml(a,'darBaixaAlerta');}).join('')+
+      (alerts.length>5?'<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px;cursor:pointer" onclick="abrirAlertasModal()">+' +(alerts.length-5)+' alertas adicionais</div>':'')+
     '</div>';
   }
   document.getElementById('page-content').innerHTML =
@@ -3524,50 +3489,16 @@ function renderDemandas() {
   }).join('');
 
   // ── Build alerts (demandas page) ──
-  var today=new Date(); today.setHours(0,0,0,0);
-  var alerts=[];
-  state.demandas.forEach(function(dem){
-    if(['Perdido','Arquivado','Concluído','Em Execução'].indexOf(dem.status)>=0){
-      if(dem.status==='Em Execução'&&dem.dataCriacao){
-        var dc2=new Date(dem.dataCriacao+'T12:00');
-        var dias2=Math.round((today-dc2)/(1000*60*60*24));
-        var progresso=(dem.subtarefas||[]).filter(function(s){return s.concluido;}).length;
-        if(dias2>30&&progresso<5) alerts.push({tipo:'urgent',icone:'🔴',msg:'<strong>Execução parada</strong> — '+dem.servico+' ('+dem.cliente+') — '+progresso+'/13 etapas',id:dem.id,tipoAlerta:'exec'});
-      }
-      return;
-    }
-    // Follow-up vencido (só Lead/Negociação/Fechado/Em Revisão)
-    if(dem.dataRetorno){
-      var dr=new Date(dem.dataRetorno+'T12:00'); dr.setHours(0,0,0,0);
-      var diff=Math.round((today-dr)/(1000*60*60*24));
-      if(diff>0) alerts.push({tipo:'urgent',icone:'⚠️',msg:'<strong>Follow-up vencido há '+diff+' dia'+(diff>1?'s':'')+'</strong> — '+dem.servico+' ('+dem.cliente+')',id:dem.id,tipoAlerta:'followup'});
-      else if(diff===0) alerts.push({tipo:'warn',icone:'📅',msg:'<strong>Follow-up hoje</strong> — '+dem.servico+' ('+dem.cliente+')',id:dem.id,tipoAlerta:'followup'});
-    }
-    // Sem resposta há mais de 7 dias
-    if(['Lead','Negociação'].indexOf(dem.status)>=0&&dem.dataCriacao&&!dem.dataRetorno){
-      var dc=new Date(dem.dataCriacao+'T12:00');
-      var dias=Math.round((today-dc)/(1000*60*60*24));
-      if(dias>7) alerts.push({tipo:'warn',icone:'💬',msg:'<strong>Sem follow-up há '+dias+' dias</strong> — '+dem.servico+' ('+dem.cliente+')',id:dem.id,tipoAlerta:'semfollowup'});
-    }
-  });
+  var alerts=buildAlertas();
   var alertsHtml='';
   if(alerts.length){
     alertsHtml='<div class="card" style="margin-bottom:14px;border-left:4px solid var(--red)">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
         '<div style="font-size:13px;font-weight:700;color:var(--red)">⚠️ Alertas ('+alerts.length+')</div>' +
+        '<button class="btn btn-ghost btn-sm" onclick="abrirAlertasModal()">Ver todas →</button>' +
       '</div>' +
-      alerts.slice(0,5).map(function(a){
-        var btnBaixa=(a.tipoAlerta==='followup'||a.tipoAlerta==='semfollowup')
-          ?'<button class="alert-baixa-btn" onclick="event.stopPropagation();darBaixaAlerta(\''+a.id+'\')" title="Marcar follow-up como concluído">✓ Dar baixa</button>'
-          :'';
-        return '<div class="alert-card alert-'+a.tipo+'" style="cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:space-between">' +
-          '<div style="display:flex;align-items:center;gap:8px;flex:1" onclick="openModalEdit(\''+a.id+'\')">' +
-            '<span style="font-size:14px">'+a.icone+'</span>' +
-            '<div style="font-size:12px">'+a.msg+'</div>' +
-          '</div>'+btnBaixa+
-        '</div>';
-      }).join('')+
-      (alerts.length>5?'<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px">+' +(alerts.length-5)+' alertas adicionais</div>':'')+
+      alerts.slice(0,5).map(function(a){return alertaRowHtml(a,'darBaixaAlerta');}).join('')+
+      (alerts.length>5?'<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px;cursor:pointer" onclick="abrirAlertasModal()">+' +(alerts.length-5)+' alertas adicionais</div>':'')+
     '</div>';
   }
   document.getElementById('page-content').innerHTML =
@@ -3605,6 +3536,86 @@ function toggleFStatus(s) {
   renderDemandas();
 }
 
+// Recalcula a lista de alertas (follow-up vencido/hoje, sem follow-up há 7+ dias, execução parada)
+// a partir do estado atual — usado pelo Dashboard, pela página Demandas e pelo modal "Ver todas"
+function buildAlertas(){
+  var today=new Date(); today.setHours(0,0,0,0);
+  var alerts=[];
+  state.demandas.forEach(function(dem){
+    if(['Perdido','Arquivado','Concluído','Em Execução'].indexOf(dem.status)>=0){
+      if(dem.status==='Em Execução'&&dem.dataCriacao){
+        var dc2=new Date(dem.dataCriacao+'T12:00');
+        var dias2=Math.round((today-dc2)/(1000*60*60*24));
+        var progresso=(dem.subtarefas||[]).filter(function(s){return s.concluido;}).length;
+        if(dias2>30&&progresso<5) alerts.push({tipo:'urgent',icone:'🔴',msg:'<strong>Execução parada</strong> — '+dem.servico+' ('+dem.cliente+') — '+progresso+'/13 etapas',id:dem.id,tipoAlerta:'exec'});
+      }
+      return;
+    }
+    // Follow-up vencido (só Lead/Negociação/Fechado/Em Revisão)
+    if(dem.dataRetorno){
+      var dr=new Date(dem.dataRetorno+'T12:00'); dr.setHours(0,0,0,0);
+      var diff=Math.round((today-dr)/(1000*60*60*24));
+      if(diff>0) alerts.push({tipo:'urgent',icone:'⚠️',msg:'<strong>Follow-up vencido há '+diff+' dia'+(diff>1?'s':'')+'</strong> — '+dem.servico+' ('+dem.cliente+')',id:dem.id,tipoAlerta:'followup'});
+      else if(diff===0) alerts.push({tipo:'warn',icone:'📅',msg:'<strong>Follow-up hoje</strong> — '+dem.servico+' ('+dem.cliente+')',id:dem.id,tipoAlerta:'followup'});
+    }
+    // Sem resposta há mais de 7 dias
+    if(['Lead','Negociação'].indexOf(dem.status)>=0&&dem.dataCriacao&&!dem.dataRetorno){
+      var dc=new Date(dem.dataCriacao+'T12:00');
+      var dias=Math.round((today-dc)/(1000*60*60*24));
+      if(dias>7) alerts.push({tipo:'warn',icone:'💬',msg:'<strong>Sem follow-up há '+dias+' dias</strong> — '+dem.servico+' ('+dem.cliente+')',id:dem.id,tipoAlerta:'semfollowup'});
+    }
+  });
+  return alerts;
+}
+
+// Renderiza uma linha de alerta. baixaFn é o nome da função global a chamar ao clicar "Dar baixa"
+// (sem abrir a demanda) — permite reusar a mesma marcação no Dashboard, em Demandas e no modal.
+function alertaRowHtml(a, baixaFn){
+  var btnBaixa=(a.tipoAlerta==='followup'||a.tipoAlerta==='semfollowup')
+    ?'<button class="alert-baixa-btn" onclick="event.stopPropagation();'+baixaFn+'(\''+a.id+'\')" title="Marcar follow-up como concluído">✓ Dar baixa</button>'
+    :'';
+  return '<div class="alert-card alert-'+a.tipo+'" style="cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:space-between">' +
+    '<div style="display:flex;align-items:center;gap:8px;flex:1" onclick="fecharAlertasModal();openModalEdit(\''+a.id+'\')">' +
+      '<span style="font-size:14px">'+a.icone+'</span>' +
+      '<div style="font-size:12px">'+a.msg+'</div>' +
+    '</div>'+btnBaixa+
+  '</div>';
+}
+
+// Modal "Ver todas" — lista TODOS os alertas (não só os 5 primeiros) e permite dar baixa
+// em cada um sem precisar abrir a demanda.
+function abrirAlertasModal(){
+  var alerts=buildAlertas();
+  var html='<div class="overlay overlay-dynamic" id="alertas-modal-overlay" style="z-index:2000" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)fecharAlertasModal()">' +
+    '<div class="modal" style="max-width:640px;max-height:82vh;display:flex;flex-direction:column">' +
+      '<div class="modal-hd">' +
+        '<div class="modal-hd-row" style="display:flex;align-items:center;justify-content:space-between">' +
+          '<div class="modal-title" style="color:var(--red)">⚠️ Todos os Alertas (<span id="alertas-modal-count">'+alerts.length+'</span>)</div>' +
+          '<button class="btn btn-ghost btn-sm btn-icon" onclick="fecharAlertasModal()">✕</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-body" id="alertas-modal-body">'+renderAlertasModalBody(alerts)+'</div>' +
+    '</div>' +
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+function renderAlertasModalBody(alerts){
+  if(!alerts.length) return '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">✅ Nenhum alerta pendente</div>';
+  return alerts.map(function(a){return alertaRowHtml(a,'darBaixaAlertaModal');}).join('');
+}
+function fecharAlertasModal(){
+  var ov=document.getElementById('alertas-modal-overlay');
+  if(ov) ov.remove();
+}
+function darBaixaAlertaModal(demId){
+  darBaixaAlerta(demId);
+  var alerts=buildAlertas();
+  var body=document.getElementById('alertas-modal-body');
+  if(body) body.innerHTML=renderAlertasModalBody(alerts);
+  var cnt=document.getElementById('alertas-modal-count');
+  if(cnt) cnt.textContent=alerts.length;
+}
+
 function darBaixaAlerta(demId) {
   var dem=state.demandas.find(function(d){return d.id===demId;});
   if(!dem) return;
@@ -3625,9 +3636,10 @@ function darBaixaAlerta(demId) {
   saveState();
   if(_sbUser) sbUpsertDemanda(dem);
   toast('Follow-up atualizado ✓');
-  // Re-renderiza a página atual
-  var pg=document.querySelector('.nav-item.active');
-  if(pg&&pg.dataset.page==='demandas') renderDemandas(); else renderDashboard();
+  // Re-renderiza a página atual, apenas se ela exibir o card de alertas
+  // (chamada também a partir do modal "Ver todas" e do painel de notificações, visíveis em qualquer página)
+  if(currentPage==='demandas') renderDemandas();
+  else if(currentPage==='dashboard') renderDashboard();
 }
 
 function toggleGroup(s) {
@@ -9743,25 +9755,62 @@ function toggleNotifPanel() {
   var existing=document.getElementById('notif-panel');
   if(existing){existing.remove();notifPanelOpen=false;return;}
   notifPanelOpen=true;
-  var notifs=getNotifs();
-  var items=notifs.length?notifs.map(function(n){
-    var colors={urgent:'var(--red)',warn:'var(--amber)',info:'var(--blue)'};
+  var panel='<div class="notif-panel" id="notif-panel">' +
+    '<div class="notif-hd">Notificações <span id="notif-panel-count" style="background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px"></span>' +
+    '<button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById(\'notif-panel\').remove()">✕</button></div>' +
+    '<div id="notif-panel-items"></div>' +
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend',panel);
+  refreshNotifPanelContent();
+  setTimeout(function(){document.addEventListener('click',function h(e){var p=document.getElementById('notif-panel');if(p&&!p.contains(e.target)&&!e.target.closest('[onclick*="toggleNotifPanel"]')){p.remove();document.removeEventListener('click',h);}});},100);
+}
+
+// Monta o HTML dos itens do painel de notificações. Cada item tem um botão "Dar baixa" / "✓"
+// que resolve a pendência sem navegar até a demanda/evento (event.stopPropagation).
+function renderNotifItems(notifs){
+  var colors={urgent:'var(--red)',warn:'var(--amber)',info:'var(--blue)'};
+  if(!notifs.length) return '<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">✅ Nenhuma notificação pendente</div>';
+  return notifs.map(function(n){
     var onclick=n.evId
       ? 'document.getElementById(\'notif-panel\').remove();showPage(\'calendario\');setTimeout(function(){openModalEvento(\''+n.evId+'\');},200)'
       : 'document.getElementById(\'notif-panel\').remove();openModalEdit(\''+n.id+'\');showPage(\'demandas\')';
-    return '<div class="notif-item" onclick="'+onclick+'">' +
-      '<div style="font-size:12px;font-weight:600;color:'+colors[n.tipo]+'">'+n.msg+'</div>' +
-      '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+fD(n.time)+'</div>' +
+    var btnResolve = n.evId
+      ? '<button class="alert-baixa-btn" onclick="event.stopPropagation();resolverNotifEvento(\''+n.evId+'\')" title="Marcar como concluído">✓</button>'
+      : '<button class="alert-baixa-btn" onclick="event.stopPropagation();resolverNotifDemanda(\''+n.id+'\')" title="Dar baixa no follow-up">✓ Dar baixa</button>';
+    return '<div class="notif-item" style="cursor:default;display:flex;align-items:center;gap:8px;justify-content:space-between">' +
+      '<div style="flex:1;min-width:0;cursor:pointer" onclick="'+onclick+'">' +
+        '<div style="font-size:12px;font-weight:600;color:'+colors[n.tipo]+'">'+n.msg+'</div>' +
+        '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+fD(n.time)+'</div>' +
+      '</div>'+btnResolve+
     '</div>';
-  }).join(''):
-    '<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">✅ Nenhuma notificação pendente</div>';
-  var panel='<div class="notif-panel" id="notif-panel">' +
-    '<div class="notif-hd">Notificações <span style="background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px">'+notifs.length+'</span>' +
-    '<button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById(\'notif-panel\').remove()">✕</button></div>' +
-    items +
-  '</div>';
-  document.body.insertAdjacentHTML('beforeend',panel);
-  setTimeout(function(){document.addEventListener('click',function h(e){var p=document.getElementById('notif-panel');if(p&&!p.contains(e.target)&&!e.target.closest('[onclick*="toggleNotifPanel"]')){p.remove();document.removeEventListener('click',h);}});},100);
+  }).join('');
+}
+
+function refreshNotifPanelContent(){
+  var notifs=getNotifs();
+  var countEl=document.getElementById('notif-panel-count');
+  if(countEl) countEl.textContent=notifs.length;
+  var itemsEl=document.getElementById('notif-panel-items');
+  if(itemsEl) itemsEl.innerHTML=renderNotifItems(notifs);
+  updateNotifBadge();
+}
+
+// Dar baixa direto do painel de notificações (sem abrir a demanda) — o bell fica visível em
+// qualquer página, então darBaixaAlerta só re-renderiza page-content se ela mostrar o card de alertas.
+function resolverNotifDemanda(id){
+  darBaixaAlerta(id);
+  refreshNotifPanelContent();
+}
+// Marca o evento/lembrete/tarefa como concluído direto do painel, sem navegar até o Calendário.
+function resolverNotifEvento(evId){
+  var ev=(state.eventos||[]).find(function(e){return e.id===evId;});
+  if(!ev) return;
+  ev.concluida=true;
+  saveState();
+  if(_sbUser) sbUpsertEvento(ev);
+  toast('✅ Concluído!','success');
+  if(currentPage==='calendario') renderCalendario();
+  refreshNotifPanelContent();
 }
 
 // ══ HISTÓRICO DE PREÇOS ═══════════════════════════════════
