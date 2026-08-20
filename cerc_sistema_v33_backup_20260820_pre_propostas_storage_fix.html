@@ -4235,23 +4235,6 @@ function openModalEdit(id) {
   var _ptb=document.getElementById('modal-tab-projeto-btn');
   if(_ptb) _ptb.style.display=(dem.status==='Fechado'||dem.status==='Em Execução'||dem.status==='Em Revisão')?'flex':'none';
   switchTab('geral'); document.getElementById('modal-demanda').style.display='flex';
-  _autoMigratePropostasLocais(dem);
-}
-// Reenvia ao Storage propostas antigas que ficaram salvas só em base64 local (ex: anexadas antes da correção
-// de política do bucket, ou offline) — roda em segundo plano ao abrir a demanda, sem travar o modal.
-function _autoMigratePropostasLocais(dem) {
-  if(!_sbUser || !_sb || !_sb.storage || !Array.isArray(dem.linkPropostas)) return;
-  var temPendente = dem.linkPropostas.some(function(p){ return p && p.arquivo && p.arquivo.dados && !p.url; });
-  if(!temPendente) return;
-  _uploadPendingPropostaArquivos(dem).then(function(){
-    saveState();
-    sbUpsertDemanda(dem);
-    if(editingId===dem.id) {
-      modalLinkPropostas = dem.linkPropostas.map(function(p){ return Object.assign({},p); });
-      renderLinkPropostas();
-    }
-    toast('📤 Proposta sincronizada para a nuvem — agora visível em qualquer dispositivo.', 'success');
-  }).catch(function(e){ console.warn('[Migração propostas]', e&&e.message); });
 }
 
 function addLinkFile(tipo) {
