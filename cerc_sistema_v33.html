@@ -2687,6 +2687,49 @@ async function syncAllToSupabase() {
   ]);
 }
 
+// O Supabase NUNCA guarda base64 de anexo (demandaToDbSb remove `dados` antes do upsert, de propósito,
+// pra não estourar o payload). Isso significa que qualquer anexo que só existe localmente (nunca subiu
+// pro Storage) fica "invisível" pro merge — e se a versão escolhida pelo mergeAndPush for a do Supabase,
+// esse anexo local some pra sempre assim que o resultado é persistido no localStorage logo em seguida.
+// Esta função tampa esse buraco: depois do merge, para cada demanda, se o `dados` local existir e o
+// vencedor não tiver, devolve o `dados` de volta — sem nunca sobrescrever o que já veio do vencedor.
+function _preserveLocalOnlyAnexos(demandasArr, localSnapshot) {
+  var localMap = {}; (localSnapshot||[]).forEach(function(d){ if(d&&d.id) localMap[d.id]=d; });
+  function backfillSingle(winnerObj, localObj) {
+    if(winnerObj && !winnerObj.dados && localObj && localObj.dados) winnerObj.dados = localObj.dados;
+  }
+  function backfillListByIndex(winnerList, localList) {
+    if(!Array.isArray(winnerList) || !Array.isArray(localList)) return;
+    winnerList.forEach(function(w,i){ backfillSingle(w, localList[i]); });
+  }
+  function backfillListById(winnerList, localList) {
+    if(!Array.isArray(winnerList) || !Array.isArray(localList)) return;
+    var byId = {}; localList.forEach(function(x){ if(x&&x.id) byId[x.id]=x; });
+    winnerList.forEach(function(w){ if(w&&w.id) backfillSingle(w, byId[w.id]); });
+  }
+  (demandasArr||[]).forEach(function(d){
+    var loc = localMap[d.id]; if(!loc) return;
+    backfillSingle(d.linkFilesArt, loc.linkFilesArt);
+    backfillSingle(d.linkFilesContrato, loc.linkFilesContrato);
+    if(Array.isArray(d.linkPropostas) && Array.isArray(loc.linkPropostas)) {
+      var propByid = {}; loc.linkPropostas.forEach(function(p){ if(p&&p.id) propByid[p.id]=p; });
+      d.linkPropostas.forEach(function(p){
+        if(p && p.id && propByid[p.id]) backfillSingle(p.arquivo, propByid[p.id].arquivo);
+      });
+    }
+    if(d.docsFiscais && loc.docsFiscais) {
+      backfillListByIndex(d.docsFiscais.nfs, loc.docsFiscais.nfs);
+      backfillListByIndex(d.docsFiscais.boletos, loc.docsFiscais.boletos);
+      backfillListByIndex(d.docsFiscais.laudos, loc.docsFiscais.laudos);
+    }
+    if(Array.isArray(d.subtarefas) && Array.isArray(loc.subtarefas)) {
+      d.subtarefas.forEach(function(s,i){ var ls=loc.subtarefas[i]; if(ls&&s) backfillListById(s.anexos, ls.anexos); });
+    }
+    if(Array.isArray(d.comentarios) && Array.isArray(loc.comentarios)) {
+      d.comentarios.forEach(function(c,i){ var lc=loc.comentarios[i]; if(lc&&c) backfillListByIndex(c.anexos, lc.anexos); });
+    }
+  });
+}
 async function loadStateFromSupabase() {
   if(!_sbUser) return;
   setSbStatus('syncing');
@@ -2728,12 +2771,15 @@ async function loadStateFromSupabase() {
         } else {
           var localT = _ts(loc.updatedAt);
           var sbT    = _ts(sb.updatedAt);
-          if(localT > sbT) {
-            // Local é CLARAMENTE mais recente (edição offline não sincronizada) → usa local e sobe
+          if(localT >= sbT) {
+            // Local é mais recente OU empatou (ex: acabou de salvar neste dispositivo, o push pro
+            // Supabase ainda nem terminou) → usa local e sobe. Empate favorece local de propósito:
+            // evita que um reload logo após salvar troque a versão local (rica) pela versão que
+            // acabou de subir ao Supabase (que pode estar sem anexos base64 — nunca são enviados).
             result.push(loc);
             toSync.push(loc);
           } else {
-            // Supabase é autoridade (igual ou mais recente) → usa Supabase
+            // Supabase é claramente mais recente → usa Supabase
             // Garante que tablet/celular sempre vê dados atualizados de outros dispositivos
             result.push(sb);
           }
@@ -2750,7 +2796,9 @@ async function loadStateFromSupabase() {
 
       return result;
     }
+    var _demandasPreMerge = state.demandas;
     state.demandas     = mergeAndPush(rDem.data,  state.demandas,  dbToDemanda,  demandaToDb,  'demandas');
+    _preserveLocalOnlyAnexos(state.demandas, _demandasPreMerge);
     state.clientes     = mergeAndPush(rCli.data,  state.clientes,  dbToCliente,  clienteToDb,  'clientes');
     state.despesas     = mergeAndPush(rDesp.data, state.despesas,  dbToDespesa,  despesaToDb,  'despesas');
     state.servicos     = mergeAndPush(rSvc.data,  state.servicos,  dbToServico,  servicoToDb,  'servicos');
