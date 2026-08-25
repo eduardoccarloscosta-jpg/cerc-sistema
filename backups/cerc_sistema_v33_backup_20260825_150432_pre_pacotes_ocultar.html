@@ -6385,14 +6385,8 @@ function getProfRate(nome) {
   var sv=state.servicos.find(function(s){return s.nome===nome;});
   return sv?sv.valorBase:(typeof PROF_HH!=='undefined'&&PROF_HH[nome]?PROF_HH[nome]:0);
 }
-function pacotesOcultosMap(){
-  var m={};
-  (precState.pacotes||[]).forEach(function(p){if(p.oculto)m[p.id]=true;});
-  return m;
-}
 function calcPrec() {
-  var ocultos=pacotesOcultosMap();
-  var cp=precState.pessoal.reduce(function(a,b){if(b.pacoteId&&ocultos[b.pacoteId])return a;return a+(b.qtd||0)*(b.pessoas||1)*(getProfRate(b.prof)||150);},0);
+  var cp=precState.pessoal.reduce(function(a,b){return a+(b.qtd||0)*(b.pessoas||1)*(getProfRate(b.prof)||150);},0);
   var co=precState.ops.reduce(function(a,b){return a+(b.qtd||0)*(b.custo||0);},0);
   var sub=cp+co;
   var cPct=precState.complexidade.indexOf('Alto')>=0?0.12:precState.complexidade.indexOf('Médio')>=0?0.05:0.02;
@@ -6420,34 +6414,15 @@ function renderPrecificacao() {
   var pacotes=precState.pacotes||[];
   var pacotesHtml=pacotes.map(function(pac){
     var itensPac=precState.pessoal.map(function(p,i){return {p:p,i:i};}).filter(function(x){return x.p.pacoteId===pac.id;});
-    var cpPac=itensPac.reduce(function(a,x){return a+(x.p.qtd||0)*(x.p.pessoas||1)*(getProfRate(x.p.prof)||0);},0);
-    // Rateio proporcional: o pacote carrega a mesma fatia do custo operacional que representa do custo de pessoal ativo,
-    // e recebe as mesmas % de lucro/Caixa SS/ISS já configuradas na seção 4 — assim a soma dos pacotes bate com o Valor Bruto total.
-    var shareOfCp=res.cp>0?cpPac/res.cp:0;
-    var coPac=res.co*shareOfCp;
-    var subPac=cpPac+coPac;
-    var lucroPac=subPac*res.totPct;
-    var ssPac=(subPac+lucroPac)*0.05;
-    var semISSPac=subPac+lucroPac+ssPac;
-    var issPac=semISSPac*0.105;
-    var brutoPac=semISSPac+issPac;
-    var pctTotal=res.bruto>0?(brutoPac/res.bruto*100):0;
-    var oculto=!!pac.oculto;
-    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;opacity:'+(oculto?'.55':'1')+'">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'+
+    var subtotalPac=itensPac.reduce(function(a,x){return a+(x.p.qtd||0)*(x.p.pessoas||1)*(getProfRate(x.p.prof)||0);},0);
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:'+(itensPac.length?'8px':'0')+'">'+
         '<input class="finput" style="font-size:12px;font-weight:700;padding:5px 8px;flex:1" value="'+(pac.nome||'')+'" placeholder="Nome do pacote/etapa" oninput="setPacoteNome(\''+pac.id+'\',this.value)"/>'+
-        (oculto?'':'<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;white-space:nowrap" onclick="addLinhaPacote(\''+pac.id+'\')">+ Linha</button>')+
-        '<button class="btn btn-ghost btn-sm btn-icon" title="'+(oculto?'Reexibir pacote':'Ocultar pacote (fica salvo, mas some do valor cobrado)')+'" onclick="togglePacoteOculto(\''+pac.id+'\')">'+(oculto?'👁':'🙈')+'</button>'+
-        '<button class="btn btn-danger btn-sm btn-icon" title="Excluir pacote definitivamente" onclick="removePacote(\''+pac.id+'\')">✕</button>'+
+        '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;white-space:nowrap" onclick="addLinhaPacote(\''+pac.id+'\')">+ Linha</button>'+
+        '<button class="btn btn-danger btn-sm btn-icon" title="Remover pacote" onclick="removePacote(\''+pac.id+'\')">✕</button>'+
       '</div>'+
-      (oculto?'<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">🙈 Oculto — não entra no valor cobrado, mas fica salvo na precificação</div>':'')+
       (itensPac.length?pesColHd+itensPac.map(function(x){return pessoalRowHtml(x.p,x.i);}).join(''):'<div style="font-size:11px;color:var(--text3)">Nenhuma linha ainda — clique em "+ Linha"</div>')+
-      (itensPac.length?(
-        '<div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:7px;border-top:1px solid var(--border);margin-top:2px">'+
-          '<span style="font-size:11px;color:var(--text2)">Mão de obra: <strong style="font-family:\'JetBrains Mono\',monospace">'+fR(cpPac)+'</strong></span>'+
-          '<span style="font-size:12px;font-weight:700;color:'+(oculto?'var(--text3)':'var(--accent)')+'">'+(oculto?'Seria':'Valor do pacote')+': <span style="font-family:\'JetBrains Mono\',monospace">'+fR(brutoPac)+'</span> <small style="font-weight:600">('+pctTotal.toFixed(1)+'%)</small></span>'+
-        '</div>'
-      ):'')+
+      (itensPac.length?'<div style="text-align:right;padding-top:6px;border-top:1px solid var(--border);margin-top:2px;font-size:11px;color:var(--text2)">Subtotal do pacote: <strong style="font-family:\'JetBrains Mono\',monospace">'+fR(subtotalPac)+'</strong></div>':'')+
     '</div>';
   }).join('');
   var itensSemPacote=precState.pessoal.map(function(p,i){return {p:p,i:i};}).filter(function(x){return !x.p.pacoteId;});
@@ -6590,7 +6565,7 @@ function addPacote(){
   // Remove linhas sem pacote que ainda estão totalmente em branco (placeholder inicial), para não sobrar uma linha solta ao lado do pacote recém-criado
   precState.pessoal=precState.pessoal.filter(function(p){return p.pacoteId||p.prof||(p.qtd||0)>0||(p.obs||'').trim();});
   var id=uid();
-  precState.pacotes.push({id:id,nome:'Novo Pacote',oculto:false});
+  precState.pacotes.push({id:id,nome:'Novo Pacote'});
   precState.pessoal.push({prof:'',qtd:0,pessoas:1,obs:'',pacoteId:id});
   renderPrecificacao();
 }
@@ -6606,10 +6581,6 @@ function removePacote(pacId){
 function setPacoteNome(pacId,val){
   var pac=(precState.pacotes||[]).find(function(p){return p.id===pacId;});
   if(pac) pac.nome=val;
-}
-function togglePacoteOculto(pacId){
-  var pac=(precState.pacotes||[]).find(function(p){return p.id===pacId;});
-  if(pac){pac.oculto=!pac.oculto;renderPrecificacao();}
 }
 
 var _precEditingDemandaId = null; // id da demanda que está sendo editada na precif
@@ -7131,9 +7102,7 @@ function puxarPrecificacao() {
     .filter(function(p){return !p.pacoteId;})
     .map(function(p){ return {desc: p.prof+' ('+p.qtd+' '+( p.pessoas>1?p.pessoas+'×':'')+(PROF_UNID[p.prof]||'uni')+')', valor: (p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0)}; });
   // Cada pacote (ex: etapas de uma NR-12) vira um único item de proposta, com o valor já separado
-  // Pacotes ocultos ficam salvos na precificação mas não entram na proposta/cobrança
   pacotes.forEach(function(pac){
-    if(pac.oculto) return;
     var itensPac = itensValidos.filter(function(p){return p.pacoteId===pac.id;});
     if(!itensPac.length) return;
     var valorPac = itensPac.reduce(function(a,p){return a+(p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0);},0);
