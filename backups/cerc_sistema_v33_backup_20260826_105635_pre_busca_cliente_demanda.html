@@ -1441,13 +1441,14 @@ body::after{
         </div>
       </div>
       <div class="fsec">
-        <div class="fsec-title">Cliente</div>
+        <div class="fsec-title">Cliente
+          <button onclick="showClientPicker()" class="btn btn-ghost btn-sm" style="margin-left:8px;font-size:12px;font-weight:600;color:var(--accent);border-color:#C4B5FD;padding:3px 10px;border-radius:20px;text-transform:none;letter-spacing:0">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+  Selecionar do cadastro
+</button>
+        </div>
         <div class="fgrid2">
-          <div class="fg" style="position:relative">
-            <label>Empresa / Cliente</label>
-            <input class="finput" id="f-cliente" placeholder="🔍 Buscar cliente..." autocomplete="off" oninput="filterDemCliente(this.value)" onfocus="this.select();filterDemCliente(this.value)" onblur="onDemCliBlur()"/>
-            <div id="dem-cli-results" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;max-height:220px;overflow-y:auto;z-index:20;box-shadow:var(--shm)"></div>
-          </div>
+          <div class="fg"><label>Empresa / Cliente</label><input class="finput" id="f-cliente" placeholder="Nome da empresa"/></div>
           <div class="fg"><label>Contato</label><input class="finput" id="f-contato"/></div>
           <div class="fg"><label>E-mail</label><input class="finput" id="f-email" type="email"/></div>
           <div class="fg"><label>Telefone</label><input class="finput" id="f-telefone"/></div>
@@ -5020,32 +5021,24 @@ function deletarPrecHist(snapId){
   toast('Versão removida do histórico');
 }
 
-// ══ SELECIONAR CLIENTE (busca com resultados em tempo real, igual à Precificação) ═══
+// ══ SELECIONAR CLIENTE ════════════════════════════════════
+function showClientPicker() {
+  if(!state.clientes.length){toast('Nenhum cliente cadastrado. Acesse Clientes → + Novo Cliente');return;}
+  var opts=state.clientes.map(function(c,i){var loc=(c.cidade||c.uf)?' ['+((c.cidade||'')+(c.cidade&&c.uf?' — ':'')+( c.uf||''))+']':'';return '<option value="'+i+'">'+c.empresa+loc+(c.contato?' — '+c.contato:'')+'</option>';}).join('');
+  var html='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:2000;display:flex;align-items:center;justify-content:center">' +
+    '<div style="background:var(--surface);border-radius:var(--rl);padding:20px;min-width:300px;box-shadow:var(--shm)">' +
+    '<div style="font-size:14px;font-weight:700;margin-bottom:12px">Selecionar Cliente</div>' +
+    '<select id="cli-pick-sel" class="finput" style="margin-bottom:12px">'+opts+'</select>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+    '<button class="btn btn-ghost" onclick="this.closest(\'div[style*=fixed]\').remove()">Cancelar</button>' +
+    '<button class="btn btn-primary" onclick="applyClient(document.getElementById(\'cli-pick-sel\').value);this.closest(\'div[style*=fixed]\').remove()">Selecionar</button>' +
+    '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
 function applyClient(idx) {
   var c=state.clientes[parseInt(idx)];if(!c) return;
   setF('f-cliente',c.empresa);setF('f-contato',c.contato||'');setF('f-email',c.email||'');setF('f-telefone',c.telefone||'');
   toast('Cliente preenchido: '+c.empresa);
-}
-function filterDemCliente(q){
-  var resEl=document.getElementById('dem-cli-results'); if(!resEl) return;
-  q=(q||'').trim().toLowerCase();
-  var list=state.clientes.map(function(c,i){return {i:i,c:c};}).sort(function(a,b){return (a.c.empresa||'').localeCompare(b.c.empresa||'','pt-BR',{sensitivity:'base'});});
-  var filtered=!q?list:list.filter(function(item){return (item.c.empresa||'').toLowerCase().indexOf(q)>=0;});
-  resEl.innerHTML=filtered.length?filtered.slice(0,50).map(function(item){
-    var c=item.c;var loc=(c.cidade||c.uf)?' ['+((c.cidade||'')+(c.cidade&&c.uf?' — ':'')+( c.uf||''))+']':'';
-    return '<div style="padding:7px 12px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border)" onmousedown="selectDemCliente('+item.i+')" onmouseover="this.style.background=\'var(--surface)\'" onmouseout="this.style.background=\'\'">'+propEscH(c.empresa)+loc+(c.contato?' — '+propEscH(c.contato):'')+'</div>';
-  }).join(''):'<div style="padding:8px 12px;font-size:12px;color:var(--text3)">Nenhum cliente encontrado</div>';
-  resEl.style.display='block';
-}
-function selectDemCliente(idx){
-  applyClient(idx);
-  var resEl=document.getElementById('dem-cli-results'); if(resEl) resEl.style.display='none';
-}
-function onDemCliBlur(){
-  // Pequeno atraso para o onmousedown de um item da lista disparar antes do blur escondê-la
-  setTimeout(function(){
-    var resEl=document.getElementById('dem-cli-results'); if(resEl) resEl.style.display='none';
-  },150);
 }
 
 // ══ SALVAR DEMANDA ════════════════════════════════════════
