@@ -6617,17 +6617,7 @@ function renderPrecificacao() {
         '<div class="rp-row"><span style="font-weight:700;font-size:14px">= VALOR LÍQUIDO</span><span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:16px;color:var(--s-con)">'+fR(res.liq)+'</span></div>' +
         '<div style="font-size:10px;color:var(--text3);margin-top:3px;padding-bottom:4px">Custo Pessoal: '+fR(res.cp)+' [Líq.] • Lucro: '+fR(res.lucro)+'</div>' +
       '</div>' +
-      // Valor que efetivamente vai pra Demanda: reconciliado com o que aparece em "Valores dos Pacotes" (mão de obra+margem)
-      // + Custo Operacional (a custo) — sem a Caixa SS embutida, que fica só nesta barra lateral como referência interna.
-      // ISS é "estourado" pra cima da soma pra continuar valendo 10,5% do Bruto e ainda assim bater: Pacotes+CustoOp+ISS = Bruto.
-      (function(){
-        var baseSemISS=res.cp*(1+res.totPct)+res.co;
-        var novoBruto=baseSemISS/0.895;
-        var novoIss=novoBruto*0.105;
-        var novoLiq=novoBruto-novoIss-res.co;
-        var lbl=_precEditingDemandaId?'✅ Aplicar na Demanda →':'Usar em Nova Demanda →';
-        return '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;font-size:14px;padding:10px" onclick="usarNaDemanda('+novoBruto.toFixed(2)+','+novoIss.toFixed(2)+','+res.co.toFixed(2)+','+novoLiq.toFixed(2)+')">'+lbl+'</button>';
-      })() +
+(_precEditingDemandaId  ? '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;font-size:14px;padding:10px" onclick="usarNaDemanda('+res.bruto.toFixed(2)+','+res.iss.toFixed(2)+','+res.co.toFixed(2)+','+res.liq.toFixed(2)+')">✅ Aplicar na Demanda →</button>'  : '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;font-size:14px;padding:10px" onclick="usarNaDemanda('+res.bruto.toFixed(2)+','+res.iss.toFixed(2)+','+res.co.toFixed(2)+','+res.liq.toFixed(2)+')">Usar em Nova Demanda →</button>') +
 '<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;font-size:12px;padding:7px;color:var(--text3)" onclick="novaPrec()">🗑 Limpar / Nova Precificação</button>' +
     '</div>';
 
