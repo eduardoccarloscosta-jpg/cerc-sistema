@@ -6385,8 +6385,6 @@ function getProfRate(nome) {
   var sv=state.servicos.find(function(s){return s.nome===nome;});
   return sv?sv.valorBase:(typeof PROF_HH!=='undefined'&&PROF_HH[nome]?PROF_HH[nome]:0);
 }
-var ICON_EYE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-var ICON_EYE_OFF='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 function pacotesOcultosMap(){
   var m={};
   (precState.pacotes||[]).forEach(function(p){if(p.oculto)m[p.id]=true;});
@@ -6433,10 +6431,10 @@ function renderPrecificacao() {
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'+
         '<input class="finput" style="font-size:12px;font-weight:700;padding:5px 8px;flex:1" value="'+(pac.nome||'')+'" placeholder="Nome do pacote/etapa" oninput="setPacoteNome(\''+pac.id+'\',this.value)"/>'+
         (oculto?'':'<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;white-space:nowrap" onclick="addLinhaPacote(\''+pac.id+'\')">+ Linha</button>')+
-        '<button class="btn btn-ghost btn-sm btn-icon" title="'+(oculto?'Reexibir pacote':'Ocultar pacote (fica salvo, mas some do valor cobrado)')+'" onclick="togglePacoteOculto(\''+pac.id+'\')">'+(oculto?ICON_EYE:ICON_EYE_OFF)+'</button>'+
+        '<button class="btn btn-ghost btn-sm btn-icon" title="'+(oculto?'Reexibir pacote':'Ocultar pacote (fica salvo, mas some do valor cobrado)')+'" onclick="togglePacoteOculto(\''+pac.id+'\')">'+(oculto?'👁':'🙈')+'</button>'+
         '<button class="btn btn-danger btn-sm btn-icon" title="Excluir pacote definitivamente" onclick="removePacote(\''+pac.id+'\')">✕</button>'+
       '</div>'+
-      (oculto?'<div style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">'+ICON_EYE_OFF+' Oculto — não entra no valor cobrado, mas fica salvo na precificação</div>':'')+
+      (oculto?'<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">🙈 Oculto — não entra no valor cobrado, mas fica salvo na precificação</div>':'')+
       (itensPac.length?pesColHd+itensPac.map(function(x){return pessoalRowHtml(x.p,x.i);}).join(''):'<div style="font-size:11px;color:var(--text3)">Nenhuma linha ainda — clique em "+ Linha"</div>')+
       (itensPac.length?(
         '<div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:7px;border-top:1px solid var(--border);margin-top:2px">'+
