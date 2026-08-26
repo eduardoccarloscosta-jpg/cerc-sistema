@@ -6395,22 +6395,17 @@ function getProfRate(nome) {
 var ICON_EYE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 var ICON_EYE_OFF='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 var ICON_COPY='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
-// Calcula o valor de cada pacote (mão de obra + margem de lucro + fatia proporcional do Caixa SS —
-// mesma fórmula da tela de Precificação) a partir de um precDados salvo numa demanda, pra exibir/copiar
-// na aba Financeiro sem reabrir a Precificação. A soma de tudo bate com o Valor Bruto cheio (com Caixa SS).
+// Calcula o valor de cada pacote (mão de obra + margem de lucro — mesma fórmula da tela de Precificação)
+// a partir de um precDados salvo numa demanda, pra exibir/copiar na aba Financeiro sem reabrir a Precificação.
 function calcPacotesValores(pd){
   if(!pd || !Array.isArray(pd.pessoal) || !pd.pessoal.length || !Array.isArray(pd.pacotes) || !pd.pacotes.length) return [];
-  var ocultos={}; pd.pacotes.forEach(function(p){if(p.oculto)ocultos[p.id]=true;});
-  var cp=pd.pessoal.reduce(function(a,p){if(p.pacoteId&&ocultos[p.pacoteId])return a;return a+(p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0);},0);
-  var co=(pd.ops||[]).reduce(function(a,o){return a+(o.qtd||0)*(o.custo||0);},0);
   var cPct=(pd.complexidade||'').indexOf('Alto')>=0?0.12:(pd.complexidade||'').indexOf('Médio')>=0?0.05:0.02;
   var tPct={'1--10':0.02,'10--100':0.05,'100--300':0.08,'300 + --':0.10}[pd.tamanho]||0.05;
   var fPct=(parseFloat(pd.fixo)||0)/100;
   var totPct=cPct+tPct+fPct;
-  var sub=cp+co, lucro=sub*totPct, ss=(sub+lucro)*0.05;
   return pd.pacotes.filter(function(pac){return !pac.oculto;}).map(function(pac){
     var cpPac=pd.pessoal.filter(function(p){return p.pacoteId===pac.id;}).reduce(function(a,p){return a+(p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0);},0);
-    return {nome:pac.nome||'Pacote', valor:cpPac*(1+totPct)+ss*(cp>0?cpPac/cp:0)};
+    return {nome:pac.nome||'Pacote', valor:cpPac*(1+totPct)};
   }).filter(function(it){return it.valor>0;});
 }
 function renderPacotesFinanceiro(dem){
@@ -6472,11 +6467,10 @@ function renderPrecificacao() {
   var pacotesHtml=pacotes.map(function(pac){
     var itensPac=precState.pessoal.map(function(p,i){return {p:p,i:i};}).filter(function(x){return x.p.pacoteId===pac.id;});
     var cpPac=itensPac.reduce(function(a,x){return a+(x.p.qtd||0)*(x.p.pessoas||1)*(getProfRate(x.p.prof)||0);},0);
-    // Valor pronto pra copiar pra proposta: mão de obra + margem de lucro + fatia proporcional do Caixa SS.
-    // Custo Operacional fica de fora (é um valor único, já mostrado separado na seção 3) — mas carrega sua própria
-    // margem quando vai pra Demanda/Proposta, então a soma de tudo continua batendo com o Valor Bruto cheio.
-    var valorPac=cpPac*(1+res.totPct)+res.ss*(res.cp>0?cpPac/res.cp:0);
-    var baseTotal=res.cp*(1+res.totPct)+res.ss; // soma de mão de obra+margem+Caixa SS de todos os pacotes/itens ativos — as % somam 100% entre si
+    // Valor pronto pra copiar pra proposta: mão de obra do pacote + margem de lucro sobre ela.
+    // Custo Operacional fica de fora (é um valor único, já mostrado separado na seção 3) — sem rateio, sem ISS/Caixa SS embutidos.
+    var valorPac=cpPac*(1+res.totPct);
+    var baseTotal=res.cp*(1+res.totPct); // soma de mão de obra+margem de todos os pacotes/itens ativos — as % somam 100% entre si
     var pctTotal=baseTotal>0?(valorPac/baseTotal*100):0;
     var oculto=!!pac.oculto;
     return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;opacity:'+(oculto?'.55':'1')+'">'+
@@ -6626,14 +6620,13 @@ function renderPrecificacao() {
       // Valor que efetivamente vai pra Demanda: reconciliado com o que aparece em "Valores dos Pacotes" (mão de obra+margem)
       // + Custo Operacional (a custo) — sem a Caixa SS embutida, que fica só nesta barra lateral como referência interna.
       // ISS é "estourado" pra cima da soma pra continuar valendo 10,5% do Bruto e ainda assim bater: Pacotes+CustoOp+ISS = Bruto.
-      // Valor que vai pra Demanda: o mesmo Valor Bruto/ISS cheios desta barra lateral (nada some) — só redistribuídos
-      // entre "Pacotes" (mão de obra + margem + Caixa SS) e "Custo Operacional" (que passa a levar sua própria margem
-      // também), pra Pacotes + Custo Operacional + ISS baterem exatamente com o Bruto em qualquer uma das telas.
       (function(){
-        var novoCo=res.co*(1+res.totPct);
-        var novoLiq=res.bruto-res.iss-novoCo;
+        var baseSemISS=res.cp*(1+res.totPct)+res.co;
+        var novoBruto=baseSemISS/0.895;
+        var novoIss=novoBruto*0.105;
+        var novoLiq=novoBruto-novoIss-res.co;
         var lbl=_precEditingDemandaId?'✅ Aplicar na Demanda →':'Usar em Nova Demanda →';
-        return '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;font-size:14px;padding:10px" onclick="usarNaDemanda('+res.bruto.toFixed(2)+','+res.iss.toFixed(2)+','+novoCo.toFixed(2)+','+novoLiq.toFixed(2)+')">'+lbl+'</button>';
+        return '<button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;font-size:14px;padding:10px" onclick="usarNaDemanda('+novoBruto.toFixed(2)+','+novoIss.toFixed(2)+','+res.co.toFixed(2)+','+novoLiq.toFixed(2)+')">'+lbl+'</button>';
       })() +
 '<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;font-size:12px;padding:7px;color:var(--text3)" onclick="novaPrec()">🗑 Limpar / Nova Precificação</button>' +
     '</div>';
@@ -7185,11 +7178,10 @@ function puxarPrecificacao() {
   var res = calcPrec();
   var itensValidos = precState.pessoal.filter(function(p){return p.qtd>0 && p.prof;});
   var pacotes = (precState.pacotes||[]).filter(function(pac){return !pac.oculto;});
-  // Valor de cada linha/pacote = mão de obra + margem de lucro + fatia proporcional do Caixa SS — o mesmo número
-  // que já aparece no "Valor do pacote" da Precificação e no Financeiro da Demanda, pronto pra copiar sem conta por
-  // fora. Custo Operacional vira uma linha única, mas com sua própria margem — assim a soma de tudo + ISS bate
-  // exatamente com o Valor Bruto cheio (nada fica escondido).
-  function valorComMargem(cpBucket){ return cpBucket*(1+res.totPct)+res.ss*(res.cp>0?cpBucket/res.cp:0); }
+  // Valor de cada linha/pacote = mão de obra + margem de lucro apenas — o mesmo número que já aparece
+  // no "Valor do pacote" da tela de Precificação, pronto pra copiar direto pra proposta sem conta por fora.
+  // Custo Operacional continua um valor único e separado (não é rateado entre os itens).
+  function valorComMargem(cpBucket){ return cpBucket*(1+res.totPct); }
   propState.itens = itensValidos
     .filter(function(p){return !p.pacoteId;})
     .map(function(p){
@@ -7204,8 +7196,8 @@ function puxarPrecificacao() {
     var cpPac = itensPac.reduce(function(a,p){return a+(p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0);},0);
     propState.itens.push({desc: pac.nome||'Pacote', valor: valorComMargem(cpPac)});
   });
-  if(res.co>0) propState.itens.push({desc:'Custos Operacionais', valor: res.co*(1+res.totPct)});
-  propState.itens.push({desc:'Despesas, NF e Impostos (ISS 10,5%)', valor: res.iss});
+  if(res.co>0) propState.itens.push({desc:'Custos Operacionais', valor: res.co});
+  propState.itens.push({desc:'Despesas, NF e Impostos (ISS 10,5% + Caixa SS 5%)', valor: res.iss+res.ss});
   renderPropostaOverlay();
   renderPropPreview();
   toast('Dados da precificação importados!','success');
