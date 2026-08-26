@@ -7610,7 +7610,7 @@ function imprimirProposta() {
   document.body.appendChild(pr);
   var sty = document.createElement('style');
   sty.id = 'prop-print-sty';
-  sty.textContent = '@media print{body>*:not(#prop-print-root){display:none!important}#prop-print-root{display:block!important}.pwm{display:none!important}}';
+  sty.textContent = '@media print{body>*:not(#prop-print-root){display:none!important}#prop-print-root{display:block!important}}';
   document.head.appendChild(sty);
   window.print();
   setTimeout(function(){
