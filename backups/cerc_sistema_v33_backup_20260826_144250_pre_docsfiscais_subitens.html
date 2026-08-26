@@ -2146,11 +2146,11 @@ var OPS_DEFAULT = [
   {id:'o9',desc:'ART (até R$ 15.000)',tipo:'uni.',custo:108.39,qtd:0,editCusto:true},
   {id:'o10',desc:'ART (> R$ 15.000)',tipo:'uni.',custo:285.59,qtd:0,editCusto:true},
   {id:'o11',desc:"EPI's",tipo:'uni.',custo:0,qtd:0,editCusto:true},
-  {id:'o12',desc:'Terceirização',tipo:'uni.',custo:0,qtd:0,editCusto:true,hasSubitens:true,subitens:[]},
+  {id:'o12',desc:'Terceirização',tipo:'uni.',custo:0,qtd:0,editCusto:true,hasObs:true,obs:''},
   {id:'o13',desc:'Pedágio',tipo:'uni.',custo:300,qtd:0,editCusto:true},
-  {id:'o14',desc:'Materiais Operacionais',tipo:'uni.',custo:0,qtd:0,editCusto:true,hasSubitens:true,subitens:[]},
+  {id:'o14',desc:'Materiais Operacionais',tipo:'uni.',custo:0,qtd:0,editCusto:true,hasObs:true,obs:''},
   {id:'o15',desc:'Aluguel de Carro',tipo:'Diária',custo:600,qtd:0,editCusto:true},
-  {id:'o16',desc:'Software / Licenças',tipo:'uni.',custo:0,qtd:0,editCusto:true,hasSubitens:true,subitens:[]}
+  {id:'o16',desc:'Software / Licenças',tipo:'uni.',custo:0,qtd:0,editCusto:true,hasObs:true,obs:''}
 ];
 
 // ══ CUSTOM STATUS DROPDOWN ═══════════════════════════════════════
@@ -2360,7 +2360,7 @@ function demandaToDb(d) {
     motivo_perda: d.motivoPerda||'', categoria_perda: String(d.categoriaPerda||''),
     plano_acao_perda: d.planoAcaoPerda||'', data_resgate: d.dataResgate||'',
     log: d.log||[], subtarefas: d.subtarefas||[], comentarios: d.comentarios||[],
-    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||'',url:doc.url||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip)};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
+    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip)};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
     parcelas: d.parcelas||[],
     pagamentos_parciais: d.pagamentosParciais||[],
     total_parcelas: parseInt(d.totalParcelas)||0,
@@ -4296,7 +4296,6 @@ function openModalEdit(id) {
   if(_ptb) _ptb.style.display=(dem.status==='Fechado'||dem.status==='Em Execução'||dem.status==='Em Revisão')?'flex':'none';
   switchTab('geral'); document.getElementById('modal-demanda').style.display='flex';
   _autoMigratePropostasLocais(dem);
-  _autoMigrateDocsFiscaisLocais(dem);
 }
 // Reenvia ao Storage propostas antigas que ficaram salvas só em base64 local (ex: anexadas antes da correção
 // de política do bucket, ou offline) — roda em segundo plano ao abrir a demanda, sem travar o modal.
@@ -4313,40 +4312,6 @@ function _autoMigratePropostasLocais(dem) {
     }
     toast('📤 Proposta sincronizada para a nuvem — agora visível em qualquer dispositivo.', 'success');
   }).catch(function(e){ console.warn('[Migração propostas]', e&&e.message); });
-}
-// Reenvia ao Storage NF/Boleto/Laudo antigos que ficaram salvos só em base64 local — mesma lógica das propostas
-async function _uploadPendingDocsFiscais(dem) {
-  if(!_sb || !_sb.storage || !dem.docsFiscais) return;
-  var arrs=['nfs','boletos','laudos'];
-  for(var a=0;a<arrs.length;a++){
-    var lista=dem.docsFiscais[arrs[a]]||[];
-    for(var i=0;i<lista.length;i++){
-      var doc=lista[i];
-      if(doc && doc.dados && !doc.url){
-        try{
-          var blob=dataUrlToBlob(doc.dados);
-          if(!blob) continue;
-          var url=await _uploadPropostaArquivo(blob, doc.tipo, dem.id, doc.nome, 'docfiscais');
-          if(url){ doc.url=url; delete doc.dados; }
-        }catch(e){ console.warn('[Storage] upload pendente de doc fiscal falhou:', e.message); }
-      }
-    }
-  }
-}
-function _autoMigrateDocsFiscaisLocais(dem) {
-  if(!_sbUser || !_sb || !_sb.storage || !dem.docsFiscais) return;
-  var arrs=['nfs','boletos','laudos'];
-  var temPendente = arrs.some(function(a){ return (dem.docsFiscais[a]||[]).some(function(doc){ return doc && doc.dados && !doc.url; }); });
-  if(!temPendente) return;
-  _uploadPendingDocsFiscais(dem).then(function(){
-    saveState();
-    sbUpsertDemanda(dem);
-    if(editingId===dem.id) {
-      modalDocsFiscais={nfs:(dem.docsFiscais.nfs||[]).slice(),boletos:(dem.docsFiscais.boletos||[]).slice(),laudos:(dem.docsFiscais.laudos||[]).slice()};
-      renderDocsFiscais();
-    }
-    toast('📤 Documentos fiscais sincronizados para a nuvem — agora visíveis em qualquer dispositivo.', 'success');
-  }).catch(function(e){ console.warn('[Migração docs fiscais]', e&&e.message); });
 }
 
 function addLinkFile(tipo) {
@@ -4385,9 +4350,9 @@ function dataUrlToBlobUrl(dataUrl) {
   return blob ? URL.createObjectURL(blob) : null;
 }
 // Sobe um arquivo de proposta para o Supabase Storage (bucket 'app') e retorna a URL pública
-async function _uploadPropostaArquivo(fileOrBlob, tipo, demId, nome, pasta) {
+async function _uploadPropostaArquivo(fileOrBlob, tipo, demId, nome) {
   if(!_sb || !_sb.storage) return null;
-  var path = (pasta||'propostas')+'/'+(demId||'novo')+'/'+uid()+'_'+(nome||'arquivo').replace(/[^a-zA-Z0-9._-]/g,'_');
+  var path = 'propostas/'+(demId||'novo')+'/'+uid()+'_'+(nome||'arquivo').replace(/[^a-zA-Z0-9._-]/g,'_');
   var res = await _sb.storage.from('app').upload(path, fileOrBlob, {contentType:tipo||'application/octet-stream', upsert:true});
   if(res.error) throw res.error;
   var pub = _sb.storage.from('app').getPublicUrl(path);
@@ -4928,43 +4893,21 @@ function addDocFiscal(tipo){
   input.onchange=function(e){
     var file=e.target.files[0];if(!file) return;
     if(file.size>5*1024*1024){toast('Limite: 5MB por arquivo.','danger');return;}
-    var arr=tipo==='nf'?'nfs':tipo==='boleto'?'boletos':'laudos';
-    if(!modalDocsFiscais[arr]) modalDocsFiscais[arr]=[];
-    var doc={nome:file.name,tipo:file.type,tamanho:file.size,data:new Date().toISOString()};
-    if(tipo==='boleto') doc.prazo='30 dias';
-    modalDocsFiscais[arr].push(doc);
-    var idx=modalDocsFiscais[arr].length-1;
-    var msgOk=tipo==='nf'?'Nota Fiscal anexada!':tipo==='boleto'?'Boleto anexado!':'Laudo/Relatório anexado!';
-    function salvarLocalOffline(){
-      var rd=new FileReader();
-      rd.onload=function(ev){
-        modalDocsFiscais[arr][idx].dados=ev.target.result;
-        renderDocsFiscais();
-        toast('Sem conexão: arquivo salvo só neste dispositivo. Abra o sistema online para sincronizar.','warning');
-      };
-      rd.readAsDataURL(file);
-    }
-    renderDocsFiscais();
-    if(!_sb || !_sb.storage) { salvarLocalOffline(); return; }
-    toast('Enviando arquivo...','info');
-    _uploadPropostaArquivo(file, file.type, editingId, file.name, 'docfiscais').then(function(url){
-      if(!url) { salvarLocalOffline(); return; }
-      modalDocsFiscais[arr][idx].url=url;
+    var rd=new FileReader();
+    rd.onload=function(ev){
+      var arr=tipo==='nf'?'nfs':tipo==='boleto'?'boletos':'laudos';
+      if(!modalDocsFiscais[arr]) modalDocsFiscais[arr]=[];
+      var doc={nome:file.name,tipo:file.type,tamanho:file.size,dados:ev.target.result,data:new Date().toISOString()};
+      if(tipo==='boleto') doc.prazo='30 dias';
+      modalDocsFiscais[arr].push(doc);
       renderDocsFiscais();
-      toast(msgOk,'success');
-    }).catch(function(err){
-      console.warn('[Storage] upload de doc fiscal falhou:', err&&err.message);
-      toast('Falha ao enviar ao servidor, salvando localmente...','warning');
-      salvarLocalOffline();
-    });
+      toast(tipo==='nf'?'Nota Fiscal anexada!':tipo==='boleto'?'Boleto anexado!':'Laudo/Relatório anexado!');
+    };
+    rd.readAsDataURL(file);
   };
   input.click();
 }
-function viewDocIdx(arr,i){
-  var doc=(modalDocsFiscais[arr]||[])[i];if(!doc) return;
-  if(doc.url){ openFileViewer(doc.url,doc.nome,doc.tipo); return; }
-  openFileViewer(doc.dados,doc.nome,doc.tipo);
-}
+function viewDocIdx(arr,i){var doc=(modalDocsFiscais[arr]||[])[i];if(!doc) return;openFileViewer(doc.dados,doc.nome,doc.tipo);}
 function removeDocIdx(arr,i){if(modalDocsFiscais[arr]) modalDocsFiscais[arr].splice(i,1);renderDocsFiscais();}
 // Compat
 function viewDoc(tipo){viewDocIdx(tipo==='nf'?'nfs':'boletos',0);}
@@ -6508,15 +6451,6 @@ function copiarValorPacote(valor){
   if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fail);
   else fail();
 }
-// Valor de um item do Custo Operacional: itens com subitens somam os subitens; os demais usam QTD × R$/uni.
-// Mantém compatibilidade com dados antigos (QTD/custo preenchidos antes de existir a lista de subitens).
-function opValor(op){
-  if(op.hasSubitens){
-    if(op.subitens&&op.subitens.length) return op.subitens.reduce(function(a,s){return a+(s.valor||0);},0);
-    return (op.qtd||0)*(op.custo||0);
-  }
-  return (op.qtd||0)*(op.custo||0);
-}
 function pacotesOcultosMap(){
   var m={};
   (precState.pacotes||[]).forEach(function(p){if(p.oculto)m[p.id]=true;});
@@ -6525,7 +6459,7 @@ function pacotesOcultosMap(){
 function calcPrec() {
   var ocultos=pacotesOcultosMap();
   var cp=precState.pessoal.reduce(function(a,b){if(b.pacoteId&&ocultos[b.pacoteId])return a;return a+(b.qtd||0)*(b.pessoas||1)*(getProfRate(b.prof)||150);},0);
-  var co=precState.ops.reduce(function(a,b){return a+opValor(b);},0);
+  var co=precState.ops.reduce(function(a,b){return a+(b.qtd||0)*(b.custo||0);},0);
   var sub=cp+co;
   var cPct=precState.complexidade.indexOf('Alto')>=0?0.12:precState.complexidade.indexOf('Médio')>=0?0.05:0.02;
   var tPct={'1--10':0.02,'10--100':0.05,'100--300':0.08,'300 + --':0.10}[precState.tamanho]||0.05;
@@ -6584,35 +6518,14 @@ function renderPrecificacao() {
   var pesHtml=itensSemPacote.map(function(x){return pessoalRowHtml(x.p,x.i);}).join('');
   var opsHtml=precState.ops.map(function(op,i){
     var isCustom=op.isCustom;
-    if(op.hasSubitens){
-      var subitens=op.subitens||[];
-      var subTotal=opValor(op);
-      var subRows=subitens.map(function(s,j){
-        return '<div style="display:grid;grid-template-columns:1fr 110px 24px;gap:5px;margin-top:4px;align-items:center">'+
-          '<input class="finput" type="text" placeholder="Descrição..." style="font-size:12px;padding:3px 8px" value="'+(s.desc||'')+'" oninput="precState.ops['+i+'].subitens['+j+'].desc=this.value"/>'+
-          '<div style="display:flex;align-items:center;gap:3px"><span style="font-size:11px;color:var(--text3);font-weight:600;flex-shrink:0">R$</span><input class="finput" type="number" min="0" step="0.01" style="font-size:12px;padding:3px 5px;text-align:right;width:100%" value="'+(s.valor||0)+'" onfocus="this.select()" oninput="precState.ops['+i+'].subitens['+j+'].valor=parseFloat(this.value)||0" onchange="precState.ops['+i+'].subitens['+j+'].valor=parseFloat(this.value)||0;renderPrecificacao()" placeholder="0,00"/></div>'+
-          '<button class="btn btn-danger btn-sm btn-icon" style="width:22px;height:22px;font-size:10px" onclick="removeSubitemOp('+i+','+j+')">✕</button>'+
-        '</div>';
-      }).join('');
-      return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">'+
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
-          '<span style="font-size:12px;font-weight:600;color:'+(subTotal>0?'var(--text)':'var(--text2)')+'">'+op.desc+'</span>'+
-          '<div style="display:flex;align-items:center;gap:10px">'+
-            '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px" onclick="addSubitemOp('+i+')">+ Subitem</button>'+
-            '<span style="font-size:12px;font-weight:700;font-family:\'JetBrains Mono\',monospace;color:'+(subTotal>0?'var(--text)':'var(--text3)')+'">'+fR(subTotal)+'</span>'+
-          '</div>'+
-        '</div>'+
-        subRows+
-      '</div>';
-    }
-    return '<div style="margin-bottom:5px"><div style="display:grid;grid-template-columns:'+(isCustom?'minmax(120px,1.4fr) 55px 68px 130px 80px 26px':'minmax(120px,1.4fr) 55px 68px 130px 80px')+';gap:5px;align-items:center">' +
+    return '<div style="margin-bottom:'+(op.hasObs?'3':'5')+'px"><div style="display:grid;grid-template-columns:'+(isCustom?'minmax(120px,1.4fr) 55px 68px 130px 80px 26px':'minmax(120px,1.4fr) 55px 68px 130px 80px')+';gap:5px;align-items:center">' +
       (isCustom?'<input class="finput" style="font-size:12px;padding:3px 6px" value="'+op.desc+'" oninput="precState.ops['+i+'].desc=this.value"/>':'<span style="font-size:12px;color:'+(op.qtd>0?'var(--text)':'var(--text2)')+';font-weight:'+(op.qtd>0?'500':'400')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+op.desc+'</span>') +
       (isCustom?'<input class="finput" style="font-size:11px;padding:3px 5px;text-align:center" value="'+op.tipo+'" placeholder="uni." oninput="precState.ops['+i+'].tipo=this.value"/>':'<span style="font-size:11px;color:var(--text3);text-align:center">'+op.tipo+'</span>') +
       '<input class="finput" type="number" min="0" step="0.5" style="font-size:12px;padding:3px 5px;text-align:center" value="'+op.qtd+'" onfocus="this.select()" oninput="precState.ops['+i+'].qtd=parseFloat(this.value)||0" onchange="precState.ops['+i+'].qtd=parseFloat(this.value)||0;renderPrecificacao()"/>'+
       '<div style="display:flex;align-items:center;gap:4px"><span style="font-size:11px;color:var(--text3);font-weight:600;flex-shrink:0">R$</span><input class="finput" type="number" min="0" step="0.01" style="font-size:12px;padding:4px 6px;text-align:right;width:100%" value="'+op.custo+'" onfocus="this.select()" oninput="precState.ops['+i+'].custo=parseFloat(this.value)||0" onchange="precState.ops['+i+'].custo=parseFloat(this.value)||0;renderPrecificacao()" placeholder="0,00"/></div>'+
-      '<span style="font-size:12px;text-align:right;color:'+(op.qtd>0?'var(--text)':'var(--text3)')+'">'  +fR(opValor(op))+'</span>' +
+      '<span style="font-size:12px;text-align:right;color:'+(op.qtd>0?'var(--text)':'var(--text3)')+'">'  +fR((op.qtd||0)*(op.custo||0))+'</span>' +
       (isCustom?'<button class="btn btn-danger btn-sm btn-icon" style="width:22px;height:22px;font-size:10px" onclick="precState.ops.splice('+i+',1);renderPrecificacao()">✕</button>':'') +
-    '</div></div>';
+    '</div>'+(op.hasObs?'<input class="finput" type="text" placeholder="'+(op.id==='o12'?'Especificar Terceiros/Serviços':'Especificar materiais...')+'" style="font-size:12px;padding:3px 10px;margin-top:3px;color:var(--text2)" value="'+(op.obs||'')+'" oninput="precState.ops['+i+'].obs=this.value"/>':'')+'</div>';
   }).join('');
 
   // LEFT column: Cliente first, then custo pessoal, operacional, margem
@@ -6914,17 +6827,6 @@ function showPrecClient(idx) {
 
 function addOpItem() {
   precState.ops.push({id:'oc'+uid(),desc:'Novo Item',tipo:'uni.',custo:0,qtd:0,editCusto:true,isCustom:true});
-  renderPrecificacao();
-}
-function addSubitemOp(i){
-  var op=precState.ops[i]; if(!op) return;
-  if(!op.subitens) op.subitens=[];
-  op.subitens.push({desc:'',valor:0});
-  renderPrecificacao();
-}
-function removeSubitemOp(i,j){
-  var op=precState.ops[i]; if(!op||!op.subitens) return;
-  op.subitens.splice(j,1);
   renderPrecificacao();
 }
 
