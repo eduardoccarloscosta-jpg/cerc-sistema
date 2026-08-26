@@ -1543,11 +1543,6 @@ body::after{
             <span id="dbox-pct" style="font-size:12px;font-weight:700;color:var(--amber)">0%</span>
           </div>
         </div>
-        <!-- Caixa Valores dos Pacotes (só aparece se a precificação vinculada tiver pacotes) -->
-        <div id="pacotes-fin-box" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:10px">
-          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">📦 Valores dos Pacotes <span style="font-weight:400;text-transform:none;letter-spacing:0">(mão de obra + margem — copie direto pra proposta)</span></div>
-          <div id="pacotes-fin-lista" style="display:flex;flex-direction:column;gap:6px"></div>
-        </div>
       </div>
       <div class="fsec">
         <div class="fsec-title">Pagamento</div>
@@ -4221,7 +4216,6 @@ function openModalNew() {
   _commentPendingFiles=[]; var _cac=document.getElementById('comment-anexo-chips');if(_cac)_cac.innerHTML='';
   document.getElementById('modal-title').textContent='Nova Demanda';
   ['f-servico','f-tipo','f-cliente','f-contato','f-email','f-telefone','f-ultimo-contato','f-fechamento','f-retorno','f-bruto','f-desconto-r','f-desconto-pct','f-imposto','f-custo-op','f-liquido','f-art','f-canva','f-gdrive','f-extra-link','f-extra-desc','f-data-pagamento'].forEach(function(id){setF(id,'');});
-  renderPacotesFinanceiro(null);
   renderLinkPropostas();
   setF('f-status','Negociação'); setF('f-proposta',nextPR()); setF('f-pagamento','Pendente');
   // Lock proposta field for new demandas
@@ -4270,7 +4264,6 @@ function openModalEdit(id) {
   setF('f-fechamento',dem.dataFechamento||'');setF('f-retorno',dem.dataRetorno||'');
   setF('f-cliente',dem.cliente);setF('f-contato',dem.contato);setF('f-email',dem.email||'');setF('f-telefone',dem.telefone||'');setF('f-ultimo-contato',dem.ultimoContato||'');
   setValorBR('f-bruto',dem.valorBruto||0);setValorBR('f-desconto-r',dem.desconto||0);setF('f-desconto-pct',dem.valorBruto&&dem.desconto?(dem.desconto/dem.valorBruto*100).toFixed(1):'');setValorBR('f-imposto',dem.impostoEstimado||0);setValorBR('f-custo-op',dem.custoOperacional||0);setValorBR('f-liquido',dem.valorLiquido||0);
-  renderPacotesFinanceiro(dem);
   setF('f-pagamento',dem.statusPagamento||'Pendente');
   // Exibir seção de perda se status=Perdido
   updatePerdaSection(dem);setF('f-data-pagamento',dem.dataPagamento||'');
@@ -6394,43 +6387,6 @@ function getProfRate(nome) {
 }
 var ICON_EYE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 var ICON_EYE_OFF='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-var ICON_COPY='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
-// Calcula o valor de cada pacote (mão de obra + margem de lucro — mesma fórmula da tela de Precificação)
-// a partir de um precDados salvo numa demanda, pra exibir/copiar na aba Financeiro sem reabrir a Precificação.
-function calcPacotesValores(pd){
-  if(!pd || !Array.isArray(pd.pessoal) || !pd.pessoal.length || !Array.isArray(pd.pacotes) || !pd.pacotes.length) return [];
-  var cPct=(pd.complexidade||'').indexOf('Alto')>=0?0.12:(pd.complexidade||'').indexOf('Médio')>=0?0.05:0.02;
-  var tPct={'1--10':0.02,'10--100':0.05,'100--300':0.08,'300 + --':0.10}[pd.tamanho]||0.05;
-  var fPct=(parseFloat(pd.fixo)||0)/100;
-  var totPct=cPct+tPct+fPct;
-  return pd.pacotes.filter(function(pac){return !pac.oculto;}).map(function(pac){
-    var cpPac=pd.pessoal.filter(function(p){return p.pacoteId===pac.id;}).reduce(function(a,p){return a+(p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0);},0);
-    return {nome:pac.nome||'Pacote', valor:cpPac*(1+totPct)};
-  }).filter(function(it){return it.valor>0;});
-}
-function renderPacotesFinanceiro(dem){
-  var box=document.getElementById('pacotes-fin-box'), lista=document.getElementById('pacotes-fin-lista');
-  if(!box||!lista) return;
-  var itens=calcPacotesValores(dem&&dem.precDados);
-  if(!itens.length){ box.style.display='none'; lista.innerHTML=''; return; }
-  box.style.display='block';
-  lista.innerHTML=itens.map(function(it){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 10px">'+
-      '<span style="font-size:12px;color:var(--text2)">'+propEscH(it.nome)+'</span>'+
-      '<span style="display:flex;align-items:center;gap:8px">'+
-        '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:13px">'+fR(it.valor)+'</span>'+
-        '<button type="button" class="btn btn-ghost btn-sm btn-icon" style="width:24px;height:24px" title="Copiar valor" onclick="copiarValorPacote('+it.valor.toFixed(2)+')">'+ICON_COPY+'</button>'+
-      '</span>'+
-    '</div>';
-  }).join('');
-}
-function copiarValorPacote(valor){
-  var txt=fR(valor);
-  function ok(){toast('Copiado: '+txt,'success');}
-  function fail(){toast('Não foi possível copiar — copie manualmente: '+txt);}
-  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fail);
-  else fail();
-}
 function pacotesOcultosMap(){
   var m={};
   (precState.pacotes||[]).forEach(function(p){if(p.oculto)m[p.id]=true;});
@@ -6762,7 +6718,6 @@ function usarNaDemanda(bruto,imp,custo,liq) {
   setTimeout(function(){
     openModalNew();
     setValorBR('f-bruto',bruto);setValorBR('f-imposto',imp);setValorBR('f-custo-op',custo);setValorBR('f-liquido',liq);
-    renderPacotesFinanceiro({precDados:_pendingPrecDados});
     if(cliSelecionado){
       setF('f-cliente',cliSelecionado.empresa);
       setF('f-contato',cliSelecionado.contato||'');
