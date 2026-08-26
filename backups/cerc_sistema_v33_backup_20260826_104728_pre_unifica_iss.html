@@ -6449,10 +6449,7 @@ function calcPrec() {
   var cPct=precState.complexidade.indexOf('Alto')>=0?0.12:precState.complexidade.indexOf('Médio')>=0?0.05:0.02;
   var tPct={'1--10':0.02,'10--100':0.05,'100--300':0.08,'300 + --':0.10}[precState.tamanho]||0.05;
   var fPct=(parseFloat(precState.fixo)||0)/100;
-  var totPct=cPct+tPct+fPct,lucro=sub*totPct,ss=(sub+lucro)*0.05,semISS=sub+lucro+ss;
-  // ISS = 10,5% do próprio Valor Bruto (não do subtotal pré-imposto) — mesma convenção usada na aba Financeiro
-  // da Demanda (ver recalcCascata()), pra Valor Bruto/ISS baterem exatamente entre as duas telas.
-  var bruto=semISS/0.895,iss=bruto-semISS;
+  var totPct=cPct+tPct+fPct,lucro=sub*totPct,ss=(sub+lucro)*0.05,semISS=sub+lucro+ss,iss=semISS*0.105,bruto=semISS+iss;
   return {cp:cp,co:co,sub:sub,lucro:lucro,cPct:cPct,tPct:tPct,fPct:fPct,totPct:totPct,ss:ss,semISS:semISS,iss:iss,bruto:bruto,liq:bruto-iss-co};
 }
 
