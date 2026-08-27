@@ -4993,7 +4993,7 @@ function renderHistorico() {
           return '<tr><td>'+p.prof+(p.obs?' <span style="font-size:10px;color:var(--text3);font-style:italic">— '+p.obs+'</span>':'')+'</td><td style="text-align:center">'+p.qtd+(p.pessoas>1?' × '+p.pessoas+' pess.':'')+'</td><td>'+fR(tot)+'</td></tr>';
         }).join('');
         var opRows = (h.ops||[]).map(function(o){
-          return '<tr><td>'+o.desc+'</td><td style="text-align:center">'+o.qtd+' '+o.tipo+'</td><td>'+fR(opValor(o))+'</td></tr>';
+          return '<tr><td>'+o.desc+'</td><td style="text-align:center">'+o.qtd+' '+o.tipo+'</td><td>'+fR((o.qtd||0)*(o.custo||0))+'</td></tr>';
         }).join('');
         return '<div class="prec-hist-card">' +
           '<div class="prec-hist-hd" onclick="togglePrecHistCard(this)">' +
@@ -6474,7 +6474,7 @@ function calcPacotesValores(pd){
   if(!pd || !Array.isArray(pd.pessoal) || !pd.pessoal.length || !Array.isArray(pd.pacotes) || !pd.pacotes.length) return [];
   var ocultos={}; pd.pacotes.forEach(function(p){if(p.oculto)ocultos[p.id]=true;});
   var cp=pd.pessoal.reduce(function(a,p){if(p.pacoteId&&ocultos[p.pacoteId])return a;return a+(p.qtd||0)*(p.pessoas||1)*(getProfRate(p.prof)||0);},0);
-  var co=(pd.ops||[]).reduce(function(a,o){return a+opValor(o);},0);
+  var co=(pd.ops||[]).reduce(function(a,o){return a+(o.qtd||0)*(o.custo||0);},0);
   var cPct=(pd.complexidade||'').indexOf('Alto')>=0?0.12:(pd.complexidade||'').indexOf('Médio')>=0?0.05:0.02;
   var tPct={'1--10':0.02,'10--100':0.05,'100--300':0.08,'300 + --':0.10}[pd.tamanho]||0.05;
   var fPct=(parseFloat(pd.fixo)||0)/100;
