@@ -3321,9 +3321,8 @@ function renderDashboard() {
   var pipeline=d.filter(function(x){return ['Lead','Negociação','Fechado','Em Revisão','Em Execução'].indexOf(x.status)>=0;}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
   var totNeg=valS('Negociação'),totExe=valS('Em Execução'),totCon=valS('Concluído');
   var ativos=d.filter(function(x){return ['Lead','Negociação','Fechado','Em Revisão','Em Execução'].indexOf(x.status)>=0;}).length;
-  // Receita Avulsa não é proposta de venda (é lançamento manual de receita) — fica fora da Taxa de Conversão
-  var totalPropostas=d.filter(function(x){return x.status!=='Lead'&&x.tipo!=='Receita Avulsa';}).length;
-  var concluidos=d.filter(function(x){return x.status==='Concluído'&&x.tipo!=='Receita Avulsa';}).length;
+  var totalPropostas=d.filter(function(x){return x.status!=='Lead';}).length;
+  var concluidos=byS['Concluído']||0;
   var taxaConv=totalPropostas>0?Math.round(concluidos/totalPropostas*100):0;
   var maxV=Math.max.apply(null,STATUSES.map(valS).concat([1]));
   var recentes=d.slice().sort(function(a,b){return new Date(b.dataCriacao)-new Date(a.dataCriacao);}).slice(0,5);
@@ -6208,10 +6207,9 @@ function renderFinanceiro() {
     var totDespGeralPago=e.filter(function(x){return x.pago;}).reduce(function(a,b){return a+(b.valor||0);},0);
     var saldoGeral=totRecGeral-totDespGeralPago;
     var recFutura=d.filter(function(x){return ['Lead','Negociação','Fechado','Em Revisão'].indexOf(x.status)>=0;}).reduce(function(a,b){return a+(b.valorLiquido||0);},0);
-    // ── Contas a Receber pendentes (mesmo recorte de status ativos do KPI "A Receber" — Negociação/
-    // Lead ainda não é receita confirmada, só pipeline; fica de fora daqui pra não superestimar) ──
+    // ── Contas a Receber pendentes (todos os status com dataPagamento definida) ──
     var contasReceber=d.filter(function(x){
-      if(['Pago','Recorrente','Parcelado'].indexOf(x.statusPagamento)>=0||_statusAtivos.indexOf(x.status)<0) return false;
+      if(['Pago','Recorrente','Parcelado'].indexOf(x.statusPagamento)>=0||['Lead','Perdido','Arquivado'].indexOf(x.status)>=0) return false;
       return true;
     }).map(function(x){return {id:x.id,proposta:x.proposta,servico:x.servico,cliente:x.cliente,valor:x.valorBruto,dataPrev:x.dataPagamento||x.dataCriacao,status:x.statusPagamento,demStatus:x.status};}).sort(function(a,b){return new Date(a.dataPrev)-new Date(b.dataPrev);}).slice(0,15);
     // Parcelas pendentes próximas
