@@ -2275,7 +2275,6 @@ function despesaToDb(e) {
     descricao_app: e.desc||'', observacoes: e.obs||'',
     pago_meses: e.pagoMeses||{}, data_fim: e.dataFim||'',
     data_pagamento: e.dataPagamento||'',
-    pago_meses_datas: e.pagoMesesDatas||{},
     updated_at: e.updatedAt||_now()
   };
 }
@@ -2287,7 +2286,6 @@ function dbToDespesa(r) {
     obs: r.obs||r.observacoes||'', pago: !!r.pago,
     pagoMeses: r.pago_meses||{}, dataFim: r.data_fim||'',
     dataPagamento: r.data_pagamento||'',
-    pagoMesesDatas: r.pago_meses_datas||{},
     updatedAt: r.updated_at||''
   };
 }
@@ -2374,7 +2372,6 @@ function demandaToDb(d) {
     checklist_lev: d.checklistLev||[],
     checklist_custom: d.checklistCustom||[],
     marcos: d.marcos||[],
-    rec: d.rec||'', data_fim: d.dataFim||'', recebido_meses: d.recebidoMeses||{},
     updated_at: d.updatedAt||_now()
   };
 }
@@ -2419,7 +2416,6 @@ function dbToDemanda(r) {
     checklistLev: r.checklist_lev||[],
     checklistCustom: r.checklist_custom||[],
     marcos: r.marcos||[],
-    rec: r.rec||'', dataFim: r.data_fim||'', recebidoMeses: r.recebido_meses||{},
     updatedAt: r.updated_at||''
   };
 }
@@ -3413,16 +3409,16 @@ function renderDashboard() {
       var anoM=dt.getFullYear(), mesM=dt.getMonth()+1;
       var nomeMes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][dt.getMonth()]+'/'+String(anoM).slice(2);
       meses.push(nomeMes);
+      var prefM=String(anoM)+'-'+String(mesM).padStart(2,'0');
       // Receitas: demandas concluídas ou pagas no mês
       var rec=state.demandas.filter(function(x){
         var dRef=x.dataPagamento||x.dataCriacao||'';
-        return inMes(dRef,mesM,anoM) && (x.status==='Concluído' || x.statusPagamento==='Pago');
+        return dRef.indexOf(prefM)===0 && (x.status==='Concluído' || x.statusPagamento==='Pago');
       }).reduce(function(a,b){return a+(b.valorBruto||0);},0);
       receitasMes.push(parseFloat(rec.toFixed(2)));
-      // Despesas: usa despesaApareceMes (mesma regra do Financeiro) — antes comparava só o prefixo
-      // da data cadastrada, então uma despesa recorrente (Mensal/Anual) só aparecia no mês de origem
+      // Despesas: despesas do mês
       var desp=state.despesas.filter(function(x){
-        return despesaApareceMes(x,mesM,anoM);
+        return (x.data||'').indexOf(prefM)===0;
       }).reduce(function(a,b){return a+(b.valor||0);},0);
       despesasMes.push(parseFloat(desp.toFixed(2)));
     }
@@ -5910,44 +5906,26 @@ function _buildExcel(snap){
 }
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Compartilhadas entre renderFinanceiro() e renderDashboard() — antes cada uma tinha sua própria
-// cópia (renderDashboard usava um casamento de string diferente), então uma despesa/receita
-// recorrente aparecia em lugares diferentes dependendo da tela. Única fonte de verdade agora.
-function inMes(ds,m,y){if(!ds) return false; var dt=new Date(ds.length===10?ds+'T12:00':ds); return dt.getMonth()+1===m&&dt.getFullYear()===y;}
-function despesaApareceMes(x,m,y){
-  if(!x.data) return false;
-  var dt=new Date(x.data+'T12:00'),dM=dt.getMonth()+1,dY=dt.getFullYear();
-  if(x.rec==='Mensal'){
-    if((dY>y)||(dY===y&&dM>m)) return false;
-    if(x.dataFim){var fim=new Date(x.dataFim+'T12:00'),fM=fim.getMonth()+1,fY=fim.getFullYear();if((fY<y)||(fY===y&&fM<m)) return false;}
-    return true;
-  } else if(x.rec==='Anual'){
-    if(dM!==m||dY>y) return false;
-    if(x.dataFim){var fim2=new Date(x.dataFim+'T12:00'),fM2=fim2.getMonth()+1,fY2=fim2.getFullYear();if((fY2<y)||(fY2===y&&fM2<m)) return false;}
-    return true;
-  }
-  return inMes(x.data,m,y);
-}
-function receitaApareceMes(x,m,y){
-  if(!x.dataCriacao) return false;
-  var dt=new Date(x.dataCriacao+'T12:00'),dM=dt.getMonth()+1,dY=dt.getFullYear();
-  if(x.rec==='Mensal'){
-    if((dY>y)||(dY===y&&dM>m)) return false;
-    if(x.dataFim){var fim=new Date(x.dataFim+'T12:00'),fM=fim.getMonth()+1,fY=fim.getFullYear();if((fY<y)||(fY===y&&fM<m)) return false;}
-    return true;
-  } else if(x.rec==='Anual'){
-    if(dM!==m||dY>y) return false;
-    if(x.dataFim){var fim2=new Date(x.dataFim+'T12:00'),fM2=fim2.getMonth()+1,fY2=fim2.getFullYear();if((fY2<y)||(fY2===y&&fM2<m)) return false;}
-    return true;
-  }
-  return false;
-}
-
 function renderFinanceiro() {
   var d=state.demandas, e=state.despesas;
   var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   var anos=[]; var ay=new Date().getFullYear();
   for(var yi=ay-2;yi<=ay+1;yi++) anos.push(yi);
+  function inMes(ds,m,y){if(!ds) return false; var dt=new Date(ds.length===10?ds+'T12:00':ds); return dt.getMonth()+1===m&&dt.getFullYear()===y;}
+  function despesaApareceMes(x,m,y){
+    if(!x.data) return false;
+    var dt=new Date(x.data+'T12:00'),dM=dt.getMonth()+1,dY=dt.getFullYear();
+    if(x.rec==='Mensal'){
+      if((dY>y)||(dY===y&&dM>m)) return false;
+      if(x.dataFim){var fim=new Date(x.dataFim+'T12:00'),fM=fim.getMonth()+1,fY=fim.getFullYear();if((fY<y)||(fY===y&&fM<m)) return false;}
+      return true;
+    } else if(x.rec==='Anual'){
+      if(dM!==m||dY>y) return false;
+      if(x.dataFim){var fim2=new Date(x.dataFim+'T12:00');if(fim2.getFullYear()<y) return false;}
+      return true;
+    }
+    return inMes(x.data,m,y);
+  }
   var mesKey=finAno+'-'+String(finMes).padStart(2,'0');
   // Mês atual selecionado
   var esMes=[];
@@ -5958,6 +5936,20 @@ function renderFinanceiro() {
     } else { esMes.push(x); }
   });
   var dMes=d.filter(function(x){return inMes(x.dataCriacao,finMes,finAno);});
+  function receitaApareceMes(x,m,y){
+    if(!x.dataCriacao) return false;
+    var dt=new Date(x.dataCriacao+'T12:00'),dM=dt.getMonth()+1,dY=dt.getFullYear();
+    if(x.rec==='Mensal'){
+      if((dY>y)||(dY===y&&dM>m)) return false;
+      if(x.dataFim){var fim=new Date(x.dataFim+'T12:00'),fM=fim.getMonth()+1,fY=fim.getFullYear();if((fY<y)||(fY===y&&fM<m)) return false;}
+      return true;
+    } else if(x.rec==='Anual'){
+      if(dM!==m||dY>y) return false;
+      if(x.dataFim){var fim2=new Date(x.dataFim+'T12:00');if(fim2.getFullYear()<y) return false;}
+      return true;
+    }
+    return false;
+  }
   var recAvulsaRecMes=d.filter(function(x){return x.tipo==='Receita Avulsa'&&x.rec&&x.rec!=='Única'&&receitaApareceMes(x,finMes,finAno);});
   var recPagoMes=d.filter(function(x){
     if(x.statusPagamento!=='Pago') return false;
@@ -6014,12 +6006,10 @@ function renderFinanceiro() {
     return dt<hoje;
   });
   var totDespVenc=despVenc.reduce(function(a,b){return a+(b.valor||0);},0);
-  // Receitas a receber no mês selecionado (o rótulo diz "este mês" — precisa acompanhar o seletor
-  // de mês do Financeiro, não ficar travado no mês real de hoje como despVenc acima, que é
-  // propositalmente sempre "vencido a partir de hoje" independente do mês que está sendo visto)
+  // Receitas a receber este mês
   var aReceberMes=d.filter(function(x){
     if(x.statusPagamento==='Pago') return false;
-    return inMes(x.dataCriacao,finMes,finAno)&&['Em Execução','Fechado','Em Revisão'].indexOf(x.status)>=0;
+    return inMes(x.dataCriacao,mesAtualN,anoAtualN)&&['Em Execução','Fechado','Em Revisão'].indexOf(x.status)>=0;
   }).reduce(function(a,b){return a+(b.valorBruto||0);},0);
   var inadimplentes=d.filter(function(x){return x.statusPagamento==='Inadimplente';}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
 
@@ -6328,23 +6318,15 @@ function toggleProjMes(pi){
 }
 function updatePag(id,val) {
   var i=state.demandas.findIndex(function(d){return d.id===id;}); if(i<0) return;
-  var dem=state.demandas[i];
-  var old=dem.statusPagamento;
-  dem.statusPagamento=val;
-  if(val==='Pago'){
-    dem.valorPago=Math.max(0,(dem.valorBruto||0)-(dem.desconto||0));
-    if(!dem.dataPagamento) dem.dataPagamento=new Date().toISOString().slice(0,10);
-  } else {
-    // Pendente/Inadimplente/Parcial/Parcelado: zera o "pago total" herdado de um status
-    // anterior (ex: vinha de "Pago") — senão pagamentosEfetivos()/pagamentoQuitado() usam
-    // valorPago/dataPagamento como fallback legado e a demanda volta a aparecer "Pago" sozinha.
-    dem.valorPago=0; dem.dataPagamento=''; dem.dataPagamentoParcial='';
-  }
-  if(!dem.log) dem.log=[];
-  addLog(dem,'fin','Pagamento: '+old+' → '+val);
-  dem.updatedAt=_now();
+  var old=state.demandas[i].statusPagamento;
+  state.demandas[i].statusPagamento=val;
+  if(val==='Pago') state.demandas[i].valorPago=state.demandas[i].valorBruto;
+  if(val==='Pendente'||val==='Inadimplente') state.demandas[i].valorPago=0;
+  if(!state.demandas[i].log) state.demandas[i].log=[];
+  addLog(state.demandas[i],'fin','Pagamento: '+old+' → '+val);
+  state.demandas[i].updatedAt=_now();
   saveState();
-  if(_sbUser) sbUpsertDemanda(dem);
+  if(_sbUser) sbUpsertDemanda(state.demandas[i]);
   toast('Atualizado'); renderFinanceiro();
 }
 function saveDespesa() {
