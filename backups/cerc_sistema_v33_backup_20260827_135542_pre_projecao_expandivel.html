@@ -6213,49 +6213,25 @@ function renderFinanceiro() {
     parcelasPend=parcelasPend.slice(0,10);
     // ── Projeção 6 meses ──────────────────────────────────
     var projRows='';
-    function _projItemRow(nome,sub,valor,cor,onclickAttr){
-      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);'+(onclickAttr?'cursor:pointer':'')+'"'+(onclickAttr?' onclick="event.stopPropagation();'+onclickAttr+'"':'')+'>'
-        +'<div style="min-width:0;flex:1"><div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nome+'</div><div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sub+'</div></div>'
-        +'<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:600;color:'+cor+';flex-shrink:0">'+fR(valor)+'</div>'
-      +'</div>';
-    }
     for(var pi=0;pi<6;pi++){
       var pm2=finMes+pi,py2=finAno;
       if(pm2>12){pm2-=12;py2++;}
-      var pRecPagoList=d.filter(function(x){return x.statusPagamento==='Pago'&&inMes(x.dataPagamento||x.dataCriacao,pm2,py2);});
-      var pRecPago=pRecPagoList.reduce(function(a,b){return a+(b.valorBruto||0);},0);
-      var pRecPendList=d.filter(function(x){
+      var pRecPago=d.filter(function(x){return x.statusPagamento==='Pago'&&inMes(x.dataPagamento||x.dataCriacao,pm2,py2);}).reduce(function(a,b){return a+(b.valorBruto||0);},0);
+      var pRecPend=d.filter(function(x){
         if(['Pendente','Parcial'].indexOf(x.statusPagamento)<0||_statusAtivos.indexOf(x.status)<0) return false;
         return inMes(x.dataPagamento||x.dataCriacao,pm2,py2);
-      });
-      var pParcelasList=[];
-      d.filter(function(x){return x.statusPagamento==='Parcelado'&&_statusAtivos.indexOf(x.status)>=0;}).forEach(function(x){
-        (x.parcelas||[]).filter(function(p){return p.status!=='Pago'&&inMes(p.dataPrev||'',pm2,py2);}).forEach(function(p){
-          pParcelasList.push({demId:x.id,servico:x.servico,cliente:x.cliente,num:p.num,valor:p.valor,dataPrev:p.dataPrev});
-        });
-      });
-      var pRecPend=pRecPendList.reduce(function(a,b){return a+(b.valorBruto||0);},0)+pParcelasList.reduce(function(a,p){return a+(p.valor||0);},0);
-      var pDespList=e.filter(function(x){return despesaApareceMes(x,pm2,py2);});
-      var pDesp=pDespList.reduce(function(a,b){return a+(b.valor||0);},0);
+      }).reduce(function(a,b){return a+(b.valorBruto||0);},0)
+      +d.filter(function(x){if(x.statusPagamento!=='Parcelado'||_statusAtivos.indexOf(x.status)<0)return false;return(x.parcelas||[]).some(function(p){return p.status!=='Pago'&&inMes(p.dataPrev||'',pm2,py2);});}).reduce(function(a,b){return a+(b.parcelas||[]).filter(function(p){return p.status!=='Pago'&&inMes(p.dataPrev||'',pm2,py2);}).reduce(function(s,p){return s+p.valor;},0);},0);
+      var pDesp=e.filter(function(x){return despesaApareceMes(x,pm2,py2);}).reduce(function(a,b){return a+(b.valor||0);},0);
       var pSaldo=(pRecPago+pRecPend)-pDesp;
       var isAtual=(pm2===finMes&&py2===finAno);
-      var temItens=(pRecPagoList.length+pRecPendList.length+pParcelasList.length+pDespList.length)>0;
-      var detParts=[];
-      if(pRecPagoList.length) detParts.push('<div style="font-size:10px;font-weight:700;color:var(--s-con);text-transform:uppercase;margin:8px 0 4px">✔ Recebido</div>'+pRecPagoList.map(function(x){return _projItemRow(escapeHtml(x.servico),escapeHtml(x.cliente)+' · '+fD(x.dataPagamento||x.dataCriacao),x.valorBruto,'var(--s-con)',"openModalEdit('"+x.id+"')");}).join(''));
-      if(pRecPendList.length||pParcelasList.length){
-        var pendHtml=pRecPendList.map(function(x){return _projItemRow(escapeHtml(x.servico),escapeHtml(x.cliente)+' · '+fD(x.dataPagamento||x.dataCriacao),x.valorBruto,'var(--amber)',"openModalEdit('"+x.id+"')");}).join('')
-          +pParcelasList.map(function(p){return _projItemRow(escapeHtml(p.servico),'Parcela '+p.num+' · '+escapeHtml(p.cliente)+' · '+fD(p.dataPrev),p.valor,'var(--amber)',"openModalEdit('"+p.demId+"')");}).join('');
-        detParts.push('<div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;margin:8px 0 4px">⏳ A Receber</div>'+pendHtml);
-      }
-      if(pDespList.length) detParts.push('<div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;margin:8px 0 4px">↓ Despesas</div>'+pDespList.map(function(x){return _projItemRow(escapeHtml(x.desc||'Despesa'),(x.obs?escapeHtml(x.obs)+' · ':'')+fD(x.data),x.valor,'var(--red)',"openModalDespesa('"+x.id+"')");}).join(''));
-      projRows+='<tr style="'+(isAtual?'background:var(--accent-l);font-weight:700;':'')+(temItens?'cursor:pointer':'')+'" onclick="'+(temItens?'toggleProjMes('+pi+')':'')+'">'
-        +'<td style="padding:8px 10px;font-size:12px;white-space:nowrap'+(isAtual?';color:var(--accent)':'')+'">'+(temItens?'<span id="proj-arrow-'+pi+'" style="display:inline-block;transition:transform .15s;width:12px">▶</span> ':'<span style="display:inline-block;width:12px"></span> ')+MESES[pm2-1].substring(0,3)+' '+py2+'</td>'
+      projRows+='<tr style="'+(isAtual?'background:var(--accent-l);font-weight:700':'')+'">'
+        +'<td style="padding:8px 10px;font-size:12px;white-space:nowrap'+(isAtual?';color:var(--accent)':'')+'">'+(isAtual?'▶ ':'')+MESES[pm2-1].substring(0,3)+' '+py2+'</td>'
         +'<td style="padding:8px 10px;text-align:right;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--s-con)">'+fR(pRecPago)+'</td>'
         +'<td style="padding:8px 10px;text-align:right;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--amber)">'+fR(pRecPend)+'</td>'
         +'<td style="padding:8px 10px;text-align:right;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--red)">'+fR(pDesp)+'</td>'
         +'<td style="padding:8px 10px;text-align:right;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:600;color:'+(pSaldo>=0?'var(--s-con)':'var(--red)')+'">'+fR(pSaldo)+'</td>'
-        +'</tr>'
-        +(temItens?'<tr id="proj-detail-'+pi+'" style="display:none"><td colspan="5" style="padding:2px 14px 12px;background:var(--surface2)">'+detParts.join('')+'</td></tr>':'');
+        +'</tr>';
     }
     // ── Montar HTML ───────────────────────────────────────
     fc.innerHTML=
@@ -6309,13 +6285,6 @@ function renderFinanceiro() {
   }
 }
 
-function toggleProjMes(pi){
-  var row=document.getElementById('proj-detail-'+pi); if(!row) return;
-  var arrow=document.getElementById('proj-arrow-'+pi);
-  var abrir=row.style.display==='none';
-  row.style.display=abrir?'table-row':'none';
-  if(arrow) arrow.style.transform=abrir?'rotate(90deg)':'rotate(0deg)';
-}
 function updatePag(id,val) {
   var i=state.demandas.findIndex(function(d){return d.id===id;}); if(i<0) return;
   var old=state.demandas[i].statusPagamento;
