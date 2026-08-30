@@ -8226,6 +8226,7 @@ function gcExportEvent(evId) {
     end:   { dateTime: end,   timeZone: 'America/Sao_Paulo' }
   };
   if (ev.cor && corToGoogleColorId(ev.cor)) body.colorId = corToGoogleColorId(ev.cor);
+  if (ev.repetir) body.recurrence = repetirToGoogleRecurrence(ev);
   // Reaproveita o evento já exportado (PUT) em vez de sempre criar um novo (POST) — evita duplicar a cada clique
   var gcId = ev.gcEventId;
   var url = gcId
@@ -8364,6 +8365,58 @@ function calShowMore(ds, btn) {
   },50);
 }
 
+// Converte ev.repetir (regra de recorrência do CERC) pro formato RRULE do Google Calendar.
+// Espelha exatamente os mesmos "kind" de recorrência que expandRecorrencia() usa pra desenhar
+// as ocorrências dentro do app — sem isso, exportar uma tarefa recorrente pro Google criava só
+// UM evento avulso preso à primeira data, e as ocorrências seguintes (ex: toda quarta) nunca
+// apareciam no Google, mesmo aparecendo certinho dentro do CERC.
+var _RRULE_DAYS=['SU','MO','TU','WE','TH','FR','SA'];
+function repetirToGoogleRecurrence(ev){
+  var r=ev.repetir; if(!r||!ev.data) return null;
+  var dtStart=new Date(ev.data+'T00:00:00');
+  var interval=Math.max(1,(r.freq==='custom'?r.interval:1)||1);
+  var kind = r.freq==='custom' ? (r.unit||'day') : (r.freq==='daily'?'day':r.freq==='weekly'?'week':r.freq==='monthly'?'monthWeekday':r.freq==='yearly'?'year':'weekday');
+  var rule;
+  if(kind==='day'){
+    rule='FREQ=DAILY;INTERVAL='+interval;
+  } else if(kind==='week'){
+    var byDay=(r.byDay&&r.byDay.length)?r.byDay.slice().sort(function(a,b){return a-b;}):[dtStart.getDay()];
+    rule='FREQ=WEEKLY;INTERVAL='+interval+';BYDAY='+byDay.map(function(d){return _RRULE_DAYS[d];}).join(',');
+  } else if(kind==='weekday'){
+    rule='FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
+  } else if(kind==='monthWeekday'){
+    var nth=Math.floor((dtStart.getDate()-1)/7)+1;
+    rule='FREQ=MONTHLY;BYDAY='+nth+_RRULE_DAYS[dtStart.getDay()];
+  } else if(kind==='month'){
+    rule='FREQ=MONTHLY;INTERVAL='+interval;
+  } else if(kind==='year'){
+    rule='FREQ=YEARLY;INTERVAL='+interval;
+  } else {
+    return null;
+  }
+  var isAllDay0=!ev.horaInicio;
+  var pad2=function(n){return n<10?'0'+n:''+n;};
+  var endType=(r.end&&r.end.type)||'never';
+  if(endType==='count'){
+    rule+=';COUNT='+Math.max(1,parseInt(r.end.count,10)||1);
+  } else if(endType==='until'&&r.end.until){
+    if(isAllDay0){
+      var untilD=new Date(r.end.until+'T00:00:00');
+      rule+=';UNTIL='+untilD.getFullYear()+pad2(untilD.getMonth()+1)+pad2(untilD.getDate());
+    } else {
+      // UNTIL precisa estar em UTC (RFC5545) quando o evento tem horário — Brasília é UTC-3 fixo (sem horário de verão)
+      var untilUtc=new Date(r.end.until+'T23:59:59-03:00');
+      rule+=';UNTIL='+untilUtc.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z/,'Z');
+    }
+  }
+  var recurrence=['RRULE:'+rule];
+  (r.exdatas||[]).forEach(function(exd){
+    if(isAllDay0) recurrence.push('EXDATE;VALUE=DATE:'+exd.replace(/-/g,''));
+    else recurrence.push('EXDATE;TZID=America/Sao_Paulo:'+exd.replace(/-/g,'')+'T'+(ev.horaInicio||'09:00').replace(':','')+'00');
+  });
+  return recurrence;
+}
+
 function gcSyncEvent(evId) {
   // Sync automático: cria ou atualiza evento no Google Calendar
   if (!gcIsConnected()) return; // sem conexão, silencioso
@@ -8395,6 +8448,7 @@ function gcSyncEvent(evId) {
     };
   }
   if (ev.cor && corToGoogleColorId(ev.cor)) body.colorId = corToGoogleColorId(ev.cor);
+  if (ev.repetir) body.recurrence = repetirToGoogleRecurrence(ev);
 
   var gcId = ev.gcEventId;
   var url, method;
@@ -10163,6 +10217,7 @@ function delEventoOcorrencia(id, occDate) {
   ev.updatedAt=_now();
   saveState(); toast('Ocorrência removida');
   if(_sbUser) sbUpsertEvento(ev);
+  if(gcIsConnected()&&ev.gcEventId) gcSyncEvent(id); // reflete a exceção (EXDATE) na série já exportada pro Google
   renderCalendario();
 }
 
