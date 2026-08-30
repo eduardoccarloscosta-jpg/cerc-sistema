@@ -8084,8 +8084,8 @@ function calLayoutDayEvents(items){
   return result;
 }
 function getWeekStart(d){var dt=new Date(d);dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-dt.getDay());return dt;}
-// gcFetchEvents() busca só o mês visível no momento do fetch — sem re-chamar ao navegar,
-// os eventos do Google ficam presos ao mês em que "Atualizar" foi clicado por último.
+// gcFetchEvents() busca só o range visível no momento do fetch (mês ou semana, conforme calView) —
+// por isso toda navegação (mês, semana, mini-calendário, "Hoje") chama de novo aqui.
 function calSyncGoogleIfNeeded(){ if(gcIsConnected()) gcFetchEvents(); }
 function calPrev(){
   if(calView==='week'){calWeekStart=calWeekStart||getWeekStart(new Date());calWeekStart.setDate(calWeekStart.getDate()-7);}
@@ -8157,9 +8157,19 @@ function gcAuth(callback) {
 
 function gcFetchEvents() {
   if (!gcToken) { gcAuth(gcFetchEvents); return; }
-  // Calcular range do mês atual visível
-  var d0 = new Date(calAno, calMes, 1);
-  var d1 = new Date(calAno, calMes + 1, 0, 23, 59, 59);
+  // Calcular o range REALMENTE visível — igual ao _rgStart/_rgEnd usado em renderCalendario() pros
+  // eventos locais. Bug corrigido: antes usava sempre calMes/calAno (o mês do mini-calendário), mas a
+  // visão Semana pode cair em dois meses diferentes (ex: semana de 30/08 a 05/09) — o "outro" mês da
+  // semana nunca era buscado no Google, então eventos e recorrências de lá simplesmente não apareciam.
+  var d0, d1;
+  if (calView === 'week') {
+    var ws = calWeekStart || getWeekStart(new Date());
+    d0 = new Date(ws); d0.setHours(0, 0, 0, 0);
+    d1 = new Date(ws); d1.setDate(d1.getDate() + 6); d1.setHours(23, 59, 59, 999);
+  } else {
+    d0 = new Date(calAno, calMes, 1);
+    d1 = new Date(calAno, calMes + 1, 0, 23, 59, 59);
+  }
   var tMin = d0.toISOString();
   var tMax = d1.toISOString();
   var url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events' +
