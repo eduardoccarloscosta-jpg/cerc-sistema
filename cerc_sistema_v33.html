@@ -8574,9 +8574,9 @@ function renderCalendario() {
     var cfg=evtCfg(ev);
     var hora=ev.horaInicio?ev.horaInicio+' ':'';
     var isTarefa=ev.tipo==='Tarefa';
-    var conc=isTarefa&&ev.concluida;
+    var conc=isTarefa&&ocorrenciaConcluida(ev,ev._occDate);
     var strikeStyle=conc?'text-decoration:line-through;opacity:0.6':'';
-    var checkBtn=isTarefa?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\')" style="margin-right:2px;cursor:pointer;font-size:11px" title="'+(conc?'Marcar como pendente':'Marcar como concluída')+'">'+(conc?'☑':'☐')+'</span>':'';
+    var checkBtn=isTarefa?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\',\''+(ev._occDate||'')+'\')" style="margin-right:2px;cursor:pointer;font-size:11px" title="'+(conc?'Marcar como pendente':'Marcar como concluída')+'">'+(conc?'☑':'☐')+'</span>':'';
     if(ev._multi){
       // Evento de múltiplos dias: barra colorida contínua entre as células (como no Google)
       var bg=conc?'#D1FAE5':cfg.bg, border=conc?'#10B981':cfg.border;
@@ -8830,12 +8830,12 @@ function renderCalendario() {
         var topPx=(startMin/60-HOURS_START)*SLOT_H;
         var heightPx=Math.max(SLOT_H*0.6,(endMin-startMin)/60*SLOT_H);
         var isTarefaW=ev.tipo==='Tarefa';
-        var concW=isTarefaW&&ev.concluida;
+        var concW=isTarefaW&&ocorrenciaConcluida(ev,ev._occDate);
         var icoW=isTarefaW?(concW?'☑':'☐'):cfg2.ico;
         var titleW=concW?'<span style="text-decoration:line-through;opacity:0.65">'+ev.titulo+'</span>':ev.titulo;
         var bgW=concW?'#D1FAE5':cfg2.bg;
         var borderW=concW?'#10B981':cfg2.border;
-        var checkSpanW=isTarefaW?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\')" style="cursor:pointer;margin-right:2px" title="'+(concW?'Reabrir':'Concluir')+'">'+icoW+'</span> ':''+icoW+' ';
+        var checkSpanW=isTarefaW?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\',\''+(ev._occDate||'')+'\')" style="cursor:pointer;margin-right:2px" title="'+(concW?'Reabrir':'Concluir')+'">'+icoW+'</span> ':''+icoW+' ';
         dayItems.push({startMin:startMin, endMin:endMin, topPx:topPx, heightPx:heightPx,
           render:function(posStyle){
             return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;'+posStyle+'background:'+bgW+';color:'+cfg2.c+';border-left-color:'+borderW+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')">' +
@@ -9588,6 +9588,24 @@ function delContrato(id) {
 // ══ EVENTOS & LEMBRETES ══════════════════════════════════
 var editingEventoId = null;
 var _gcPreFill = null;
+var _dupPreFill = null; // dados de um evento sendo duplicado — pré-preenche o modal de "Novo Evento" sem tocar no original
+
+// Duplica um evento/tarefa do calendário: abre o modal de "Novo Evento" já preenchido com os mesmos dados,
+// pra só ajustar o que for diferente (normalmente a data) e salvar — nada é gravado até o usuário confirmar.
+// occDate: quando a duplicação parte de uma ocorrência específica de uma série recorrente, usa a data dessa
+// ocorrência como ponto de partida; a cópia em si nunca repete (evita criar sem querer uma 2ª série infinita).
+function duplicarEvento(id, occDate){
+  var ev0=(state.eventos||[]).find(function(e){return e.id===id;});
+  if(!ev0) return;
+  var dataBase = (occDate && ev0.repetir) ? occDate : ev0.data;
+  var dataFimBase = (occDate && ev0.repetir) ? _occDataFim(ev0,occDate) : (ev0.dataFim||'');
+  _dupPreFill = {
+    titulo: ev0.titulo, data: dataBase, dataFim: dataFimBase,
+    horaInicio: ev0.horaInicio||'', horaFim: ev0.horaFim||'',
+    tipo: ev0.tipo, cor: ev0.cor||'', descricao: ev0.descricao||'', demandaId: ev0.demandaId||''
+  };
+  openModalEvento(null, dataBase);
+}
 
 function openModalGcEvento(gcEv) {
   if(!gcEv) return;
@@ -9603,16 +9621,17 @@ function openModalEvento(id, preData) {
   editingEventoId = id || null;
   var ev = id ? (state.eventos||[]).find(function(e){return e.id===id;}) : null;
   var gcFill = (!id && _gcPreFill) ? _gcPreFill : null;
+  var dupFill = (!id && _dupPreFill) ? _dupPreFill : null; // duplicar evento: pré-preenche como se fosse novo (não edita o original)
   var hoje = new Date().toISOString().slice(0,10);
   var gcHoraIni = gcFill&&!gcFill.allDay&&gcFill.inicio ? gcFill.inicio.slice(11,16) : '';
   var gcHoraFim = gcFill&&!gcFill.allDay&&gcFill.fim    ? gcFill.fim.slice(11,16)    : '';
-  var horaIniVal = ev&&ev.horaInicio ? ev.horaInicio : (gcHoraIni||'');
-  var horaFimVal = ev&&ev.horaFim    ? ev.horaFim    : (gcHoraFim||'');
+  var horaIniVal = ev&&ev.horaInicio ? ev.horaInicio : (dupFill&&dupFill.horaInicio ? dupFill.horaInicio : (gcHoraIni||''));
+  var horaFimVal = ev&&ev.horaFim    ? ev.horaFim    : (dupFill&&dupFill.horaFim    ? dupFill.horaFim    : (gcHoraFim||''));
   // Lista de horários pré-configurados (00:00–23:30, sem rolagem infinita) — o campo continua editável livremente
-  var gcBanner = gcFill ? '<div style="background:#E8F0FE;border:1px solid #1A73E8;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#1A73E8;display:flex;align-items:center;gap:8px">🗓 <strong>Importado do Google Calendar</strong> — edite e salve para registrar no sistema</div>' : '';
+  var gcBanner = gcFill ? '<div style="background:#E8F0FE;border:1px solid #1A73E8;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#1A73E8;display:flex;align-items:center;gap:8px">🗓 <strong>Importado do Google Calendar</strong> — edite e salve para registrar no sistema</div>' : (dupFill ? '<div style="background:#F5F3FF;border:1px solid #C4B5FD;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#6D28D9;display:flex;align-items:center;gap:8px">📋 <strong>Cópia de "'+(dupFill.titulo||'')+'"</strong> — ajuste o que precisar e salve</div>' : '');
 
   // ── Cor do evento (paleta do Google Calendar) ─────────────────────
-  var curCor = ev&&ev.cor ? ev.cor : (gcFill&&gcFill.colorId ? googleColorIdToCor(gcFill.colorId) : '');
+  var curCor = ev&&ev.cor ? ev.cor : (dupFill&&dupFill.cor ? dupFill.cor : (gcFill&&gcFill.colorId ? googleColorIdToCor(gcFill.colorId) : ''));
   var colorPickerHtml = '<div class="fg"><label>Cor do evento</label><div id="ev-color-picker" style="display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:2px 0 6px">' +
     '<div class="ev-color-swatch'+(!curCor?' selected':'')+'" data-cor="" onclick="evPickColor(\'\')" title="Automática (cor do Tipo)" style="background:repeating-conic-gradient(#d1d5db 0deg 90deg,#f3f4f6 90deg 180deg)">'+(!curCor?'✓':'')+'</div>' +
     EVENT_COLORS.map(function(c){
@@ -9665,31 +9684,31 @@ function openModalEvento(id, preData) {
     '</div></div>' +
     '<div class="modal-body" style="padding-top:14px">' +
       gcBanner+
-      '<div class="fg"><label>Título *</label><input id="ev-titulo" class="finput" placeholder="Ex: Reunião com cliente, Prazo entrega..." value="'+(ev?ev.titulo:(gcFill?gcFill.titulo:''))+'"/></div>' +
+      '<div class="fg"><label>Título *</label><input id="ev-titulo" class="finput" placeholder="Ex: Reunião com cliente, Prazo entrega..." value="'+(ev?ev.titulo:(dupFill?dupFill.titulo:(gcFill?gcFill.titulo:'')))+'"/></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-        '<div class="fg"><label>Data Início *</label><input id="ev-data" type="date" class="finput" value="'+(ev?ev.data:preData||hoje)+'" onchange="evAjustaFim()"/></div>' +
-        '<div class="fg"><label>Data Fim <span style="font-size:10px;color:var(--text3)">(opcional)</span></label><input id="ev-data-fim" type="date" class="finput" value="'+(ev&&ev.dataFim?ev.dataFim:(gcFill&&gcFill.fim?gcFill.fim.slice(0,10):''))+'"/></div>' +
+        '<div class="fg"><label>Data Início *</label><input id="ev-data" type="date" class="finput" value="'+(ev?ev.data:(dupFill?dupFill.data:preData||hoje))+'" onchange="evAjustaFim()"/></div>' +
+        '<div class="fg"><label>Data Fim <span style="font-size:10px;color:var(--text3)">(opcional)</span></label><input id="ev-data-fim" type="date" class="finput" value="'+(ev&&ev.dataFim?ev.dataFim:(dupFill&&dupFill.dataFim?dupFill.dataFim:(gcFill&&gcFill.fim?gcFill.fim.slice(0,10):'')))+'"/></div>' +
       '</div>' +
       repeteSelectHtml + repeteCustomHtml + repeteEndHtml +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">' +
         '<div class="fg"><label>⏰ Hora Início</label><div style="position:relative"><input type="text" id="ev-hora-ini" class="finput" style="font-size:12px" placeholder="--:--" autocomplete="off" value="'+horaIniVal+'" onfocus="evShowHoraDropdown(this)" oninput="evFilterHoraDropdown(this)" onblur="evNormalizaHora(this);evHideHoraDropdown(this.id)"/><div id="ev-hora-ini-dd" class="ev-hora-dropdown" style="display:none"></div></div></div>' +
         '<div class="fg"><label>⏰ Hora Fim</label><div style="position:relative"><input type="text" id="ev-hora-fim" class="finput" style="font-size:12px" placeholder="--:--" autocomplete="off" value="'+horaFimVal+'" onfocus="evShowHoraDropdown(this)" oninput="evFilterHoraDropdown(this)" onblur="evNormalizaHora(this);evHideHoraDropdown(this.id)"/><div id="ev-hora-fim-dd" class="ev-hora-dropdown" style="display:none"></div></div></div>' +
         '<div class="fg"><label>Tipo</label><select id="ev-tipo" class="finput" onchange="evTipoChange()">' +
-          ['Evento','Lembrete','Prazo','Reunião','Vistoria','Tarefa'].map(function(t){return '<option'+(ev&&ev.tipo===t?' selected':'')+'>'+t+'</option>';}).join('') +
+          ['Evento','Lembrete','Prazo','Reunião','Vistoria','Tarefa'].map(function(t){return '<option'+((ev&&ev.tipo===t)||(dupFill&&dupFill.tipo===t)?' selected':'')+'>'+t+'</option>';}).join('') +
         '</select></div>' +
       '</div>' +
       colorPickerHtml +
-      '<div class="fg"><label>Descrição / Observação</label><textarea id="ev-desc" class="finput" rows="2" placeholder="Detalhes do evento...">'+(ev?ev.descricao||'':'')+'</textarea></div>' +
-      '<div id="ev-tarefa-row" style="display:'+(ev&&ev.tipo==='Tarefa'||(!ev&&false)?'flex':'none')+';align-items:center;gap:10px;padding:10px 12px;background:#ECFDF5;border:1px solid #10B981;border-radius:8px;margin-bottom:12px">' +
+      '<div class="fg"><label>Descrição / Observação</label><textarea id="ev-desc" class="finput" rows="2" placeholder="Detalhes do evento...">'+(ev?ev.descricao||'':(dupFill?dupFill.descricao||'':''))+'</textarea></div>' +
+      '<div id="ev-tarefa-row" style="display:'+((ev&&ev.tipo==='Tarefa')||(dupFill&&dupFill.tipo==='Tarefa')?'flex':'none')+';align-items:center;gap:10px;padding:10px 12px;background:#ECFDF5;border:1px solid #10B981;border-radius:8px;margin-bottom:12px">' +
         '<input type="checkbox" id="ev-concluida" style="width:16px;height:16px;accent-color:#10B981;cursor:pointer"'+(ev&&ev.concluida?' checked':'')+'/>' +
         '<label for="ev-concluida" style="font-size:13px;font-weight:600;color:#065F46;cursor:pointer;margin:0">Tarefa concluída</label>' +
       '</div>' +
       '<div class="fg"><label>Demanda Relacionada</label><select id="ev-demanda" class="finput"><option value="">— Nenhuma —</option>' +
-        state.demandas.map(function(d){return '<option value="'+d.id+'"'+(ev&&ev.demandaId===d.id?' selected':'')+'>'+(d.proposta||'')+(d.cliente?' — '+d.cliente:'')+'</option>';}).join('') +
+        state.demandas.map(function(d){return '<option value="'+d.id+'"'+((ev&&ev.demandaId===d.id)||(dupFill&&dupFill.demandaId===d.id)?' selected':'')+'>'+(d.proposta||'')+(d.cliente?' — '+d.cliente:'')+'</option>';}).join('') +
       '</select></div>' +
     '</div>' +
     '<div class="modal-ft">' +
-      (ev?'<button class="btn btn-danger" onclick="delEvento(\''+id+'\',true)">🗑 '+(ev.repetir?'Excluir série':'Excluir')+'</button>'+'<button class="btn btn-ghost btn-sm" onclick="gcExportEvent(\''+id+'\')" style="color:#1A73E8">🗓 Google</button>':'<div></div>') +
+      (ev?'<button class="btn btn-danger" onclick="delEvento(\''+id+'\',true)">🗑 '+(ev.repetir?'Excluir série':'Excluir')+'</button>'+'<button class="btn btn-ghost btn-sm" onclick="closeModalEvento();duplicarEvento(\''+id+'\',\'\')" style="color:#6D28D9">📋 Duplicar</button>'+'<button class="btn btn-ghost btn-sm" onclick="gcExportEvent(\''+id+'\')" style="color:#1A73E8">🗓 Google</button>':'<div></div>') +
       '<div style="display:flex;gap:6px">' +
         '<button class="btn btn-ghost" onclick="closeModalEvento()">Cancelar</button>' +
         '<button class="btn btn-primary" onclick="saveEvento()">'+(ev?'💾 Salvar':'📅 Criar Evento')+'</button>' +
@@ -9707,6 +9726,7 @@ function closeModalEvento() {
   var m = document.getElementById('modal-evento');
   if(m) m.remove();
   _gcPreFill = null;
+  _dupPreFill = null;
 }
 
 function _closeEventPopover() {
@@ -9721,12 +9741,14 @@ function openEventPopover(id, e, occDate) {
   // Se veio de uma ocorrência de série recorrente, exibe a data/fim daquela ocorrência específica (a série em si não muda)
   var ev = (occDate && ev0.repetir) ? Object.assign({},ev0,{data:occDate, dataFim:_occDataFim(ev0,occDate)}) : ev0;
   var cfg=evtCfg(ev);
-  var icoDisp=(ev.tipo==='Tarefa'?(ev.concluida?'☑':'☐'):cfg.ico);
+  var concOc=ev.tipo==='Tarefa'&&ocorrenciaConcluida(ev0,occDate);
+  var icoDisp=(ev.tipo==='Tarefa'?(concOc?'☑':'☐'):cfg.ico);
   var horaTxt=ev.horaInicio?(ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:'')):'Dia inteiro';
   var dataTxt=fD(ev.data)+(ev.dataFim&&ev.dataFim!==ev.data?' → '+fD(ev.dataFim):'');
   var demanda=ev.demandaId?(state.demandas||[]).find(function(d){return d.id===ev.demandaId;}):null;
   var gcBtn=ev.gcEventId?'<a href="https://calendar.google.com/calendar/event?eid='+btoa(ev.gcEventId)+'" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#1A73E8;font-weight:600;text-decoration:none;padding:4px 8px;border:1px solid #1A73E8;border-radius:6px">🗓 Ver no Google</a>':'';
-  var tarefaBtn=ev.tipo==='Tarefa'?'<button onclick="_closeEventPopover();toggleTarefaConcluida(\''+id+'\')" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid #10B981;color:#065F46;background:#ECFDF5;cursor:pointer">'+(ev.concluida?'↩ Reabrir':'☑ Concluir')+'</button>':'';
+  var tarefaBtn=ev.tipo==='Tarefa'?'<button onclick="_closeEventPopover();toggleTarefaConcluida(\''+id+'\',\''+(occDate||'')+'\')" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid #10B981;color:#065F46;background:#ECFDF5;cursor:pointer">'+(concOc?'↩ Reabrir':'☑ Concluir')+'</button>':'';
+  var dupBtn='<button onclick="_closeEventPopover();duplicarEvento(\''+id+'\',\''+(occDate||'')+'\')" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);background:var(--surface);cursor:pointer">📋 Duplicar</button>';
   var repeteTxt=ev0.repetir?'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--text2)"><span>🔁</span><span>'+repetirResumoTxt(ev0.repetir,ev0.data)+'</span></div>':'';
   var delBtn = (ev0.repetir && occDate)
     ? '<button onclick="_closeEventPopover();delEventoOcorrencia(\''+id+'\',\''+occDate+'\')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;border:1px solid #FECACA;color:var(--red);background:#FEF2F2;cursor:pointer">🗑 Esta ocorrência</button>'
@@ -9738,7 +9760,7 @@ function openEventPopover(id, e, occDate) {
         '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">'+
           '<span style="font-size:18px;flex-shrink:0">'+icoDisp+'</span>'+
           '<div style="min-width:0">'+
-            '<div style="font-size:13px;font-weight:700;color:'+cfg.c+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(ev.concluida?';text-decoration:line-through;opacity:.7':'')+'">'+ev.titulo+'</div>'+
+            '<div style="font-size:13px;font-weight:700;color:'+cfg.c+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(concOc?';text-decoration:line-through;opacity:.7':'')+'">'+ev.titulo+'</div>'+
             '<div style="font-size:11px;color:'+cfg.c+';opacity:.8;margin-top:1px">'+ev.tipo+'</div>'+
           '</div>'+
         '</div>'+
@@ -9751,7 +9773,7 @@ function openEventPopover(id, e, occDate) {
       repeteTxt+
       (ev.descricao?'<div style="font-size:12px;color:var(--text2);margin-bottom:8px;padding:8px;background:var(--bg);border-radius:6px;line-height:1.5">'+ev.descricao+'</div>':'')+
       (demanda?'<div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:8px">📋 '+demanda.servico+(demanda.cliente?' — '+demanda.cliente:'')+'</div>':'')+
-      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">'+tarefaBtn+gcBtn+'</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">'+tarefaBtn+dupBtn+gcBtn+'</div>'+
     '</div>'+
     '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:10px 16px;border-top:1px solid var(--border);border-radius:0 0 12px 12px;background:var(--bg)">'+
       delBtn+
@@ -9928,14 +9950,31 @@ function evUpdateRepeteLabels(){
   if(optY) optY.textContent='Anualmente em '+d.getDate()+' de '+MESES_PT[d.getMonth()];
 }
 
-function toggleTarefaConcluida(id) {
+// Uma tarefa recorrente compartilha o mesmo id/objeto-base em todas as ocorrências — usar só "concluida"
+// marcaria a série inteira de uma vez. Pra série recorrente, guarda as datas de ocorrência já concluídas
+// em ev.concluidasDatas; pra evento único (sem repetir), continua usando o booleano ev.concluida.
+function ocorrenciaConcluida(ev, occDate){
+  if(ev.repetir && occDate) return (ev.concluidasDatas||[]).indexOf(occDate)>=0;
+  return !!ev.concluida;
+}
+function toggleTarefaConcluida(id, occDate) {
   var ev = (state.eventos||[]).find(function(e){return e.id===id;});
   if(!ev) return;
-  ev.concluida = !ev.concluida;
+  var ficouConcluida;
+  if(ev.repetir && occDate){
+    if(!ev.concluidasDatas) ev.concluidasDatas=[];
+    var i=ev.concluidasDatas.indexOf(occDate);
+    if(i>=0){ ev.concluidasDatas.splice(i,1); ficouConcluida=false; }
+    else { ev.concluidasDatas.push(occDate); ficouConcluida=true; }
+  } else {
+    ev.concluida = !ev.concluida;
+    ficouConcluida = ev.concluida;
+  }
+  ev.updatedAt=_now();
   saveState();
   if(_sbUser) sbUpsertEvento(ev);
   renderCalendario();
-  toast(ev.concluida ? '✅ Tarefa concluída!' : '↩ Tarefa reaberta', 'success');
+  toast(ficouConcluida ? '✅ Tarefa concluída!' : '↩ Tarefa reaberta', 'success');
 }
 
 // Lê a regra de recorrência do formulário do modal de evento (null se "Não se repete")
