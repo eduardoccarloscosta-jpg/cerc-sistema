@@ -9954,7 +9954,11 @@ function evUpdateRepeteLabels(){
 // marcaria a série inteira de uma vez. Pra série recorrente, guarda as datas de ocorrência já concluídas
 // em ev.concluidasDatas; pra evento único (sem repetir), continua usando o booleano ev.concluida.
 function ocorrenciaConcluida(ev, occDate){
-  if(ev.repetir && occDate) return (ev.concluidasDatas||[]).indexOf(occDate)>=0;
+  // Guarda dentro de ev.repetir (não num campo novo no evento) porque "repetir" já é a única coluna
+  // jsonb de livre-forma que sincroniza com o Supabase (eventoToDb/dbToEvento só passam campos fixos
+  // por nome — um campo novo no nível do evento seria descartado no upload e nunca voltaria em outro
+  // dispositivo). O mesmo truque já é usado por "exdatas" pra excluir uma ocorrência da série.
+  if(ev.repetir && occDate) return ((ev.repetir.concluidasDatas)||[]).indexOf(occDate)>=0;
   return !!ev.concluida;
 }
 function toggleTarefaConcluida(id, occDate) {
@@ -9962,10 +9966,11 @@ function toggleTarefaConcluida(id, occDate) {
   if(!ev) return;
   var ficouConcluida;
   if(ev.repetir && occDate){
-    if(!ev.concluidasDatas) ev.concluidasDatas=[];
-    var i=ev.concluidasDatas.indexOf(occDate);
-    if(i>=0){ ev.concluidasDatas.splice(i,1); ficouConcluida=false; }
-    else { ev.concluidasDatas.push(occDate); ficouConcluida=true; }
+    if(!ev.repetir.concluidasDatas) ev.repetir.concluidasDatas=[];
+    var arr=ev.repetir.concluidasDatas;
+    var i=arr.indexOf(occDate);
+    if(i>=0){ arr.splice(i,1); ficouConcluida=false; }
+    else { arr.push(occDate); ficouConcluida=true; }
   } else {
     ev.concluida = !ev.concluida;
     ficouConcluida = ev.concluida;
@@ -10018,6 +10023,8 @@ function saveEvento() {
     // preserva ocorrências já removidas individualmente ("excluir esta ocorrência") ao reeditar a série
     var oldEv=state.eventos.find(function(e){return e.id===editingEventoId;});
     if(oldEv && oldEv.repetir && oldEv.repetir.exdatas) repetir.exdatas=oldEv.repetir.exdatas.slice();
+    // preserva quais ocorrências já foram marcadas como concluídas ao reeditar a série
+    if(oldEv && oldEv.repetir && oldEv.repetir.concluidasDatas) repetir.concluidasDatas=oldEv.repetir.concluidasDatas.slice();
   }
   var obj = {
     titulo:titulo, data:data, dataFim:dataFim||null,
