@@ -5945,6 +5945,22 @@ function _buildExcel(snap){
 // cópia (renderDashboard usava um casamento de string diferente), então uma despesa/receita
 // recorrente aparecia em lugares diferentes dependendo da tela. Única fonte de verdade agora.
 function inMes(ds,m,y){if(!ds) return false; var dt=new Date(ds.length===10?ds+'T12:00':ds); return dt.getMonth()+1===m&&dt.getFullYear()===y;}
+// Data de vencimento de uma despesa recorrente NO mês/ano informado — usa o dia de x.data, caindo
+// pro último dia do mês quando esse dia não existe nele (ex: dia 31 num mês de 30 dias). Mesma regra
+// usada pra exibir a coluna "Vencimento" da tabela de Despesas — reaproveitada aqui pra saber se já
+// venceu de verdade, não só "ainda não paga neste mês" (bug: no dia 1º isso marcava tudo como vencido).
+function despesaVencimentoNoMes(x,mes,ano){
+  if(!x.data) return null;
+  var d=new Date(x.data+'T12:00');
+  if(x.rec==='Mensal'){
+    var v=new Date(ano,mes-1,d.getDate());
+    if(v.getMonth()!==mes-1) v=new Date(ano,mes,0);
+    return v;
+  }
+  if(x.rec==='Anual') return new Date(ano,d.getMonth(),d.getDate());
+  d.setHours(0,0,0,0);
+  return d;
+}
 function despesaApareceMes(x,m,y){
   if(!x.data) return false;
   var dt=new Date(x.data+'T12:00'),dM=dt.getMonth()+1,dY=dt.getFullYear();
@@ -6038,7 +6054,9 @@ function renderFinanceiro() {
   var despVenc=e.filter(function(x){
     if(x.rec&&x.rec!=='Única'){
       if(!despesaApareceMes(x,mesAtualN,anoAtualN)) return false;
-      return !(x.pagoMeses&&x.pagoMeses[mesAtualKey]);
+      if(x.pagoMeses&&x.pagoMeses[mesAtualKey]) return false;
+      var vencMes=despesaVencimentoNoMes(x,mesAtualN,anoAtualN);
+      return !!vencMes && vencMes<hoje;
     }
     if(x.pago) return false;
     var dt=new Date(x.data+'T12:00'); dt.setHours(0,0,0,0);
@@ -6230,7 +6248,7 @@ function renderFinanceiro() {
     despList=despList.slice().sort(function(a,b){return new Date(b.data)-new Date(a.data);});
     var bycat={};(esMes.length?esMes:e).forEach(function(x){bycat[x.cat]=(bycat[x.cat]||0)+x.valor;});
     var catRows=Object.keys(bycat).sort(function(a,b){return bycat[b]-bycat[a];}).map(function(c){return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:12px">'+c+'</span><span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--red)">'+fR(bycat[c])+'</span></div>';}).join('');
-    fc.innerHTML='<div class="fin-desp-layout"><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:12px">'+MESES[finMes-1]+' — Por Categoria</div>'+(catRows||'<div style="font-size:12px;color:var(--text3)">Sem despesas.</div>')+'<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid var(--border);margin-top:6px;font-weight:700;font-size:13px"><span>Total</span><span style="font-family:\'JetBrains Mono\',monospace;color:var(--red)">'+fR(totDespMes||e.reduce(function(a,b){return a+(b.valor||0);},0))+'</span></div></div><div class="tw"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Proposta</th><th>Rec.</th><th>Vencimento</th><th style="text-align:right">Valor</th><th>Pagamento</th><th></th></tr></thead><tbody>'+despList.map(function(x){var dem=x.propostaId?state.demandas.find(function(d){return d.id===x.propostaId;}):null;var dataPagStr=x.pago&&x.dataPagamento?'<div style="font-size:10px;color:var(--s-con);margin-top:2px">'+fD(x.dataPagamento)+'</div>':'';var vencDesp=(function(){if(!x.data)return '—';if(x.rec==='Mensal'){var _d=new Date(x.data+'T12:00'),_v=new Date(finAno,finMes-1,_d.getDate());if(_v.getMonth()!==finMes-1)_v=new Date(finAno,finMes,0);return fD(_v.toISOString().slice(0,10));}if(x.rec==='Anual'){var _d=new Date(x.data+'T12:00');return fD(finAno+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0'));}return fD(x.data);})();return '<tr><td style="font-weight:500">'+x.desc+'</td><td style="font-size:11px;color:var(--text2)">'+x.cat+'</td><td>'+(dem?'<span class="badge b-neg" style="font-size:10px">'+dem.proposta+'</span>':'<span style="color:var(--text3);font-size:11px">—</span>')+'</td><td><span class="badge b-fec">'+x.rec+'</span></td><td style="font-size:12px;color:var(--text2)">'+vencDesp+'</td><td class="cn" style="color:var(--red);font-weight:600">'+fR(x.valor)+'</td><td><button class="btn btn-sm" style="font-size:11px;padding:3px 9px;border-radius:20px;border:1.5px solid;cursor:pointer;font-weight:600;background:'+(x.pago?'var(--s-con-l)':'var(--s-per-l)')+';color:'+(x.pago?'var(--s-con)':'var(--text3)')+';border-color:'+(x.pago?'#86EFAC':'var(--border)')+'" onclick="toggleDespPago(\''+x.id+'\',this,'+(x._mesKey?'\''+x._mesKey+'\'':'null')+')">'+(x.pago?'✅ Paga':'⏳ Pendente')+'</button>'+dataPagStr+'</td><td style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openModalDespesa(\''+x.id+'\')">✏️</button><button class="btn btn-danger btn-sm btn-icon" onclick="delDesp(\''+x.id+'\')">🗑</button></td></tr>';}).join('')+'</tbody></table></div></div>';
+    fc.innerHTML='<div class="fin-desp-layout"><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:12px">'+MESES[finMes-1]+' — Por Categoria</div>'+(catRows||'<div style="font-size:12px;color:var(--text3)">Sem despesas.</div>')+'<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid var(--border);margin-top:6px;font-weight:700;font-size:13px"><span>Total</span><span style="font-family:\'JetBrains Mono\',monospace;color:var(--red)">'+fR(totDespMes||e.reduce(function(a,b){return a+(b.valor||0);},0))+'</span></div></div><div class="tw"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Proposta</th><th>Rec.</th><th>Vencimento</th><th style="text-align:right">Valor</th><th>Pagamento</th><th></th></tr></thead><tbody>'+despList.map(function(x){var dem=x.propostaId?state.demandas.find(function(d){return d.id===x.propostaId;}):null;var dataPagStr=x.pago&&x.dataPagamento?'<div style="font-size:10px;color:var(--s-con);margin-top:2px">'+fD(x.dataPagamento)+'</div>':'';var vencDesp=(function(){var _v=despesaVencimentoNoMes(x,finMes,finAno);return _v?fD(_v.toISOString().slice(0,10)):'—';})();return '<tr><td style="font-weight:500">'+x.desc+'</td><td style="font-size:11px;color:var(--text2)">'+x.cat+'</td><td>'+(dem?'<span class="badge b-neg" style="font-size:10px">'+dem.proposta+'</span>':'<span style="color:var(--text3);font-size:11px">—</span>')+'</td><td><span class="badge b-fec">'+x.rec+'</span></td><td style="font-size:12px;color:var(--text2)">'+vencDesp+'</td><td class="cn" style="color:var(--red);font-weight:600">'+fR(x.valor)+'</td><td><button class="btn btn-sm" style="font-size:11px;padding:3px 9px;border-radius:20px;border:1.5px solid;cursor:pointer;font-weight:600;background:'+(x.pago?'var(--s-con-l)':'var(--s-per-l)')+';color:'+(x.pago?'var(--s-con)':'var(--text3)')+';border-color:'+(x.pago?'#86EFAC':'var(--border)')+'" onclick="toggleDespPago(\''+x.id+'\',this,'+(x._mesKey?'\''+x._mesKey+'\'':'null')+')">'+(x.pago?'✅ Paga':'⏳ Pendente')+'</button>'+dataPagStr+'</td><td style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openModalDespesa(\''+x.id+'\')">✏️</button><button class="btn btn-danger btn-sm btn-icon" onclick="delDesp(\''+x.id+'\')">🗑</button></td></tr>';}).join('')+'</tbody></table></div></div>';
   } else {
     // ── Fluxo de Caixa ────────────────────────────────────
     var totRecGeral=d.filter(function(x){return x.statusPagamento==='Pago';}).reduce(function(a,b){return a+(b.valorBruto||0);},0)+d.filter(function(x){return x.statusPagamento==='Parcial';}).reduce(function(a,b){return a+(b.valorPago||0);},0)+d.filter(function(x){return x.statusPagamento==='Parcelado';}).reduce(function(a,b){return a+(b.parcelas||[]).filter(function(p){return p.status==='Pago';}).reduce(function(s,p){return s+p.valor;},0);},0);
