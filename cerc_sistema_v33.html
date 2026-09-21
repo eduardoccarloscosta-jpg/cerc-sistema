@@ -2522,6 +2522,7 @@ async function sbUpsertDemanda(dem) {
   if(!_sbUser) return;
   try {
     await _uploadPendingPropostaArquivos(dem);
+    await _uploadPendingLinkArquivos(dem);
     var body = demandaToDbSb(dem); body.user_id = _sbUser.id;
     var {error} = await _sb.from('demandas').upsert(body, {onConflict:'id'});
     if(error) console.warn('[SB] upsert demanda:', error.message);
@@ -4302,6 +4303,7 @@ function openModalEdit(id) {
   switchTab('geral'); document.getElementById('modal-demanda').style.display='flex';
   _autoMigratePropostasLocais(dem);
   _autoMigrateDocsFiscaisLocais(dem);
+  _autoMigrateLinkArquivosLocais(dem);
 }
 // Reenvia ao Storage propostas antigas que ficaram salvas só em base64 local (ex: anexadas antes da correção
 // de política do bucket, ou offline) — roda em segundo plano ao abrir a demanda, sem travar o modal.
@@ -4353,26 +4355,68 @@ function _autoMigrateDocsFiscaisLocais(dem) {
     toast('📤 Documentos fiscais sincronizados para a nuvem — agora visíveis em qualquer dispositivo.', 'success');
   }).catch(function(e){ console.warn('[Migração docs fiscais]', e&&e.message); });
 }
+// Reenvia ART/Contrato antigos que ficaram só em base64 local — mesma lógica das propostas
+function _autoMigrateLinkArquivosLocais(dem) {
+  if(!_sbUser || !_sb || !_sb.storage) return;
+  var temPendente = ['linkFilesArt','linkFilesContrato'].some(function(campo){ var f=dem[campo]; return f && f.dados && !f.url; });
+  if(!temPendente) return;
+  _uploadPendingLinkArquivos(dem).then(function(){
+    saveState();
+    sbUpsertDemanda(dem);
+    if(editingId===dem.id) {
+      modalLinkFiles.art = dem.linkFilesArt||null;
+      modalLinkFiles.contrato = dem.linkFilesContrato||null;
+      renderAllLinkChips();
+    }
+    toast('📤 Arquivo sincronizado para a nuvem — agora visível em qualquer dispositivo.', 'success');
+  }).catch(function(e){ console.warn('[Migração ART/Contrato]', e&&e.message); });
+}
 
 function addLinkFile(tipo) {
   var input=document.createElement('input'); input.type='file'; input.accept='application/pdf,image/*,.doc,.docx';
   input.onchange=function(e) {
     var file=e.target.files[0]; if(!file) return;
-    if(file.size>8*1024*1024){toast('Limite: 8MB');return;}
+    _processarArquivoLink(tipo,file);
+  };
+  input.click();
+}
+// Anexa arquivo de ART/Contrato — sobe pro Supabase Storage (igual às propostas) pra abrir em qualquer dispositivo
+function _processarArquivoLink(tipo, file) {
+  if(file.size>10*1024*1024){ toast('Limite: 10MB por arquivo','warning'); return; }
+  function salvarLocalOffline() {
+    if(file.size>8*1024*1024){toast('Limite: 8MB (sem conexão)','warning');return;}
     var rd=new FileReader();
     rd.onload=function(ev){
       modalLinkFiles[tipo]={nome:file.name,tipo:file.type,tamanho:file.size,dados:ev.target.result,data:new Date().toISOString()};
-      renderLinkChip(tipo); toast('Arquivo anexado: '+file.name);
+      renderLinkChip(tipo);
+      toast('Sem conexão: arquivo salvo só neste dispositivo. Abra o sistema online para sincronizar.', 'warning');
     };
     rd.readAsDataURL(file);
-  };
-  input.click();
+  }
+  if(!_sb || !_sb.storage) { salvarLocalOffline(); return; }
+  toast('Enviando arquivo...', 'info');
+  _uploadPropostaArquivo(file, file.type, editingId, file.name, tipo).then(function(url){
+    if(!url) { salvarLocalOffline(); return; }
+    modalLinkFiles[tipo]={nome:file.name,tipo:file.type,tamanho:file.size,data:new Date().toISOString(),url:url};
+    renderLinkChip(tipo);
+    toast('Arquivo anexado: '+file.name, 'success');
+  }).catch(function(e){
+    console.warn('[Storage] upload falhou:', e&&e.message);
+    toast('Falha ao enviar ao servidor, salvando localmente...', 'warning');
+    salvarLocalOffline();
+  });
 }
 function renderLinkChip(tipo) {
   var el=document.getElementById('f-'+tipo+'-chip'); if(!el) return;
   var f=modalLinkFiles[tipo];
   if(!f){el.innerHTML='';return;}
-  var safeId=tipo; el.innerHTML='<span class="anx-chip" style="display:inline-flex;cursor:pointer"><span onclick="viewLinkFile(\''+safeId+'\')">📎 '+escapeHtml(f.nome)+'</span> <span class="anx-x" onclick="removeLinkFile(\''+safeId+'\')">×</span></span>';
+  var safeId=tipo;
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+      '<span class="anx-chip"><span>📎 '+escapeHtml(f.nome)+'</span></span>' +
+      '<button class="btn btn-ghost btn-sm" onclick="viewLinkFile(\''+safeId+'\')" style="font-size:11px;padding:3px 8px;color:#0891B2">👁 Ver Arquivo</button>' +
+      '<span class="anx-x" style="cursor:pointer" onclick="removeLinkFile(\''+safeId+'\')" title="Remover">×</span>' +
+    '</div>';
 }
 function dataUrlToBlob(dataUrl) {
   try {
@@ -4410,6 +4454,23 @@ async function _uploadPendingPropostaArquivos(dem) {
         var url = await _uploadPropostaArquivo(blob, p.arquivo.tipo, dem.id, p.arquivo.nome);
         if(url) { p.url = url; delete p.arquivo.dados; }
       } catch(e){ console.warn('[Storage] upload pendente falhou:', e.message); }
+    }
+  }
+}
+// Reenvia para o Storage ART/Contrato que ficaram só em base64 local (mesma lógica das propostas)
+async function _uploadPendingLinkArquivos(dem) {
+  if(!_sb || !_sb.storage) return;
+  var campos = [['linkFilesArt','art'],['linkFilesContrato','contrato']];
+  for(var i=0;i<campos.length;i++) {
+    var campo=campos[i][0], pasta=campos[i][1];
+    var f = dem[campo];
+    if(f && f.dados && !f.url) {
+      try {
+        var blob = dataUrlToBlob(f.dados);
+        if(!blob) continue;
+        var url = await _uploadPropostaArquivo(blob, f.tipo, dem.id, f.nome, pasta);
+        if(url) { f.url = url; delete f.dados; }
+      } catch(e){ console.warn('[Storage] upload pendente ('+campo+') falhou:', e.message); }
     }
   }
 }
@@ -4475,7 +4536,7 @@ function closeFileViewer() {
 }
 function viewLinkFile(tipo) {
   var f=modalLinkFiles[tipo]; if(!f) return;
-  openFileViewer(f.dados, f.nome, f.tipo);
+  openFileViewer(f.url||f.dados, f.nome, f.tipo);
 }
 function removeLinkFile(tipo) { modalLinkFiles[tipo]=null; renderLinkChip(tipo); }
 function renderAllLinkChips() { ['art','contrato'].forEach(renderLinkChip); }
