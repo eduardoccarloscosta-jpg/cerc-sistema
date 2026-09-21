@@ -2523,6 +2523,7 @@ async function sbUpsertDemanda(dem) {
   try {
     await _uploadPendingPropostaArquivos(dem);
     await _uploadPendingLinkArquivos(dem);
+    await _uploadPendingCommentArquivos(dem);
     var body = demandaToDbSb(dem); body.user_id = _sbUser.id;
     var {error} = await _sb.from('demandas').upsert(body, {onConflict:'id'});
     if(error) console.warn('[SB] upsert demanda:', error.message);
@@ -4304,6 +4305,7 @@ function openModalEdit(id) {
   _autoMigratePropostasLocais(dem);
   _autoMigrateDocsFiscaisLocais(dem);
   _autoMigrateLinkArquivosLocais(dem);
+  _autoMigrateCommentArquivosLocais(dem);
 }
 // Reenvia ao Storage propostas antigas que ficaram salvas só em base64 local (ex: anexadas antes da correção
 // de política do bucket, ou offline) — roda em segundo plano ao abrir a demanda, sem travar o modal.
@@ -4370,6 +4372,21 @@ function _autoMigrateLinkArquivosLocais(dem) {
     }
     toast('📤 Arquivo sincronizado para a nuvem — agora visível em qualquer dispositivo.', 'success');
   }).catch(function(e){ console.warn('[Migração ART/Contrato]', e&&e.message); });
+}
+// Reenvia anexos de comentário antigos que ficaram só em base64 local — mesma lógica das propostas
+function _autoMigrateCommentArquivosLocais(dem) {
+  if(!_sbUser || !_sb || !_sb.storage || !Array.isArray(dem.comentarios)) return;
+  var temPendente = dem.comentarios.some(function(c){ return c && Array.isArray(c.anexos) && c.anexos.some(function(a){ return a && a.dados && !a.url; }); });
+  if(!temPendente) return;
+  _uploadPendingCommentArquivos(dem).then(function(){
+    saveState();
+    sbUpsertDemanda(dem);
+    if(editingId===dem.id) {
+      modalComentarios = dem.comentarios.map(function(c){ return Object.assign({},c); });
+      renderChat();
+    }
+    toast('📤 Anexo(s) de comentário sincronizado(s) para a nuvem — agora visíveis em qualquer dispositivo.', 'success');
+  }).catch(function(e){ console.warn('[Migração anexos de comentário]', e&&e.message); });
 }
 
 function addLinkFile(tipo) {
@@ -4471,6 +4488,25 @@ async function _uploadPendingLinkArquivos(dem) {
         var url = await _uploadPropostaArquivo(blob, f.tipo, dem.id, f.nome, pasta);
         if(url) { f.url = url; delete f.dados; }
       } catch(e){ console.warn('[Storage] upload pendente ('+campo+') falhou:', e.message); }
+    }
+  }
+}
+// Reenvia para o Storage anexos de comentário que ficaram só em base64 local (mesma lógica das propostas)
+async function _uploadPendingCommentArquivos(dem) {
+  if(!_sb || !_sb.storage || !Array.isArray(dem.comentarios)) return;
+  for(var i=0;i<dem.comentarios.length;i++) {
+    var c = dem.comentarios[i];
+    if(!c || !Array.isArray(c.anexos)) continue;
+    for(var j=0;j<c.anexos.length;j++) {
+      var a = c.anexos[j];
+      if(a && a.dados && !a.url) {
+        try {
+          var blob = dataUrlToBlob(a.dados);
+          if(!blob) continue;
+          var url = await _uploadPropostaArquivo(blob, a.tipo, dem.id, a.nome, 'comentarios');
+          if(url) { a.url = url; delete a.dados; }
+        } catch(e){ console.warn('[Storage] upload pendente de anexo de comentário falhou:', e.message); }
+      }
     }
   }
 }
@@ -4850,12 +4886,12 @@ function viewCommentAnexo(ci, ai) {
   var c = modalComentarios[ci];
   if(!c || !c.anexos || !c.anexos[ai]) return;
   var a = c.anexos[ai];
-  openFileViewer(a.dados, a.nome, a.tipo);
+  openFileViewer(a.url||a.dados, a.nome, a.tipo);
 }
 function viewPendingCommentAnexo(i) {
   var f = _commentPendingFiles[i];
-  if(!f) return;
-  openFileViewer(f.dados, f.nome, f.tipo);
+  if(!f || f.uploading) return;
+  openFileViewer(f.url||f.dados, f.nome, f.tipo);
 }
 function sendComment() {
   var inp = document.getElementById('chat-input');
@@ -4863,15 +4899,19 @@ function sendComment() {
   var texto = (inp.value||'').trim();
   // Permite enviar sem texto se houver anexos pendentes
   if(!texto && !_commentPendingFiles.length) { inp.focus(); return; }
+  if(_commentPendingFiles.some(function(f){return f.uploading;})) { toast('Aguarde o envio do(s) anexo(s) terminar...','warning'); return; }
   var nome = (_sbProfile&&_sbProfile.nome) || (_sbUser&&_sbUser.email.split('@')[0]) || 'Usuário';
   var foto = (_sbProfile&&_sbProfile.avatar_base64) || localStorage.getItem('cerc_profile_foto') || '';
-  // Armazena apenas metadados dos anexos para evitar estouro de localStorage/Supabase
-  var anexosMeta = _commentPendingFiles.map(function(f){return {nome:f.nome,tipo:f.tipo,tamanho:f.tamanho,dados:f.dados,data:f.data};});
+  var anexosMeta = _commentPendingFiles.map(function(f){
+    var m = {nome:f.nome,tipo:f.tipo,tamanho:f.tamanho,data:f.data};
+    if(f.url) m.url=f.url; else if(f.dados) m.dados=f.dados;
+    return m;
+  });
   var c = { id: uid(), autor: nome, avatarB64: foto, texto: texto||'📎 Arquivo anexado', data: new Date().toISOString(), anexos: anexosMeta };
   modalComentarios.push(c);
   inp.value = '';
   _commentPendingFiles=[];
-  var chipsEl=document.getElementById('comment-anexo-chips');if(chipsEl)chipsEl.innerHTML='';
+  renderCommentPendingChips();
   renderChat();
   // Salvar imediatamente se for edição
   if(editingId) {
@@ -4889,21 +4929,51 @@ function sendComment() {
     }
   }
 }
-// ── Comment attachment ──────────────────────────────
+// ── Comment attachment — sobe pro Storage (igual propostas/ART/Contrato), com fallback local offline ──
 var _commentPendingFiles = [];
 function triggerCommentAnexo() {
   document.getElementById('comment-file-input').click();
 }
+function renderCommentPendingChips() {
+  var chips=document.getElementById('comment-anexo-chips'); if(!chips) return;
+  chips.innerHTML=_commentPendingFiles.map(function(f,i){
+    var label=(f.uploading?'⏳ ':'📎 ')+escapeHtml(f.nome);
+    return '<span style="font-size:11px;background:var(--accent-l);color:var(--accent);padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px"><span onclick="viewPendingCommentAnexo('+i+')" style="cursor:pointer;display:flex;align-items:center;gap:4px" title="Clique para visualizar">'+label+'</span><span style="cursor:pointer;font-weight:700;margin-left:4px;opacity:.6" onclick="_commentPendingFiles.splice('+i+',1);renderCommentPendingChips()">×</span></span>';
+  }).join('');
+}
 function handleCommentAnexo(input) {
   var files=Array.from(input.files||[]); if(!files.length) return;
-  var chips=document.getElementById('comment-anexo-chips'); if(!chips) return;
   files.forEach(function(file){
-    var reader=new FileReader();
-    reader.onload=function(ev){
-      _commentPendingFiles.push({nome:file.name,tipo:file.type,tamanho:file.size,dados:ev.target.result,data:new Date().toISOString()});
-      chips.innerHTML=_commentPendingFiles.map(function(f,i){return '<span style="font-size:11px;background:var(--accent-l);color:var(--accent);padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px"><span onclick="viewPendingCommentAnexo('+i+')" style="cursor:pointer;display:flex;align-items:center;gap:4px" title="Clique para visualizar">📎 '+escapeHtml(f.nome)+'</span><span style="cursor:pointer;font-weight:700;margin-left:4px;opacity:.6" onclick="_commentPendingFiles.splice('+i+',1);handleCommentAnexo({files:[]})">×</span></span>';}).join('');
-    };
-    reader.readAsDataURL(file);
+    if(file.size>10*1024*1024){ toast('Limite: 10MB por arquivo','warning'); return; }
+    var pid = uid();
+    _commentPendingFiles.push({_pid:pid, nome:file.name,tipo:file.type,tamanho:file.size,uploading:true,data:new Date().toISOString()});
+    renderCommentPendingChips();
+    function setEntry(patch) {
+      var e = _commentPendingFiles.find(function(x){return x._pid===pid;});
+      if(!e) return; // removido antes do envio terminar
+      delete e.uploading;
+      Object.assign(e, patch);
+      renderCommentPendingChips();
+    }
+    function salvarLocalOffline() {
+      if(file.size>8*1024*1024){
+        toast('Limite: 8MB (sem conexão) — '+file.name,'warning');
+        _commentPendingFiles=_commentPendingFiles.filter(function(x){return x._pid!==pid;});
+        renderCommentPendingChips();
+        return;
+      }
+      var rd=new FileReader();
+      rd.onload=function(ev){ setEntry({dados:ev.target.result}); };
+      rd.readAsDataURL(file);
+    }
+    if(!_sb || !_sb.storage) { salvarLocalOffline(); return; }
+    _uploadPropostaArquivo(file, file.type, editingId, file.name, 'comentarios').then(function(url){
+      if(!url) { salvarLocalOffline(); return; }
+      setEntry({url:url});
+    }).catch(function(e){
+      console.warn('[Storage] upload de anexo de comentário falhou:', e&&e.message);
+      salvarLocalOffline();
+    });
   });
   input.value='';
 }
