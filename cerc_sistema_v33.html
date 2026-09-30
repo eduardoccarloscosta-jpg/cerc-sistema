@@ -1458,6 +1458,12 @@ body.fv-open::after{display:none}
           <div class="fg"><label>E-mail</label><input class="finput" id="f-email" type="email"/></div>
           <div class="fg"><label>Telefone</label><input class="finput" id="f-telefone"/></div>
           <div class="fg"><label>Último Contato</label><input class="finput" type="date" id="f-ultimo-contato"/></div>
+          <div class="fg"><label>CNPJ / CPF</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input class="finput" id="f-cnpj" placeholder="Preenchido ao selecionar o cliente" style="font-family:'JetBrains Mono',monospace"/>
+              <button type="button" class="btn btn-ghost btn-sm btn-icon" style="width:34px;height:34px;flex-shrink:0" title="Copiar CNPJ" onclick="copiarCnpjDemanda()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2362,7 +2368,7 @@ function demandaToDb(d) {
     motivo_perda: d.motivoPerda||'', categoria_perda: String(d.categoriaPerda||''),
     plano_acao_perda: d.planoAcaoPerda||'', data_resgate: d.dataResgate||'',
     log: d.log||[], subtarefas: d.subtarefas||[], comentarios: d.comentarios||[],
-    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||'',url:doc.url||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip)};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
+    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||'',url:doc.url||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip),cnpjCliente:d.cnpj||''};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
     parcelas: d.parcelas||[],
     pagamentos_parciais: d.pagamentosParciais||[],
     total_parcelas: parseInt(d.totalParcelas)||0,
@@ -2383,6 +2389,7 @@ function dbToDemanda(r) {
   return {
     id: r.id, proposta: r.proposta||'', servico: r.servico||'', tipo: r.tipo||'', status: r.status||'',
     cliente: r.cliente||'', contato: r.contato||'', email: r.email||'', telefone: r.telefone||'',
+    cnpj: (r.docs_fiscais&&r.docs_fiscais.cnpjCliente)||'', // guardado dentro do jsonb docs_fiscais (tabela não tem coluna cnpj)
     ultimoContato: r.ultimo_contato||'', dataCriacao: r.data_criacao||'', dataFechamento: r.data_fechamento||'',
     dataRetorno: r.data_retorno||'', dataLembrete: r.data_lembrete||'',
     valorBruto: parseFloat(r.valor_bruto)||0, desconto: parseFloat(r.desconto)||0,
@@ -2515,7 +2522,7 @@ function demandaToDbSb(d) {
   if(base.link_files_contrato && base.link_files_contrato.dados) { var c=base.link_files_contrato; base.link_files_contrato={nome:c.nome,tipo:c.tipo,tamanho:c.tamanho,data:c.data}; }
   // Strip base64 dos docs fiscais
   function stripDoc(doc){ return doc&&doc.dados ? {nome:doc.nome,tipo:doc.tipo,tamanho:doc.tamanho,data:doc.data,prazo:doc.prazo||''} : doc; }
-  if(base.docs_fiscais) { base.docs_fiscais={nfs:(base.docs_fiscais.nfs||[]).map(stripDoc),boletos:(base.docs_fiscais.boletos||[]).map(stripDoc),laudos:(base.docs_fiscais.laudos||[]).map(stripDoc)}; }
+  if(base.docs_fiscais) { base.docs_fiscais={nfs:(base.docs_fiscais.nfs||[]).map(stripDoc),boletos:(base.docs_fiscais.boletos||[]).map(stripDoc),laudos:(base.docs_fiscais.laudos||[]).map(stripDoc),cnpjCliente:base.docs_fiscais.cnpjCliente||''}; }
   return base;
 }
 async function sbUpsertDemanda(dem) {
@@ -4232,7 +4239,7 @@ function openModalNew() {
   modalDocsFiscais={nfs:[],boletos:[],laudos:[]}; modalLinkFiles={'pdf-prop':null,art:null,contrato:null}; modalLinkPropostas=[];
   _commentPendingFiles=[]; var _cac=document.getElementById('comment-anexo-chips');if(_cac)_cac.innerHTML='';
   document.getElementById('modal-title').textContent='Nova Demanda';
-  ['f-servico','f-tipo','f-cliente','f-contato','f-email','f-telefone','f-ultimo-contato','f-fechamento','f-retorno','f-bruto','f-desconto-r','f-desconto-pct','f-imposto','f-custo-op','f-liquido','f-art','f-canva','f-gdrive','f-extra-link','f-extra-desc','f-data-pagamento'].forEach(function(id){setF(id,'');});
+  ['f-servico','f-tipo','f-cliente','f-contato','f-email','f-telefone','f-cnpj','f-ultimo-contato','f-fechamento','f-retorno','f-bruto','f-desconto-r','f-desconto-pct','f-imposto','f-custo-op','f-liquido','f-art','f-canva','f-gdrive','f-extra-link','f-extra-desc','f-data-pagamento'].forEach(function(id){setF(id,'');});
   renderPacotesFinanceiro(null);
   renderLinkPropostas();
   setF('f-status','Negociação'); setF('f-proposta',nextPR()); setF('f-pagamento','Pendente');
@@ -4281,6 +4288,7 @@ function openModalEdit(id) {
   if(lockIcon){lockIcon.textContent='✏️ editável';lockIcon.style.color='var(--amber)';}
   setF('f-fechamento',dem.dataFechamento||'');setF('f-retorno',dem.dataRetorno||'');
   setF('f-cliente',dem.cliente);setF('f-contato',dem.contato);setF('f-email',dem.email||'');setF('f-telefone',dem.telefone||'');setF('f-ultimo-contato',dem.ultimoContato||'');
+  setF('f-cnpj',dem.cnpj||cnpjDoClientePorNome(dem.cliente));
   setValorBR('f-bruto',dem.valorBruto||0);setValorBR('f-desconto-r',dem.desconto||0);setF('f-desconto-pct',dem.valorBruto&&dem.desconto?(dem.desconto/dem.valorBruto*100).toFixed(1):'');setValorBR('f-imposto',dem.impostoEstimado||0);setValorBR('f-custo-op',dem.custoOperacional||0);setValorBR('f-liquido',dem.valorLiquido||0);
   renderPacotesFinanceiro(dem);
   setF('f-pagamento',dem.statusPagamento||'Pendente');
@@ -5240,8 +5248,33 @@ function normBusca(s){
 }
 function applyClient(idx) {
   var c=state.clientes[parseInt(idx)];if(!c) return;
-  setF('f-cliente',c.empresa);setF('f-contato',c.contato||'');setF('f-email',c.email||'');setF('f-telefone',c.telefone||'');
+  setF('f-cliente',c.empresa);setF('f-contato',c.contato||'');setF('f-email',c.email||'');setF('f-telefone',c.telefone||'');setF('f-cnpj',c.cnpj||'');
   toast('Cliente preenchido: '+c.empresa);
+}
+// Compara nomes de cliente ignorando espaços nas pontas, maiúsculas e acentos (cadastros antigos têm espaço sobrando no fim)
+function nomeCliKey(s){ return normBusca(s).replace(/\s+/g,' ').trim(); }
+// Índice (em state.clientes) do cliente com esse nome; havendo filiais com o mesmo nome, desempata pelo CNPJ
+function findClienteIdx(nome, cnpj){
+  var k=nomeCliKey(nome); if(!k) return -1;
+  var dig=(cnpj||'').replace(/\D/g,'');
+  var idxs=[]; state.clientes.forEach(function(c,i){ if(nomeCliKey(c.empresa)===k) idxs.push(i); });
+  if(!idxs.length) return -1;
+  if(dig){ for(var j=0;j<idxs.length;j++){ if((state.clientes[idxs[j]].cnpj||'').replace(/\D/g,'')===dig) return idxs[j]; } }
+  return idxs[0];
+}
+// CNPJ para demandas antigas (salvas antes do campo existir): só preenche se não houver ambiguidade entre filiais
+function cnpjDoClientePorNome(nome){
+  var k=nomeCliKey(nome); if(!k) return '';
+  var cnpjs=[]; state.clientes.forEach(function(c){ if(nomeCliKey(c.empresa)===k && c.cnpj && cnpjs.indexOf(c.cnpj)<0) cnpjs.push(c.cnpj); });
+  return cnpjs.length===1?cnpjs[0]:'';
+}
+function copiarCnpjDemanda(){
+  var el=document.getElementById('f-cnpj'); var txt=el?el.value.trim():'';
+  if(!txt){ toast('CNPJ vazio — selecione o cliente','warning'); return; }
+  function ok(){toast('Copiado: '+txt,'success');}
+  function fail(){ el.select(); toast('Não foi possível copiar — use Ctrl+C'); }
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fail);
+  else fail();
 }
 function filterDemCliente(q){
   var resEl=document.getElementById('dem-cli-results'); if(!resEl) return;
@@ -5308,7 +5341,7 @@ function _saveDemandaImpl() {
   var fStatus=document.getElementById('f-status').value;
   // Se status mudou de Perdido para outro, limpar campos de perda
   var old2=editingId?state.demandas.find(function(x){return x.id===editingId;}):null;
-  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:dataParcialDerivada,pagamentosParciais:pag==='Parcial'?modalPagamentosParciais.slice():[],parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].url||''):''),linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkGdrive:document.getElementById('f-gdrive').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkPropostas:modalLinkPropostas.slice(),linkFilesPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].arquivo||null):null),linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nfs:(modalDocsFiscais.nfs||[]).slice(),boletos:(modalDocsFiscais.boletos||[]).slice(),laudos:(modalDocsFiscais.laudos||[]).slice()},marcos:modalMarcos.map(function(m){return JSON.parse(JSON.stringify(m));}),
+  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,cnpj:document.getElementById('f-cnpj').value.trim(),ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:dataParcialDerivada,pagamentosParciais:pag==='Parcial'?modalPagamentosParciais.slice():[],parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].url||''):''),linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkGdrive:document.getElementById('f-gdrive').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkPropostas:modalLinkPropostas.slice(),linkFilesPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].arquivo||null):null),linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nfs:(modalDocsFiscais.nfs||[]).slice(),boletos:(modalDocsFiscais.boletos||[]).slice(),laudos:(modalDocsFiscais.laudos||[]).slice()},marcos:modalMarcos.map(function(m){return JSON.parse(JSON.stringify(m));}),
     motivoPerda:   fStatus==='Perdido'?(old2?old2.motivoPerda||'':(_perdaTempData?_perdaTempData.motivoPerda||'':'')):''   ,
     categoriaPerda:fStatus==='Perdido'?(old2?old2.categoriaPerda||'':(_perdaTempData?_perdaTempData.categoriaPerda||'':'')):''  ,
     planoAcaoPerda:fStatus==='Perdido'?(old2?old2.planoAcaoPerda||'':(_perdaTempData?_perdaTempData.planoAcaoPerda||'':'')):'' ,
@@ -7029,9 +7062,10 @@ function editarNaPrec(demId) {
   // Cliente já selecionado no formulário da demanda (antes de fechar o modal) — evita ter que escolher de novo na Precificação
   var _cliField = document.getElementById('f-cliente');
   var _cliNome = _cliField ? _cliField.value.trim() : '';
+  var _cnpjField = document.getElementById('f-cnpj');
   var _cliIdxMatch = '';
   if(_cliNome){
-    var _idxFound = state.clientes.findIndex(function(c){return (c.empresa||'').toLowerCase()===_cliNome.toLowerCase();});
+    var _idxFound = findClienteIdx(_cliNome, _cnpjField ? _cnpjField.value : (dem&&dem.cnpj));
     if(_idxFound>=0) _cliIdxMatch = String(_idxFound);
   }
   // Carrega dados da demanda na precificação se disponíveis
@@ -7042,7 +7076,8 @@ function editarNaPrec(demId) {
     if(!Array.isArray(precState.pacotes)) precState.pacotes=[];
     var _existingOpIds=precState.ops.map(function(o){return o.id;});
     OPS_DEFAULT.forEach(function(o){ if(_existingOpIds.indexOf(o.id)<0) precState.ops.push(Object.assign({},o)); });
-    if((precState.cliIdx===''||precState.cliIdx===null||precState.cliIdx===undefined) && _cliIdxMatch) precState.cliIdx=_cliIdxMatch;
+    // O cliente da demanda manda: o cliIdx salvo é um índice de state.clientes e fica errado quando a lista muda
+    if(_cliIdxMatch) precState.cliIdx=_cliIdxMatch;
   } else {
     // Sem precificação salva pra esta demanda (nova ou ainda sem precDados): começa limpo, sem resíduo de uma precificação anterior
     precState = precStateBlank(dem?'Engenheiro Pleno':'');
@@ -7133,6 +7168,7 @@ function usarNaDemanda(bruto,imp,custo,liq) {
       setF('f-contato',cliSelecionado.contato||'');
       setF('f-email',cliSelecionado.email||'');
       setF('f-telefone',cliSelecionado.telefone||'');
+      setF('f-cnpj',cliSelecionado.cnpj||'');
       switchTab('geral');
       toast('✅ Cliente "'+cliSelecionado.empresa+'" preenchido automaticamente!');
       setTimeout(function(){switchTab('financeiro');},1200);
