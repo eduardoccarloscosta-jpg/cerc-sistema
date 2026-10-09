@@ -1298,6 +1298,8 @@ body.fv-open::after{display:none}
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Clientes</div>
     <div class="ni" onclick="showPage('contratos')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Contratos</div>
+    <div class="ni" onclick="showPage('documentos')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>Documentos</div>
     <div class="ni" onclick="showPage('financeiro')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</div>
     <div class="ni" onclick="showPage('projetos')">
@@ -1674,6 +1676,10 @@ body.fv-open::after{display:none}
     </div>
     <!-- LINKS -->
     <div id="tab-links" style="display:none">
+      <div class="fsec">
+        <div class="fsec-title">Documentos Técnicos (LT / MC / MD)</div>
+        <div id="f-doctec-list"></div>
+      </div>
       <div class="fsec">
         <div class="fsec-title">Documentos Anexados</div>
         <!-- PROPOSTAS / REVISÕES -->
@@ -2831,6 +2837,7 @@ async function loadStateFromSupabase() {
     state.nr12Maquinas = mergeAndPush(rMaq.error?[]:rMaq.data, state.nr12Maquinas||[], dbToNr12Maquina, nr12MaquinaToDb, 'nr12_maquinas');
     state.nr12Riscos   = mergeAndPush(rRisc.error?[]:rRisc.data, state.nr12Riscos||[], dbToNr12Risco, nr12RiscoToDb, 'nr12_riscos');
     sbOnline=true;
+    docTecCarregar(true);
     try{ localStorage.setItem(SK,JSON.stringify({demandas:state.demandas,despesas:state.despesas,clientes:state.clientes,collapseStatus:state.collapseStatus,servicos:state.servicos,svCatCollapsed:state.svCatCollapsed||{},eventos:state.eventos||[],contratos:state.contratos||[],pmocs:state.pmocs||[],nr12Maquinas:state.nr12Maquinas||[],nr12Riscos:state.nr12Riscos||[]})); }catch(e){}
     setSbStatus('online');
     var actPg=document.querySelector('.ni.active');
@@ -3232,7 +3239,7 @@ function showPage(pg) {
   var _pc=document.getElementById('page-content');
   if(_pc) _pc.style.padding = (pg==='calendario') ? '0' : '';
   document.querySelectorAll('.ni').forEach(function(el){ el.classList.toggle('active',(el.getAttribute('onclick')||'').indexOf("'"+pg+"'")>=0); });
-  var titles={dashboard:'Dashboard',demandas:'Demandas',clientes:'Cadastro de Clientes',financeiro:'Financeiro',projetos:'Gestão de Projetos',precificacao:'Calculadora de Precificação',servicos:'Tabela de Serviços',calendario:'Calendário',contratos:'Contratos',configuracoes:'Configurações',pmoc:'PMOC — Plano de Manutenção',nr12:'NR-12 — Segurança em Máquinas'};
+  var titles={dashboard:'Dashboard',demandas:'Demandas',clientes:'Cadastro de Clientes',financeiro:'Financeiro',projetos:'Gestão de Projetos',precificacao:'Calculadora de Precificação',servicos:'Tabela de Serviços',calendario:'Calendário',contratos:'Contratos',documentos:'Documentos Técnicos',configuracoes:'Configurações',pmoc:'PMOC — Plano de Manutenção',nr12:'NR-12 — Segurança em Máquinas'};
   document.getElementById('topbar-title').textContent=titles[pg]||pg;
   var acts=document.getElementById('topbar-actions'); acts.innerHTML='';
   if(pg==='demandas') acts.innerHTML='<button class="btn btn-primary" onclick="openModalNew()">+ Nova Demanda</button>';
@@ -3241,6 +3248,7 @@ function showPage(pg) {
   if(pg==='servicos') acts.innerHTML='<button class="btn btn-primary" onclick="openServicoModal(null)">+ Novo Serviço</button>';
   if(pg==='contratos') acts.innerHTML='<button class="btn btn-primary" onclick="openNovoContrato()">+ Novo Contrato</button>';
   if(pg==='pmoc') acts.innerHTML='<button class="btn btn-primary" onclick="openPmocModal(null)">+ Novo PMOC</button>';
+  if(pg==='documentos') acts.innerHTML='<button class="btn btn-primary" onclick="docTecNovo()">+ Novo Documento</button>';
   if(pg==='nr12') acts.innerHTML='<button class="btn btn-primary" style="background:#0891B2;border-color:#0891B2" onclick="openNR12MaqModal(null)">🛡️ + Nova Máquina</button>';
   if(pg==='calendario'){setTimeout(function(){var l=document.getElementById('cal-mes-label');if(l){l.textContent='';}},50); setTimeout(function(){if(gcIsConnected())gcFetchEvents();},300);} if(pg==='calendario') acts.innerHTML='<span id="cal-mes-label" style="font-size:13px;font-weight:600;color:var(--text2)"></span>';
   // notif bell always visible
@@ -3250,7 +3258,7 @@ function showPage(pg) {
     +'</button>';
   acts.insertAdjacentHTML('afterbegin', bellHtml);
   setTimeout(updateNotifBadge, 100);
-  var rmap2={dashboard:renderDashboard,demandas:renderDemandas,clientes:renderClientes,financeiro:renderFinanceiro,projetos:renderProjetos,precificacao:renderPrecificacao,servicos:renderServicos,calendario:renderCalendario,contratos:renderContratos,configuracoes:renderConfiguracoes,pmoc:renderPmoc,nr12:renderNR12};
+  var rmap2={documentos:renderDocumentos,dashboard:renderDashboard,demandas:renderDemandas,clientes:renderClientes,financeiro:renderFinanceiro,projetos:renderProjetos,precificacao:renderPrecificacao,servicos:renderServicos,calendario:renderCalendario,contratos:renderContratos,configuracoes:renderConfiguracoes,pmoc:renderPmoc,nr12:renderNR12};
   if(rmap2[pg]) rmap2[pg]();
 }
 
@@ -3291,11 +3299,16 @@ function showGlobalResults(val){
     var hay=((ct.titulo||'')+' '+(ct.cliente||'')+' '+(ct.descricao||'')).toLowerCase();
     if(hay.indexOf(q)>=0) results.push({tipo:'contrato',icone:'📄',titulo:ct.titulo||'Contrato',sub:ct.cliente||'',id:ct.id});
   });
+  // Documentos técnicos
+  (docTec.lista||[]).forEach(function(d){
+    var hay=((d.codigo||'')+' '+(d.titulo||'')+' '+(d.cliente||'')).toLowerCase();
+    if(hay.indexOf(q)>=0) results.push({tipo:'documento',icone:'📑',titulo:escapeHtml(d.codigo+(d.titulo?' — '+d.titulo:'')),sub:escapeHtml(d.cliente||''),id:d.id});
+  });
   if(!results.length){
     el.innerHTML='<div style="padding:14px;text-align:center;font-size:12px;color:var(--text3)">Nenhum resultado para "'+q+'"</div>';
     el.style.display='block';return;
   }
-  var tipoLabel={demanda:'Demanda',cliente:'Cliente',contrato:'Contrato'};
+  var tipoLabel={demanda:'Demanda',cliente:'Cliente',contrato:'Contrato',documento:'Documento'};
   el.innerHTML=results.slice(0,12).map(function(r,idx){
     return '<div class="gs-item" tabindex="0" onclick="gsOpen(\''+r.tipo+'\',\''+r.id+'\')" style="display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s" onmouseenter="this.style.background=\'var(--surface2)\'" onmouseleave="this.style.background=\'\'">'+
       '<span style="font-size:16px">'+r.icone+'</span>'+
@@ -3314,6 +3327,7 @@ function gsOpen(tipo,id){
   if(tipo==='demanda'){ showPage('demandas'); setTimeout(function(){openModalEdit(id);},200); }
   else if(tipo==='cliente'){ showPage('clientes'); setTimeout(function(){openClienteDetalhe(id);},200); }
   else if(tipo==='contrato'){ showPage('contratos'); setTimeout(function(){verContrato(id);},200); }
+  else if(tipo==='documento'){ showPage('documentos'); setTimeout(function(){docTecAbrir(id);},200); }
 }
 document.addEventListener('click',function(e){
   var sr=document.getElementById('global-search-results');
@@ -3779,7 +3793,7 @@ function switchTab(tab) {
   if(tab==='progresso'){ renderSubList(); renderChecklistLev(); renderChecklistCustom(); }
   if(tab==='historico') renderHistorico();
   if(tab==='financeiro'){renderDocsFiscais();setTimeout(function(){updateDespesasBox();renderCascataBox();},50);}
-  if(tab==='links'){ setTimeout(renderAllLinkChips,50); setTimeout(renderLinkPropostas,50); }
+  if(tab==='links'){ setTimeout(renderAllLinkChips,50); setTimeout(renderLinkPropostas,50); setTimeout(renderDocTecDemanda,50); }
   if(tab==='projeto') renderMarcosTab();
 }
 
@@ -9253,6 +9267,392 @@ function numContrato(){
   return 'CT-'+ano+'-'+String(n).padStart(3,'0');
 }
 
+// ══ DOCUMENTOS TÉCNICOS — numeração LT / MC / MD ═════════════════
+// Código no formato SIGLA-NNAAAA (ex: LT-152026). Sequência separada por tipo e reiniciada a cada ano.
+// A reserva do número é feita no Supabase (RPC reservar_documento) para que dois usuários nunca peguem o mesmo número.
+var DOC_TIPOS = {LT:'Laudo Técnico', MC:'Memorial de Cálculo', MD:'Memorial Descritivo'};
+var DOC_ROTULOS = ['PDF final','Editável','Revisão','Outro'];
+var DOC_STATUS = {Reservado:{bg:'#FEF3C7',fg:'#B45309'},Emitido:{bg:'#DCFCE7',fg:'#15803D'},Cancelado:{bg:'#F3F4F6',fg:'#6B7280'}};
+var DOC_MAX_BYTES = 15*1024*1024; // limite do bucket 'app' no Storage
+var docTec = {lista:[], carregado:false, erro:false, carregando:null, filtro:{tipo:'',ano:String(new Date().getFullYear()),status:'',q:''}};
+var docTecEdit = null; // documento aberto no modal de detalhe
+var _docTecSvgCopy = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+
+function docTecCodigo(sigla, seq, ano){ return sigla+'-'+(seq<10?'0'+seq:String(seq))+ano; }
+function docTecCarregar(force){
+  if(!_sbUser) return Promise.resolve(docTec.lista);
+  if(docTec.carregando && !force) return docTec.carregando;
+  docTec.carregando = (async function(){
+    try {
+      var res = await _sb.from('documentos').select('*');
+      if(res.error) throw new Error(res.error.message);
+      docTec.lista = res.data||[]; docTec.carregado = true; docTec.erro = false;
+    } catch(e){ docTec.erro = true; console.warn('[SB] documentos:', e.message); }
+    docTec.carregando = null;
+    return docTec.lista;
+  })();
+  return docTec.carregando;
+}
+function docTecProximoSeq(sigla, ano){
+  var m=0; docTec.lista.forEach(function(d){ if(d.sigla===sigla && d.ano===ano && d.seq>m) m=d.seq; });
+  return m+1;
+}
+function docTecUltimo(sigla, ano){
+  var u=null; docTec.lista.forEach(function(d){ if(d.sigla===sigla && d.ano===ano && (!u || d.seq>u.seq)) u=d; });
+  return u;
+}
+function docTecArquivoPrincipal(d){
+  var arr=(d&&d.arquivos)||[], f=null;
+  arr.forEach(function(a){ if(a.url && a.rotulo==='PDF final') f=a; });
+  if(!f) arr.forEach(function(a){ if(a.url) f=a; });
+  return f;
+}
+function docTecBadge(st){
+  var c=DOC_STATUS[st]||DOC_STATUS.Reservado;
+  return '<span class="badge" style="background:'+c.bg+';color:'+c.fg+'">'+escapeHtml(st||'Reservado')+'</span>';
+}
+function docTecDemanda(d){ return d&&d.demanda_id ? state.demandas.find(function(x){return x.id===d.demanda_id;}) : null; }
+function docTecData(iso){ return iso ? new Date(iso).toLocaleDateString('pt-BR') : '—'; }
+function docTecTam(b){ if(!b) return ''; return b>=1048576 ? (b/1048576).toFixed(1).replace('.',',')+' MB' : Math.max(1,Math.round(b/1024))+' KB'; }
+function docTecCopiar(codigo){
+  function ok(){ toast('Copiado: '+codigo,'success'); }
+  function fail(){ toast('Não foi possível copiar — código: '+codigo); }
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(codigo).then(ok, fail);
+  else fail();
+}
+function docTecVerArquivo(docId, arqId){
+  var d=docTec.lista.find(function(x){return x.id===docId;}); if(!d) return;
+  var a=arqId ? (d.arquivos||[]).find(function(x){return x.id===arqId;}) : docTecArquivoPrincipal(d);
+  if(a && a.url) openFileViewer(a.url, a.nome, a.tipo);
+}
+function docTecRefresh(){
+  if(currentPage==='documentos') renderDocumentosConteudo();
+  renderDocTecDemanda();
+}
+function docTecAbrirDemanda(demId){
+  showPage('demandas'); setTimeout(function(){ openModalEdit(demId); switchTab('links'); },200);
+}
+
+// ── Página Documentos ────────────────────────────────────
+function renderDocumentos(){
+  var pc=document.getElementById('page-content');
+  if(!docTec.carregado){
+    if(!_sbUser){ pc.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">Faça login (online) para acessar os documentos.</div>'; return; }
+    pc.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">Carregando documentos...</div>';
+    docTecCarregar().then(function(){
+      if(currentPage!=='documentos') return;
+      if(docTec.carregado) renderDocumentosConteudo();
+      else pc.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">Não foi possível carregar os documentos (sem conexão?).<br><br><button class="btn btn-ghost" onclick="renderDocumentos()">Tentar novamente</button></div>';
+    });
+    return;
+  }
+  renderDocumentosConteudo();
+}
+function renderDocumentosConteudo(){
+  var pc=document.getElementById('page-content'); if(!pc) return;
+  var ano=new Date().getFullYear();
+  var cards=Object.keys(DOC_TIPOS).map(function(s){
+    var u=docTecUltimo(s, ano);
+    var qtd=docTec.lista.filter(function(d){return d.sigla===s && d.ano===ano;}).length;
+    return '<div class="kpi" style="display:flex;flex-direction:column;gap:6px">'+
+      '<div class="kpi-label">'+DOC_TIPOS[s]+' ('+s+')</div>'+
+      '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text3)">Próximo:</span>'+
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:17px;font-weight:700;color:var(--accent)">'+docTecCodigo(s, docTecProximoSeq(s, ano), ano)+'</span></div>'+
+      '<div class="kpi-sub">'+(u?'Último: '+u.codigo:'Nenhum em '+ano)+' · '+qtd+' no ano</div>'+
+      '<button class="btn btn-primary btn-sm" style="align-self:flex-start;margin-top:2px" onclick="docTecNovo(\''+s+'\')">+ Gerar '+s+'</button>'+
+    '</div>';
+  }).join('');
+  var anos={}; anos[ano]=1; docTec.lista.forEach(function(d){ anos[d.ano]=1; });
+  var f=docTec.filtro;
+  var anoOpts='<option value="">Todos os anos</option>'+Object.keys(anos).sort().reverse().map(function(a){return '<option'+(f.ano===a?' selected':'')+'>'+a+'</option>';}).join('');
+  var tipoOpts='<option value="">Todos os tipos</option>'+Object.keys(DOC_TIPOS).map(function(s){return '<option value="'+s+'"'+(f.tipo===s?' selected':'')+'>'+s+' — '+DOC_TIPOS[s]+'</option>';}).join('');
+  var stOpts='<option value="">Todos os status</option>'+Object.keys(DOC_STATUS).map(function(s){return '<option'+(f.status===s?' selected':'')+'>'+s+'</option>';}).join('');
+  pc.innerHTML=
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:16px">'+cards+'</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">'+
+      '<input class="finput" style="flex:1;min-width:200px" placeholder="Buscar código, título, cliente ou proposta..." value="'+escapeHtml(f.q)+'" oninput="docTec.filtro.q=this.value;renderDocTecTabela()"/>'+
+      '<select class="finput" style="width:auto" onchange="docTec.filtro.tipo=this.value;renderDocTecTabela()">'+tipoOpts+'</select>'+
+      '<select class="finput" style="width:auto" onchange="docTec.filtro.ano=this.value;renderDocTecTabela()">'+anoOpts+'</select>'+
+      '<select class="finput" style="width:auto" onchange="docTec.filtro.status=this.value;renderDocTecTabela()">'+stOpts+'</select>'+
+    '</div>'+
+    '<div id="doctec-tabela"></div>';
+  renderDocTecTabela();
+}
+function renderDocTecTabela(){
+  var el=document.getElementById('doctec-tabela'); if(!el) return;
+  var f=docTec.filtro, q=normBusca(f.q||'').trim();
+  var rows=docTec.lista.filter(function(d){
+    if(f.tipo && d.sigla!==f.tipo) return false;
+    if(f.ano && String(d.ano)!==f.ano) return false;
+    if(f.status && d.status!==f.status) return false;
+    if(q){
+      var dem=docTecDemanda(d);
+      var hay=normBusca([d.codigo,d.titulo,d.cliente,dem?dem.proposta:'',dem?dem.servico:''].join(' '));
+      if(hay.indexOf(q)<0) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return b.ano-a.ano || a.sigla.localeCompare(b.sigla) || b.seq-a.seq; });
+  if(!rows.length){
+    el.innerHTML='<div style="text-align:center;padding:40px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);color:var(--text3);font-size:13px">'+
+      (docTec.lista.length?'Nenhum documento encontrado com esses filtros.':'Nenhum documento registrado ainda. Use os botões acima para gerar o primeiro número.')+'</div>';
+    return;
+  }
+  el.innerHTML='<div class="tw"><table><thead><tr><th>Código</th><th>Tipo</th><th>Título</th><th>Proposta</th><th>Cliente</th><th>Status</th><th>Arquivo</th><th>Criado em</th><th></th></tr></thead><tbody>'+
+    rows.map(function(d){
+      var dem=docTecDemanda(d), arq=docTecArquivoPrincipal(d), n=(d.arquivos||[]).length;
+      return '<tr'+(d.status==='Cancelado'?' style="opacity:.6"':'')+'>'+
+        '<td style="white-space:nowrap"><span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:var(--accent)'+(d.status==='Cancelado'?';text-decoration:line-through':'')+'">'+d.codigo+'</span> '+
+          '<button class="btn btn-ghost btn-sm btn-icon" title="Copiar código" onclick="docTecCopiar(\''+d.codigo+'\')">'+_docTecSvgCopy+'</button></td>'+
+        '<td style="font-size:12px;color:var(--text2)">'+(DOC_TIPOS[d.sigla]||d.sigla)+'</td>'+
+        '<td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500" title="'+escapeHtml(d.titulo)+'">'+(escapeHtml(d.titulo)||'<span style="color:var(--text3)">—</span>')+'</td>'+
+        '<td style="font-size:12px">'+(dem?'<a href="#" style="color:var(--accent);font-weight:600" onclick="event.preventDefault();docTecAbrirDemanda(\''+dem.id+'\')">'+escapeHtml(dem.proposta)+'</a>':'—')+'</td>'+
+        '<td style="font-size:12px">'+(escapeHtml(d.cliente)||'—')+'</td>'+
+        '<td>'+docTecBadge(d.status)+'</td>'+
+        '<td style="white-space:nowrap">'+(arq?'<button class="btn btn-ghost btn-sm" onclick="docTecVerArquivo(\''+d.id+'\')">👁 Ver</button>'+(n>1?' <span style="font-size:11px;color:var(--text3)">+'+(n-1)+'</span>':''):'<span style="font-size:11px;color:var(--text3)">—</span>')+'</td>'+
+        '<td style="font-size:12px;color:var(--text3)">'+docTecData(d.created_at)+'</td>'+
+        '<td><button class="btn btn-ghost btn-sm" onclick="docTecAbrir(\''+d.id+'\')">Abrir</button></td>'+
+      '</tr>';
+    }).join('')+'</tbody></table></div>';
+}
+
+// ── Gerar novo número ────────────────────────────────────
+function docTecNovo(sigla, demId){
+  if(!_sbUser){ toast('É preciso estar online e logado para gerar números.','warning'); return; }
+  docTecCarregar(); // atualiza a prévia do próximo número
+  var ano=new Date().getFullYear();
+  sigla=sigla||'LT';
+  var dems=state.demandas.slice().sort(function(a,b){return (b.proposta||'').localeCompare(a.proposta||'');});
+  var demOpts='<option value="">— Nenhuma —</option>'+dems.map(function(d){return '<option value="'+d.id+'"'+(d.id===demId?' selected':'')+'>'+escapeHtml((d.proposta||'')+(d.cliente?' — '+d.cliente:'')+(d.servico?' | '+d.servico:''))+'</option>';}).join('');
+  var tipoOpts=Object.keys(DOC_TIPOS).map(function(s){return '<option value="'+s+'"'+(s===sigla?' selected':'')+'>'+s+' — '+DOC_TIPOS[s]+'</option>';}).join('');
+  var old=document.getElementById('doctec-novo-overlay'); if(old) old.remove();
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="doctec-novo-overlay" class="overlay" style="z-index:1100" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()">'+
+    '<div class="modal" style="max-width:520px"><div class="modal-hd"><div class="modal-hd-row">'+
+      '<div class="modal-title">Gerar número de documento</div>'+
+      '<button class="btn btn-ghost btn-icon" onclick="document.getElementById(\'doctec-novo-overlay\').remove()">✕</button>'+
+    '</div></div>'+
+    '<div class="modal-body">'+
+      '<div class="fg" style="margin-bottom:12px"><label>Tipo *</label><select id="dtn-tipo" class="finput" onchange="docTecNovoPreview()">'+tipoOpts+'</select></div>'+
+      '<div class="fg" style="margin-bottom:12px"><label>Demanda / Proposta vinculada</label><select id="dtn-demanda" class="finput">'+demOpts+'</select></div>'+
+      '<div class="fg" style="margin-bottom:12px"><label>Título / descrição curta</label><input id="dtn-titulo" class="finput" placeholder="Ex: Laudo de inspeção NR-13 — vaso de pressão VP-01"/></div>'+
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;margin-bottom:8px"><input type="checkbox" id="dtn-manual" onchange="docTecNovoPreview()"/> Registrar um número já existente (documento emitido antes do sistema)</label>'+
+      '<div id="dtn-manual-box" class="fgrid2" style="display:none;margin-bottom:12px">'+
+        '<div class="fg"><label>Número</label><input id="dtn-seq" class="finput" type="number" min="1" placeholder="14" oninput="docTecNovoPreview()"/></div>'+
+        '<div class="fg"><label>Ano</label><input id="dtn-ano" class="finput" type="number" min="2000" max="2100" value="'+ano+'" oninput="docTecNovoPreview()"/></div>'+
+      '</div>'+
+      '<div style="background:var(--accent-l);border:1.5px solid #C4B5FD;border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px">'+
+        '<span id="dtn-prev-label" style="font-size:12px;color:var(--text2)">Número que será gerado:</span>'+
+        '<span id="dtn-prev" style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--accent)"></span>'+
+      '</div>'+
+    '</div>'+
+    '<div class="modal-ft">'+
+      '<button class="btn btn-ghost" onclick="document.getElementById(\'doctec-novo-overlay\').remove()">Cancelar</button>'+
+      '<button class="btn btn-primary" id="dtn-btn" onclick="docTecGerar()">Gerar número</button>'+
+    '</div></div></div>');
+  docTecNovoPreview();
+  if(docTec.carregando) docTec.carregando.then(docTecNovoPreview);
+}
+function docTecNovoPreview(){
+  var el=document.getElementById('dtn-prev'); if(!el) return;
+  var sigla=document.getElementById('dtn-tipo').value;
+  var manual=document.getElementById('dtn-manual').checked;
+  document.getElementById('dtn-manual-box').style.display=manual?'grid':'none';
+  document.getElementById('dtn-prev-label').textContent=manual?'Número que será registrado:':'Próximo número (confirmado ao gerar):';
+  if(manual){
+    var seq=parseInt(document.getElementById('dtn-seq').value,10), ano=parseInt(document.getElementById('dtn-ano').value,10);
+    el.textContent=(seq>0 && ano>=2000 && ano<=2100) ? docTecCodigo(sigla, seq, ano) : '—';
+  } else {
+    var a=new Date().getFullYear();
+    el.textContent=docTecCodigo(sigla, docTecProximoSeq(sigla, a), a);
+  }
+}
+async function docTecGerar(){
+  var btn=document.getElementById('dtn-btn'); if(!btn || btn.disabled) return;
+  var sigla=document.getElementById('dtn-tipo').value;
+  var demId=document.getElementById('dtn-demanda').value;
+  var titulo=document.getElementById('dtn-titulo').value.trim();
+  var manual=document.getElementById('dtn-manual').checked;
+  var ano=new Date().getFullYear(), seq=null;
+  if(manual){
+    seq=parseInt(document.getElementById('dtn-seq').value,10);
+    ano=parseInt(document.getElementById('dtn-ano').value,10);
+    if(!(seq>0)){ toast('Informe o número do documento existente.','warning'); return; }
+    if(!(ano>=2000 && ano<=2100)){ toast('Ano inválido.','warning'); return; }
+  }
+  var dem=demId ? state.demandas.find(function(d){return d.id===demId;}) : null;
+  btn.disabled=true; btn.textContent='Gerando...';
+  try {
+    var res=await _sb.rpc('reservar_documento',{p_sigla:sigla,p_ano:ano,p_titulo:titulo,p_demanda_id:demId||'',p_cliente:dem?(dem.cliente||''):'',p_seq:seq});
+    if(res.error){
+      if(res.error.code==='23505') toast('O número '+docTecCodigo(sigla, seq||0, ano)+' já está registrado.','danger');
+      else toast('Erro ao gerar número: '+res.error.message,'danger');
+      btn.disabled=false; btn.textContent='Gerar número';
+      return;
+    }
+    var row=Array.isArray(res.data)?res.data[0]:res.data;
+    docTec.lista=docTec.lista.filter(function(d){return d.id!==row.id;}).concat([row]);
+    var ov=document.getElementById('doctec-novo-overlay'); if(ov) ov.remove();
+    docTecRefresh();
+    toast('Número gerado: '+row.codigo,'success');
+    docTecAbrir(row.id);
+  } catch(e){
+    toast('Sem conexão — não foi possível gerar o número.','danger');
+    btn.disabled=false; btn.textContent='Gerar número';
+  }
+}
+
+// ── Detalhe do documento (dados + anexos) ────────────────
+function docTecAbrir(id){
+  var d=docTec.lista.find(function(x){return x.id===id;}); if(!d) return;
+  docTecEdit={id:d.id, arquivos:(d.arquivos||[]).map(function(a){return Object.assign({},a);})};
+  var dems=state.demandas.slice().sort(function(a,b){return (b.proposta||'').localeCompare(a.proposta||'');});
+  var demOpts='<option value="">— Nenhuma —</option>'+dems.map(function(x){return '<option value="'+x.id+'"'+(x.id===d.demanda_id?' selected':'')+'>'+escapeHtml((x.proposta||'')+(x.cliente?' — '+x.cliente:'')+(x.servico?' | '+x.servico:''))+'</option>';}).join('');
+  var stOpts=Object.keys(DOC_STATUS).map(function(s){return '<option'+(s===d.status?' selected':'')+'>'+s+'</option>';}).join('');
+  var rotOpts=DOC_ROTULOS.map(function(r){return '<option>'+r+'</option>';}).join('');
+  var old=document.getElementById('doctec-det-overlay'); if(old) old.remove();
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="doctec-det-overlay" class="overlay" style="z-index:1100" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)docTecFechar()">'+
+    '<div class="modal" style="max-width:640px"><div class="modal-hd"><div class="modal-hd-row">'+
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:20px;font-weight:700;color:var(--accent)">'+d.codigo+'</span>'+
+        '<button class="btn btn-ghost btn-sm" onclick="docTecCopiar(\''+d.codigo+'\')">'+_docTecSvgCopy+' Copiar</button>'+
+        docTecBadge(d.status)+
+      '</div>'+
+      '<button class="btn btn-ghost btn-icon" onclick="docTecFechar()">✕</button>'+
+    '</div><div style="font-size:12px;color:var(--text3);margin:4px 0 10px">'+(DOC_TIPOS[d.sigla]||d.sigla)+' · gerado em '+docTecData(d.created_at)+'</div></div>'+
+    '<div class="modal-body">'+
+      '<div class="fg" style="margin-bottom:12px"><label>Título / descrição curta</label><input id="dtd-titulo" class="finput" value="'+escapeHtml(d.titulo)+'"/></div>'+
+      '<div class="fg" style="margin-bottom:12px"><label>Demanda / Proposta vinculada</label><select id="dtd-demanda" class="finput">'+demOpts+'</select></div>'+
+      '<div class="fgrid2" style="margin-bottom:12px">'+
+        '<div class="fg"><label>Status</label><select id="dtd-status" class="finput" onchange="document.getElementById(\'dtd-motivo-box\').style.display=this.value===\'Cancelado\'?\'block\':\'none\'">'+stOpts+'</select></div>'+
+        '<div class="fg" id="dtd-motivo-box" style="display:'+(d.status==='Cancelado'?'block':'none')+'"><label>Motivo do cancelamento *</label><input id="dtd-motivo" class="finput" value="'+escapeHtml(d.motivo_cancelamento)+'" placeholder="Ex: gerado por engano"/></div>'+
+      '</div>'+
+      '<div class="fg" style="margin-bottom:14px"><label>Observações</label><textarea id="dtd-obs" class="finput" rows="2">'+escapeHtml(d.obs)+'</textarea></div>'+
+      '<div class="fsec"><div class="fsec-title">Arquivos</div>'+
+        '<div id="dtd-arquivos" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px"></div>'+
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+          '<select id="dtd-rotulo" class="finput" style="width:auto">'+rotOpts+'</select>'+
+          '<button class="btn btn-ghost btn-sm" onclick="docTecAnexar()">📎 Anexar arquivo</button>'+
+          '<span style="font-size:11px;color:var(--text3)">PDF, DOCX, XLSX, DWG… até 15 MB. O arquivo é salvo na hora.</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="modal-ft">'+
+      '<button class="btn btn-ghost" onclick="docTecFechar()">Fechar</button>'+
+      '<button class="btn btn-primary" id="dtd-btn" onclick="docTecSalvar()">Salvar alterações</button>'+
+    '</div></div></div>');
+  renderDocTecArquivos();
+}
+function docTecFechar(){ var ov=document.getElementById('doctec-det-overlay'); if(ov) ov.remove(); docTecEdit=null; }
+function renderDocTecArquivos(){
+  var el=document.getElementById('dtd-arquivos'); if(!el || !docTecEdit) return;
+  var arr=docTecEdit.arquivos;
+  if(!arr.length){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">Nenhum arquivo anexado.</div>'; return; }
+  el.innerHTML=arr.map(function(a){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r)">'+
+      '<span class="badge" style="background:var(--accent-l);color:var(--accent)">'+escapeHtml(a.rotulo||'Outro')+'</span>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+escapeHtml(a.nome)+'">'+escapeHtml(a.nome)+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)">'+(a._enviando?'Enviando...':docTecData(a.data)+(a.tamanho?' · '+docTecTam(a.tamanho):''))+'</div></div>'+
+      (a.url?'<button class="btn btn-ghost btn-sm" onclick="docTecVerArquivo(\''+docTecEdit.id+'\',\''+a.id+'\')">👁 Ver</button>'+
+             '<a class="btn btn-ghost btn-sm" href="'+escapeHtml(a.url)+'" target="_blank" rel="noopener" download="'+escapeHtml(a.nome)+'" title="Baixar">⬇</a>'+
+             '<button class="btn btn-danger btn-sm btn-icon" title="Remover" onclick="docTecRemoverArquivo(\''+a.id+'\')">✕</button>':'')+
+    '</div>';
+  }).join('');
+}
+// Grava a lista de arquivos (e status, se informado) direto no Supabase
+async function docTecPersistir(id, campos){
+  campos.updated_at=new Date().toISOString();
+  var res=await _sb.from('documentos').update(campos).eq('id', id).select().single();
+  if(res.error) throw new Error(res.error.message);
+  docTec.lista=docTec.lista.map(function(d){return d.id===id?res.data:d;});
+  return res.data;
+}
+function docTecArquivosLimpos(){
+  return docTecEdit.arquivos.filter(function(a){return a.url && !a._enviando;}).map(function(a){return {id:a.id,nome:a.nome,tipo:a.tipo,tamanho:a.tamanho,rotulo:a.rotulo,data:a.data,url:a.url};});
+}
+function docTecAnexar(){
+  if(!docTecEdit) return;
+  var docId=docTecEdit.id;
+  var d=docTec.lista.find(function(x){return x.id===docId;}); if(!d) return;
+  var rotulo=document.getElementById('dtd-rotulo').value;
+  var input=document.createElement('input'); input.type='file';
+  input.onchange=async function(e){
+    var file=e.target.files[0]; if(!file) return;
+    if(file.size>DOC_MAX_BYTES){ toast('Limite: 15 MB por arquivo.','danger'); return; }
+    var arq={id:uid(),nome:file.name,tipo:file.type||'application/octet-stream',tamanho:file.size,rotulo:rotulo,data:new Date().toISOString(),_enviando:true};
+    docTecEdit.arquivos.push(arq); renderDocTecArquivos();
+    try {
+      var url=await _uploadPropostaArquivo(file, arq.tipo, d.codigo, file.name, 'documentos');
+      if(!url) throw new Error('sem URL');
+      arq.url=url; delete arq._enviando;
+      var campos={arquivos:docTecArquivosLimpos()};
+      var stSel=document.getElementById('dtd-status');
+      // Anexar o PDF final marca o documento como Emitido (se ainda estava Reservado)
+      if(rotulo==='PDF final' && d.status==='Reservado' && (!stSel || stSel.value==='Reservado')){ campos.status='Emitido'; if(stSel) stSel.value='Emitido'; }
+      await docTecPersistir(docId, campos);
+      renderDocTecArquivos(); docTecRefresh();
+      toast('Arquivo anexado'+(campos.status?' — documento marcado como Emitido':'')+'.','success');
+    } catch(err){
+      console.warn('[Storage] anexo de documento falhou:', err&&err.message);
+      if(docTecEdit && docTecEdit.id===docId) docTecEdit.arquivos=docTecEdit.arquivos.filter(function(a){return a.id!==arq.id;});
+      renderDocTecArquivos();
+      toast('Falha ao enviar o arquivo. Verifique a conexão e tente de novo.','danger');
+    }
+  };
+  input.click();
+}
+async function docTecRemoverArquivo(arqId){
+  if(!docTecEdit) return;
+  var a=docTecEdit.arquivos.find(function(x){return x.id===arqId;}); if(!a) return;
+  if(!confirm('Remover o arquivo "'+a.nome+'" deste documento?')) return;
+  var antes=docTecEdit.arquivos;
+  docTecEdit.arquivos=antes.filter(function(x){return x.id!==arqId;});
+  try { await docTecPersistir(docTecEdit.id, {arquivos:docTecArquivosLimpos()}); renderDocTecArquivos(); docTecRefresh(); toast('Arquivo removido.','success'); }
+  catch(e){ docTecEdit.arquivos=antes; renderDocTecArquivos(); toast('Erro ao remover: '+e.message,'danger'); }
+}
+async function docTecSalvar(){
+  if(!docTecEdit) return;
+  var btn=document.getElementById('dtd-btn'); if(btn.disabled) return;
+  if(docTecEdit.arquivos.some(function(a){return a._enviando;})){ toast('Aguarde o envio do arquivo terminar.','warning'); return; }
+  var status=document.getElementById('dtd-status').value;
+  var motivo=document.getElementById('dtd-motivo').value.trim();
+  if(status==='Cancelado' && !motivo){ toast('Informe o motivo do cancelamento.','warning'); return; }
+  var demId=document.getElementById('dtd-demanda').value;
+  var dem=demId ? state.demandas.find(function(x){return x.id===demId;}) : null;
+  var campos={titulo:document.getElementById('dtd-titulo').value.trim(),demanda_id:demId||'',cliente:dem?(dem.cliente||''):'',status:status,motivo_cancelamento:status==='Cancelado'?motivo:'',obs:document.getElementById('dtd-obs').value.trim()};
+  btn.disabled=true; btn.textContent='Salvando...';
+  try { await docTecPersistir(docTecEdit.id, campos); docTecFechar(); docTecRefresh(); toast('Documento salvo.','success'); }
+  catch(e){ btn.disabled=false; btn.textContent='Salvar alterações'; toast('Erro ao salvar: '+e.message,'danger'); }
+}
+
+// ── Seção "Documentos técnicos" dentro da demanda (aba Links) ─────
+function renderDocTecDemanda(){
+  var el=document.getElementById('f-doctec-list'); if(!el) return;
+  var md=document.getElementById('modal-demanda'); if(!md || md.style.display==='none') return;
+  if(!editingId){ el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Salve a demanda para gerar documentos vinculados a ela.</div>'; return; }
+  if(!_sbUser){ el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Disponível apenas online.</div>'; return; }
+  if(!docTec.carregado){
+    el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Carregando documentos...</div>';
+    if(!docTec.carregando && docTec.erro){ el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">Não foi possível carregar os documentos. <a href="#" onclick="event.preventDefault();docTec.erro=false;renderDocTecDemanda()">Tentar novamente</a></div>'; return; }
+    docTecCarregar().then(function(){ if(docTec.carregado || docTec.erro) renderDocTecDemanda(); });
+    return;
+  }
+  var demId=editingId;
+  var docs=docTec.lista.filter(function(d){return d.demanda_id===demId;}).sort(function(a,b){return a.sigla.localeCompare(b.sigla) || b.ano-a.ano || b.seq-a.seq;});
+  el.innerHTML=(docs.length?docs.map(function(d){
+      var arq=docTecArquivoPrincipal(d);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px'+(d.status==='Cancelado'?';opacity:.6':'')+'">'+
+        '<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:var(--accent)'+(d.status==='Cancelado'?';text-decoration:line-through':'')+'">'+d.codigo+'</span>'+
+        '<button class="btn btn-ghost btn-sm btn-icon" title="Copiar código" onclick="docTecCopiar(\''+d.codigo+'\')">'+_docTecSvgCopy+'</button>'+
+        '<div style="flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(DOC_TIPOS[d.sigla]||d.sigla)+(d.titulo?' — '+escapeHtml(d.titulo):'')+'</div>'+
+        docTecBadge(d.status)+
+        (arq?'<button class="btn btn-ghost btn-sm" onclick="docTecVerArquivo(\''+d.id+'\')">👁 Ver Arquivo</button>':'')+
+        '<button class="btn btn-ghost btn-sm" onclick="docTecAbrir(\''+d.id+'\')">Abrir</button>'+
+      '</div>';
+    }).join(''):'<div style="font-size:11px;color:var(--text3);padding:4px 0 8px">Nenhum documento técnico vinculado a esta demanda.</div>')+
+    '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px" onclick="docTecNovo(\'LT\',\''+demId+'\')">＋ Gerar documento (LT / MC / MD)</button>';
+}
+
 function renderContratos() {
   var cts=state.contratos||[];
   var total=cts.length;
@@ -11719,6 +12119,7 @@ async function doSignOut() {
   if(!confirm('Deseja sair da sua conta?')) return;
   await _sb.auth.signOut();
   _sbUser = null; _sbProfile = null;
+  docTec.lista=[]; docTec.carregado=false;
   state = {demandas:[],despesas:[],clientes:[],collapseStatus:{},servicos:[],eventos:[],contratos:[]};
   showAuth();
   showAuthPanel('login');
@@ -14488,6 +14889,10 @@ initAuth();
     <button onclick="mobNav('contratos',null);toggleMobMenu()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       <span style="font-size:12px;font-weight:600;color:var(--text2)">Contratos</span>
+    </button>
+    <button onclick="mobNav('documentos',null);toggleMobMenu()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      <span style="font-size:12px;font-weight:600;color:var(--text2)">Documentos</span>
     </button>
     <button onclick="mobNav('servicos',null);toggleMobMenu()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
