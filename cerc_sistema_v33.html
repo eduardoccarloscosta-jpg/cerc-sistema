@@ -1405,7 +1405,7 @@ body.fv-open::after{display:none}
       <div class="modal-tab" onclick="switchTab('progresso')">Progresso</div>
       <div class="modal-tab" onclick="switchTab('historico')">Histórico</div>
       <div class="modal-tab" onclick="switchTab('links')">Links</div>
-      <div class="modal-tab" id="modal-tab-projeto-btn" onclick="switchTab('projeto')" style="display:none">🗂️ Projeto</div>
+      <div class="modal-tab" id="modal-tab-projeto-btn" onclick="switchTab('projeto')" style="display:none">🗂️ PMO</div>
     </div>
   </div>
   <div class="modal-split">
@@ -1736,7 +1736,7 @@ body.fv-open::after{display:none}
     <div id="tab-projeto" style="display:none">
       <div class="fsec">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div class="fsec-title" style="margin-bottom:0">🗂️ Marcos do Projeto</div>
+          <div class="fsec-title" style="margin-bottom:0">🗂️ PMO — Marcos e Tarefas</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
             <button class="btn btn-ghost btn-sm" onclick="projImportarPrecificacao()" title="Traz os pacotes e tarefas (referência + horas) da precificação desta demanda">⇣ Importar da Precificação</button>
             <button class="btn btn-ghost btn-sm" onclick="projAbrirCronograma()" title="Sugere datas para as tarefas considerando as outras demandas">📅 Sugerir cronograma</button>
@@ -10652,6 +10652,7 @@ function toggleTarefaConcluida(id, occDate) {
   if(_sbUser) sbUpsertEvento(ev);
   renderCalendario();
   toast(ficouConcluida ? '✅ Tarefa concluída!' : '↩ Tarefa reaberta', 'success');
+  if(ficouConcluida && !ev.repetir) _pmoConcluirPorEvento(ev.id);
 }
 
 // Lê a regra de recorrência do formulário do modal de evento (null se "Não se repete")
@@ -10931,6 +10932,7 @@ function resolverNotifEvento(evId){
   saveState();
   if(_sbUser) sbUpsertEvento(ev);
   toast('✅ Concluído!','success');
+  _pmoConcluirPorEvento(ev.id);
   if(currentPage==='calendario') renderCalendario();
   refreshNotifPanelContent();
 }
@@ -14538,7 +14540,11 @@ function _projSetCapacidade(v){ try{ localStorage.setItem('cerc_proj_hdia', Stri
 function _ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function _parseYmd(s){ var p=(s||'').split('-'); return p.length===3?new Date(+p[0],+p[1]-1,+p[2]):null; }
 function _isUtil(d){ var w=d.getDay(); return w!==0&&w!==6; }
-function _fmtH(h){ return String(Math.round((h||0)*10)/10).replace('.',',')+' h'; }
+function _fmtH(h){
+  h=h||0;
+  if(h>0 && h<1){ var mi=Math.round(h*60); return mi<1?'<1 min':mi+' min'; }
+  return String(Math.round(h*10)/10).replace('.',',')+' h';
+}
 // Dias úteis entre duas datas (inclusive). Se a janela cair só em fim de semana, usa o último dia.
 function _diasUteis(ini, fim){
   var d=_parseYmd(ini), f=_parseYmd(fim), out=[]; if(!f) return out; if(!d||d>f) d=new Date(f);
@@ -14567,10 +14573,10 @@ function _projSelf(){
   return {id:editingId||'__novo', proposta:p?p.value:'', cliente:c?c.value:''};
 }
 // Avisa se a janela prevista da tarefa cruza com outras demandas ou passa da capacidade diária. true = pode gravar.
-function _projConfirmarInterferencias(tmp, mi, ti){
+function _projConfirmarInterferencias(tmp, mi, ti, ctx){
   if(!tmp.dataPrevista) return true;
-  var cap=_projCapacidade(), self=_projSelf(), carga=_projCargaOutras(self.id);
-  modalMarcos.forEach(function(m,a){ (m.tarefas||[]).forEach(function(t,b){ if(a!==mi||b!==ti) _projAddCarga(carga, t, self); }); });
+  var cap=_projCapacidade(), self=ctx?ctx.self:_projSelf(), carga=_projCargaOutras(self.id);
+  (ctx?ctx.marcos:modalMarcos).forEach(function(m,a){ (m.tarefas||[]).forEach(function(t,b){ if(a!==mi||b!==ti) _projAddCarga(carga, t, self); }); });
   var add={}; _projAddCarga(add, Object.assign({}, tmp, {status:'pending'}), self);
   var dias=Object.keys(add).sort(), noDia={}, outras={}, ordem=[], sobre=[];
   dias.forEach(function(k){
@@ -14617,6 +14623,7 @@ function _projSetData(mi, ti, campo, el){
   t[campo]=novo;
   _syncMarcoDates(mi);
   _tarRefreshLinha2(mi, ti);
+  _pmoAtualizarEventoDatas(t);
 }
 
 // ── Linha de horas / cronômetro exibida em cada tarefa ──
@@ -14631,9 +14638,10 @@ function _tarLinha2Html(tar, mi, ti){
   var ses=(tar.sessoes||[]).length;
   return '<span style="display:inline-flex;align-items:center;gap:6px">'+_timerBotoes(editingId||'', tar)+_timerChip(tar)+'</span>'+
     '<span>Orçado <input type="number" min="0" step="0.5" style="'+inp+'" value="'+(tar.horasOrcadas===0||tar.horasOrcadas?tar.horasOrcadas:'')+'" onfocus="this.select()" oninput="modalMarcos['+mi+'].tarefas['+ti+'].horasOrcadas=this.value===\'\'?\'\':(parseFloat(this.value)||0)" onchange="_tarRefreshLinha2('+mi+','+ti+')"/> h</span>'+
-    '<span>Real <input id="tar-real-'+mi+'-'+ti+'" type="number" min="0" step="0.25" style="'+inp+';color:'+(real&&orc&&real>orc?'#DC2626':'var(--text)')+'" value="'+(tar.horasRealizadas===0||tar.horasRealizadas?Math.round(tar.horasRealizadas*100)/100:'')+'" onfocus="this.select()" oninput="modalMarcos['+mi+'].tarefas['+ti+'].horasRealizadas=this.value===\'\'?\'\':(parseFloat(this.value)||0)" onchange="_tarRefreshLinha2('+mi+','+ti+')" title="Somado automaticamente pelo cronômetro — pode corrigir à mão"/> h</span>'+
+    '<span>Real <input id="tar-real-'+mi+'-'+ti+'" type="text" inputmode="decimal" placeholder="h:mm" style="'+inp+';width:70px;color:'+(real&&orc&&real>orc?'#DC2626':'var(--text)')+'" value="'+(tar.horasRealizadas===0||tar.horasRealizadas?_fmtHMS(tar.horasRealizadas):'')+'" onfocus="this.select()" oninput="modalMarcos['+mi+'].tarefas['+ti+'].horasRealizadas=_parseHoras(this.value)" onchange="_tarRefreshLinha2('+mi+','+ti+')" title="Formato h:mm:ss — somado automaticamente pelo cronômetro. Pode corrigir à mão (ex.: 1:30 ou 1,5)"/></span>'+
     prev+
-    (ses?'<span title="Períodos de trabalho registrados pelo cronômetro">'+ses+' sessão'+(ses>1?'ões':'')+'</span>':'')+
+    (ses?'<span title="Tempo exato registrado pelo cronômetro">'+ses+' sessão'+(ses>1?'ões':'')+' · '+_fmtDur((tar.sessoes||[]).reduce(function(a,x){return a+(x.h||0);},0)*3.6e6)+'</span>':'')+
+    _pmoBotaoAgenda(editingId||'', tar)+
     (tar.iniciadoEm?'<span style="color:#1D4ED8">Início '+hm(tar.iniciadoEm)+'</span>':'')+
     (tar.concluidoEm?'<span style="color:#15803D;font-weight:600">✓ Concluída '+hm(tar.concluidoEm)+'</span>':'');
 }
@@ -14712,10 +14720,10 @@ function _projAoMudarStatus(val){
   var grupos=_projGruposPrecificacao(_projPrecDadosAtual());
   if(!grupos.length) return;
   var nt=grupos.reduce(function(a,g){return a+g.tarefas.length;},0);
-  if(!confirm('Proposta fechada! Gerar o projeto a partir da precificação?\n\n'+grupos.length+' pacote(s) e '+nt+' tarefa(s) serão criados na aba Projeto.')) return;
+  if(!confirm('Proposta fechada! Gerar o projeto a partir da precificação?\n\n'+grupos.length+' pacote(s) e '+nt+' tarefa(s) serão criados na aba PMO.')) return;
   var novas=_projImportarGrupos(grupos);
   renderMarcosTab();
-  toast('Projeto gerado com '+novas+' tarefa(s) — confira na aba Projeto e salve a demanda.','success');
+  toast('Projeto gerado com '+novas+' tarefa(s) — confira na aba PMO e salve a demanda.','success');
 }
 
 // ── Sugestão automática de cronograma (respeitando a carga das outras demandas) ──
@@ -14738,6 +14746,7 @@ function projAbrirCronograma(){
         '<div class="fg"><label>Prazo de entrega (opcional)</label><input id="pc-prazo" type="date" class="finput"/></div>'+
       '</div>'+
       '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;margin-bottom:12px"><input type="checkbox" id="pc-todas"/> Reagendar também as tarefas que já têm data prevista</label>'+
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;margin:-4px 0 12px"><input type="checkbox" id="pc-cal" checked/> Criar/atualizar as tarefas no Calendário (dia inteiro, do início ao término previsto)</label>'+
       '<button class="btn btn-ghost btn-sm" onclick="projCalcularCronograma()">Calcular</button>'+
       '<div id="pc-resultado" style="margin-top:14px"></div>'+
     '</div>'+
@@ -14812,10 +14821,14 @@ function projCalcularCronograma(){
 }
 function projAplicarCronograma(){
   if(!_projCronoCalc) return;
-  var marcosTocados={};
+  var marcosTocados={}, comCal=(document.getElementById('pc-cal')||{}).checked, info=_projSelf();
+  var infoBase={demId:editingId||'', proposta:info.proposta, cliente:info.cliente, servico:(document.getElementById('f-servico')||{}).value||''};
   _projCronoCalc.forEach(function(p){
     var t=modalMarcos[p.mi]&&modalMarcos[p.mi].tarefas&&modalMarcos[p.mi].tarefas[p.ti]; if(!t) return;
     t.dataInicioPrev=p.ini; t.dataPrevista=p.fim; marcosTocados[p.mi]=1;
+    if(!t.id) t.id=uid();
+    if(comCal){ var ev=_pmoEventoDaTarefa(t, Object.assign({marco:modalMarcos[p.mi].nome}, infoBase), {data:p.ini, dataFim:p.fim}); t.eventoId=ev.id; }
+    else _pmoAtualizarEventoDatas(t);
   });
   Object.keys(marcosTocados).forEach(function(mi){ _syncMarcoDates(+mi); });
   _projCronoCalc=null;
@@ -14857,9 +14870,9 @@ var PMO_ICON_PLAY='<svg width="11" height="11" viewBox="0 0 24 24" fill="current
 var PMO_ICON_PAUSE='<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
 var PMO_ICON_CHECK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 var PMO_COR={verde:{fg:'#15803D',bg:'#DCFCE7',dot:'#10B981'},amarelo:{fg:'#B45309',bg:'#FEF3C7',dot:'#F59E0B'},vermelho:{fg:'#B91C1C',bg:'#FEE2E2',dot:'#EF4444'},cinza:{fg:'#475569',bg:'#F1F5F9',dot:'#94A3B8'}};
-var _pmoView=(function(){ try{ return localStorage.getItem('cerc_pmo_view')||'semana'; }catch(e){ return 'semana'; } })();
+var _pmoView=(function(){ try{ return localStorage.getItem('cerc_pmo_view2')||'geral'; }catch(e){ return 'geral'; } })();
 var _pmoConclAberto=false, _pmoSemDataAberto=false;
-function _pmoSetView(v){ _pmoView=v; try{ localStorage.setItem('cerc_pmo_view',v); }catch(e){} renderProjetos(); }
+function _pmoSetView(v){ _pmoView=v; try{ localStorage.setItem('cerc_pmo_view2',v); }catch(e){} renderProjetos(); }
 function _pmoHoje(){ return _ymd(new Date()); }
 function _fmtDur(ms){ var s=Math.max(0,Math.floor(ms/1000)), h=Math.floor(s/3600), m=Math.floor(s%3600/60); s=s%60; return (h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function _pmoTarefas(d){
@@ -14909,7 +14922,7 @@ function _pmoBadgeSaude(s){
 function _pmoAbrir(demId){ openModalEdit(demId); switchTab('projeto'); }
 
 // ── Cronômetro ──────────────────────────────────────────
-var TIMER_CAMPOS=['status','iniciadoEm','concluidoEm','dataInicio','dataRealizada','horasRealizadas','rodandoDesde','sessoes'];
+var TIMER_CAMPOS=['status','iniciadoEm','concluidoEm','dataInicio','dataRealizada','horasRealizadas','rodandoDesde','sessoes','eventoId','dataInicioPrev','dataPrevista'];
 function _achaTarefa(marcos, id){
   var r=null;
   (marcos||[]).forEach(function(m,mi){ (m.tarefas||[]).forEach(function(t,ti){ if(!r && t.id===id) r={t:t,mi:mi,ti:ti}; }); });
@@ -14949,7 +14962,7 @@ function _timerAcao(demId, tarId, acao){
     base.rodandoDesde='';
   }
   if(acao==='play'){ base.rodandoDesde=agora; if(!base.iniciadoEm) base.iniciadoEm=agora; if(!base.dataInicio) base.dataInicio=hoje; base.status='in_progress'; }
-  if(acao==='concluir'){ base.status='done'; base.concluidoEm=agora; base.dataRealizada=hoje; if(!base.dataInicio) base.dataInicio=hoje; }
+  if(acao==='concluir'){ base.status='done'; base.concluidoEm=agora; base.dataRealizada=hoje; if(!base.dataInicio) base.dataInicio=hoje; _pmoBaixaEvento(base); }
   _timerEspelhar(base, m, s, dem);
   if(acao==='concluir' && !(parseFloat(base.horasRealizadas)>0)){
     if(m){
@@ -15044,13 +15057,14 @@ function renderProjResumoBox(){
 function renderProjetos(){
   var pc=document.getElementById('page-content'); if(!pc) return;
   var projetos=state.demandas.filter(function(d){ return PROJ_STATUS_ATIVOS.indexOf(d.status)>=0; });
-  var abas=[['semana','Semana'],['carteira','Carteira'],['capacidade','Capacidade'],['cronograma','Cronograma']];
+  var abas=[['geral','Visão geral'],['semana','Semana'],['carteira','Carteira'],['capacidade','Capacidade'],['cronograma','Cronograma']];
   var html='<div style="padding:20px 24px">'+
     '<div class="pmo-tabs">'+abas.map(function(a){ return '<button class="pmo-tab'+(_pmoView===a[0]?' on':'')+'" onclick="_pmoSetView(\''+a[0]+'\')">'+a[1]+'</button>'; }).join('')+'</div>';
   if(_pmoView==='carteira') html+=_pmoCarteira(projetos);
   else if(_pmoView==='capacidade') html+=_pmoCapacidade(projetos);
   else if(_pmoView==='cronograma') html+=_pmoCronograma(projetos);
-  else html+=_pmoSemana(projetos);
+  else if(_pmoView==='semana') html+=_pmoSemana(projetos);
+  else html+=_pmoGeral(projetos);
   pc.innerHTML=html+'</div>';
   _timerPill();
 }
@@ -15070,8 +15084,9 @@ function _pmoTarefaRow(x, extra){
     '</div>'+
     '<div class="pmo-tr-meta" style="display:flex;align-items:center;gap:10px;flex-shrink:0">'+
       (extra||'')+
-      '<span style="font-size:11px;color:'+(orc&&real>orc?'#DC2626':'var(--text2)')+';white-space:nowrap" title="Horas gastas / orçadas">'+_fmtH(real).replace(' h','')+' / '+(orc?_fmtH(orc):'— h')+'</span>'+
+      '<span style="font-size:11px;color:'+(orc&&real>orc?'#DC2626':'var(--text2)')+';white-space:nowrap" title="Horas gastas / orçadas">'+_fmtH(real)+' / '+(orc?_fmtH(orc):'—')+'</span>'+
       (t.dataPrevista?'<span style="font-size:11px;white-space:nowrap;color:'+(atras?'#DC2626':'var(--text3)')+';font-weight:'+(atras?'700':'400')+'">até '+fD(t.dataPrevista).slice(0,5)+'</span>':'')+
+      _pmoBotaoAgenda(d.id, t)+
       _timerChip(t)+
     '</div>'+
   '</div>';
@@ -15270,6 +15285,225 @@ function _pmoCronograma(projetos){
   return '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">Barras do início da primeira tarefa até o prazo de entrega (ou última data prevista). Vermelho = projeto em risco.</div>'+_renderGantt(projetos, prazoMap);
 }
 
+// ══ PMO → Calendário (tarefa agendada vira evento "Tarefa", sem duplicar) + horas em h:mm:ss ══
+// Vínculo: t.eventoId na tarefa (marcos jsonb) e ev.obs='pmo:'+t.id no evento (coluna obs não é usada pelo calendário).
+var PMO_ICON_CAL='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-1px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+function _parseHoras(v){
+  v=String(v||'').trim(); if(!v) return '';
+  if(v.indexOf(':')>=0){ var p=v.split(':'); return Math.round(((parseInt(p[0],10)||0)+(parseInt(p[1],10)||0)/60+(parseInt(p[2],10)||0)/3600)*10000)/10000; }
+  return parseFloat(v.replace(',','.'))||0;
+}
+function _fmtHMS(h){
+  var s=Math.round((h||0)*3600), hh=Math.floor(s/3600), mm=Math.floor(s%3600/60), ss=s%60;
+  return hh+':'+(mm<10?'0':'')+mm+(ss?':'+(ss<10?'0':'')+ss:'');
+}
+function _pmoEventoDe(t){
+  if(!t) return null;
+  var evs=state.eventos||[];
+  return (t.eventoId && evs.find(function(e){return e.id===t.eventoId;})) || evs.find(function(e){return e.obs==='pmo:'+t.id;}) || null;
+}
+function _pmoGravarEvento(ev){
+  ev.updatedAt=_now(); saveState();
+  if(_sbUser) sbUpsertEvento(ev);
+  if(typeof gcIsConnected==='function' && gcIsConnected()) gcSyncEvent(ev.id);
+}
+// Cria ou atualiza o evento da tarefa. opts: {data, dataFim, horaInicio, horaFim}
+function _pmoEventoDaTarefa(t, info, opts){
+  var ev=_pmoEventoDe(t), novo=!ev;
+  if(novo){ ev={id:uid(), criado:new Date().toISOString(), cor:'', repetir:null, concluida:false}; (state.eventos=state.eventos||[]).push(ev); }
+  Object.assign(ev, {
+    titulo:(t.nome||'Tarefa')+(info.proposta?' · '+info.proposta:''),
+    data:opts.data, dataFim:(opts.dataFim && opts.dataFim!==opts.data)?opts.dataFim:null,
+    horaInicio:opts.horaInicio||'', horaFim:opts.horaFim||'',
+    tipo:'Tarefa', demandaId:info.demId||'', obs:'pmo:'+t.id,
+    descricao:'PMO — '+(info.servico||'')+(info.marco?' / '+info.marco:'')+(info.cliente?' — '+info.cliente:''),
+    concluida:t.status==='done'
+  });
+  _pmoGravarEvento(ev);
+  return ev;
+}
+function _pmoBaixaEvento(t){
+  var ev=_pmoEventoDe(t); if(!ev || ev.concluida) return;
+  ev.concluida=true; _pmoGravarEvento(ev);
+}
+// Tarefas com evento de dia inteiro acompanham a mudança das datas previstas
+function _pmoAtualizarEventoDatas(t){
+  var ev=_pmoEventoDe(t); if(!ev || ev.horaInicio || !t.dataPrevista) return;
+  ev.data=t.dataInicioPrev||t.dataPrevista; ev.dataFim=t.dataPrevista!==ev.data?t.dataPrevista:null;
+  _pmoGravarEvento(ev);
+}
+// Calendário → PMO: concluir a tarefa no calendário conclui a tarefa do PMO
+function _pmoConcluirPorEvento(evId){
+  var ev=(state.eventos||[]).find(function(e){return e.id===evId;}); if(!ev || !ev.concluida) return;
+  state.demandas.forEach(function(d){ _pmoTarefas(d).forEach(function(x){
+    if(x.t.status!=='done' && (x.t.eventoId===evId || ev.obs==='pmo:'+x.t.id)) _timerAcao(d.id, x.t.id, 'concluir');
+  }); });
+}
+// Aplica uma alteração numa tarefa (cópia do modal e cópia gravada) e grava na hora
+function _tarAplicar(demId, tarId, fn){
+  var dem=demId ? state.demandas.find(function(d){return d.id===demId;}) : null;
+  var s=dem ? _achaTarefa(dem.marcos, tarId) : null;
+  var m=_modalDemAberto(demId) ? _achaTarefa(modalMarcos, tarId) : null;
+  var base=m ? m.t : (s ? s.t : null);
+  if(!base) return null;
+  fn(base);
+  _timerEspelhar(base, m, s, dem);
+  return base;
+}
+function _pmoInfoTarefa(demId, tarId){
+  var dem=demId ? state.demandas.find(function(d){return d.id===demId;}) : null;
+  var src=_modalDemAberto(demId) ? modalMarcos : (dem ? dem.marcos : []), marco='';
+  (src||[]).forEach(function(mm){ (mm.tarefas||[]).forEach(function(t){ if(t.id===tarId) marco=mm.nome||''; }); });
+  if(_modalDemAberto(demId)){
+    var g=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+    return {demId:demId, proposta:g('f-proposta'), servico:g('f-servico'), cliente:g('f-cliente'), marco:marco};
+  }
+  return {demId:demId, proposta:dem?dem.proposta:'', servico:dem?dem.servico:'', cliente:dem?dem.cliente:'', marco:marco};
+}
+function _pmoTarefaBase(demId, tarId){
+  var m=_modalDemAberto(demId) ? _achaTarefa(modalMarcos, tarId) : null;
+  if(m) return m;
+  var dem=demId ? state.demandas.find(function(d){return d.id===demId;}) : null;
+  return dem ? _achaTarefa(dem.marcos, tarId) : null;
+}
+function pmoAgendarAbrir(demId, tarId){
+  var x=_pmoTarefaBase(demId, tarId); if(!x) return;
+  var t=x.t, ev=_pmoEventoDe(t);
+  var dia=new Date(); while(!_isUtil(dia)) dia.setDate(dia.getDate()+1);
+  var data=ev ? ev.data : (t.dataInicioPrev||t.dataPrevista||_ymd(dia));
+  if(!ev && data<_pmoHoje()) data=_ymd(dia);
+  var rest=Math.max((parseFloat(t.horasOrcadas)||0)-(parseFloat(t.horasRealizadas)||0),0);
+  var dur=ev && ev.horaInicio && ev.horaFim ? (function(){ var a=ev.horaInicio.split(':'), b=ev.horaFim.split(':'); return Math.max(((+b[0])*60+(+b[1])-(+a[0])*60-(+a[1]))/60,0.5); })() : (rest?Math.min(rest,_projCapacidade()):1);
+  var diaInteiro=ev ? !ev.horaInicio : false;
+  var old=document.getElementById('pmo-ag-overlay'); if(old) old.remove();
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="pmo-ag-overlay" class="overlay" style="z-index:1150" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()">'+
+    '<div class="modal" style="max-width:460px"><div class="modal-hd"><div class="modal-hd-row">'+
+      '<div class="modal-title">'+(ev?'Tarefa no calendário':'Agendar no calendário')+'</div>'+
+      '<button class="btn btn-ghost btn-icon" onclick="document.getElementById(\'pmo-ag-overlay\').remove()">✕</button>'+
+    '</div><div style="font-size:12px;color:var(--text2);margin:2px 0 10px">'+_esc(t.nome||'')+'</div></div>'+
+    '<div class="modal-body">'+
+      '<div class="fgrid2" style="margin-bottom:10px">'+
+        '<div class="fg"><label>Data</label><input id="pmo-ag-data" type="date" class="finput" value="'+data+'"/></div>'+
+        '<div class="fg" style="justify-content:flex-end"><label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:12px;cursor:pointer;margin-top:18px"><input type="checkbox" id="pmo-ag-diainteiro"'+(diaInteiro?' checked':'')+' onchange="document.getElementById(\'pmo-ag-horas\').style.display=this.checked?\'none\':\'grid\'"/> Dia inteiro</label></div>'+
+      '</div>'+
+      '<div id="pmo-ag-horas" class="fgrid2" style="display:'+(diaInteiro?'none':'grid')+';margin-bottom:10px">'+
+        '<div class="fg"><label>Início</label><input id="pmo-ag-ini" type="time" class="finput" value="'+((ev&&ev.horaInicio)||'08:00')+'"/></div>'+
+        '<div class="fg"><label>Duração (h)</label><input id="pmo-ag-dur" type="number" min="0.25" step="0.25" class="finput" value="'+(Math.round(dur*4)/4)+'"/></div>'+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--text3)">Vira um evento do tipo Tarefa no Calendário, ligado à demanda'+(typeof gcIsConnected==='function'&&gcIsConnected()?' (e ao Google Agenda)':'')+'. Ao concluir a tarefa aqui no PMO, o evento é baixado automaticamente — e vice-versa.</div>'+
+    '</div>'+
+    '<div class="modal-ft">'+
+      (ev?'<button class="btn btn-danger" style="margin-right:auto" onclick="pmoAgendarRemover(\''+demId+'\',\''+tarId+'\')">Remover do calendário</button>':'')+
+      '<button class="btn btn-ghost" onclick="document.getElementById(\'pmo-ag-overlay\').remove()">Cancelar</button>'+
+      '<button class="btn btn-primary" onclick="pmoAgendarSalvar(\''+demId+'\',\''+tarId+'\')">'+(ev?'Atualizar':'Agendar')+'</button>'+
+    '</div></div></div>');
+}
+function pmoAgendarSalvar(demId, tarId){
+  var x=_pmoTarefaBase(demId, tarId); if(!x) return;
+  var data=document.getElementById('pmo-ag-data').value;
+  if(!data){ toast('Informe a data.','warning'); return; }
+  var diaInteiro=document.getElementById('pmo-ag-diainteiro').checked, hi='', hf='';
+  if(!diaInteiro){
+    hi=document.getElementById('pmo-ag-ini').value; var dur=parseFloat(document.getElementById('pmo-ag-dur').value)||1;
+    if(!hi){ toast('Informe o horário de início.','warning'); return; }
+    var p=hi.split(':'), fimMin=Math.min((+p[0])*60+(+p[1])+Math.round(dur*60), 23*60+59);
+    hf=String(Math.floor(fimMin/60)).padStart(2,'0')+':'+String(fimMin%60).padStart(2,'0');
+  }
+  var t=x.t, novasDatas=!t.dataPrevista;
+  // Tarefa ainda sem data prevista passa a ter a data agendada — com a checagem de interferência
+  if(novasDatas){
+    var tmp=Object.assign({}, t, {dataInicioPrev:data, dataPrevista:data});
+    var ctx=_modalDemAberto(demId) ? null : (function(){ var dem=state.demandas.find(function(d){return d.id===demId;}); return dem?{marcos:dem.marcos, self:{id:dem.id,proposta:dem.proposta,cliente:dem.cliente}}:null; })();
+    if(!_projConfirmarInterferencias(tmp, x.mi, x.ti, ctx)) return;
+  }
+  var ev=_pmoEventoDaTarefa(t, _pmoInfoTarefa(demId, tarId), {data:data, horaInicio:hi, horaFim:hf});
+  _tarAplicar(demId, tarId, function(b){ b.eventoId=ev.id; if(novasDatas){ b.dataInicioPrev=data; b.dataPrevista=data; } });
+  var ov=document.getElementById('pmo-ag-overlay'); if(ov) ov.remove();
+  if(currentPage==='calendario') renderCalendario();
+  toast('Agendado no calendário: '+fD(data)+(hi?' '+hi+'–'+hf:' (dia inteiro)'),'success');
+}
+function pmoAgendarRemover(demId, tarId){
+  var x=_pmoTarefaBase(demId, tarId); if(!x) return;
+  var ev=_pmoEventoDe(x.t);
+  if(ev){
+    if(ev.gcEventId && typeof gcDeleteGEvent==='function') gcDeleteGEvent(ev.gcEventId);
+    state.eventos=(state.eventos||[]).filter(function(e){return e.id!==ev.id;});
+    saveState(); if(_sbUser) sbDeleteRecord('eventos', ev.id);
+  }
+  _tarAplicar(demId, tarId, function(b){ b.eventoId=''; });
+  var ov=document.getElementById('pmo-ag-overlay'); if(ov) ov.remove();
+  toast('Removido do calendário.','success');
+}
+function _pmoBotaoAgenda(demId, t){
+  if(t.status==='done') return '';
+  var ev=_pmoEventoDe(t);
+  return '<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 8px;white-space:nowrap'+(ev?';color:var(--accent);border-color:#C4B5FD':'')+'" title="'+(ev?'Agendada no calendário — clique para alterar':'Agendar no calendário')+'" onclick="event.stopPropagation();pmoAgendarAbrir(\''+demId+'\',\''+t.id+'\')">'+PMO_ICON_CAL+' '+(ev?fD(ev.data).slice(0,5)+(ev.horaInicio?' '+ev.horaInicio:''):'Agendar')+'</button>';
+}
+
+// ── Visão geral do PMO (painel) ──
+function _pmoGeral(projetos){
+  if(!projetos.length) return _pmoVazio();
+  var hoje=_pmoHoje(), cap=_projCapacidade(), carga=_projCargaOutras(null);
+  function cargaDia(k){ return (carga[k]||[]).reduce(function(a,i){return a+i.horas;},0); }
+  var dados=projetos.map(function(d){ var r=_pmoResumo(d); return {d:d,r:r,s:_pmoSaude(d,r)}; });
+  var pend=[]; projetos.forEach(function(p){ _pmoTarefas(p).forEach(function(x){ if(x.t.status!=='done') pend.push(x); }); });
+  var atrasadas=pend.filter(function(x){return x.t.dataPrevista && x.t.dataPrevista<hoje;});
+  var deHoje=pend.filter(function(x){ var t=x.t; return t.dataPrevista && t.dataPrevista>=hoje && _diasUteis(t.dataInicioPrev||t.dataInicio||t.dataPrevista, t.dataPrevista).indexOf(hoje)>=0; });
+  var rodando=pend.filter(function(x){return x.t.rodandoDesde;});
+  var andamento=pend.filter(function(x){return x.t.status==='in_progress' && !x.t.rodandoDesde && deHoje.indexOf(x)<0 && atrasadas.indexOf(x)<0;});
+  var emRisco=dados.filter(function(x){return x.s.nivel==='vermelho';});
+  var atencao=dados.filter(function(x){return x.s.nivel==='vermelho'||x.s.nivel==='amarelo'||x.s.nivel==='cinza';}).sort(function(a,b){ var o={vermelho:0,amarelo:1,cinza:2}; return o[a.s.nivel]-o[b.s.nivel]; });
+  var restante=dados.reduce(function(a,x){return a+x.r.restante;},0);
+  var dias10=[], dd=new Date(); dd.setHours(0,0,0,0);
+  while(dias10.length<10){ if(_isUtil(dd)) dias10.push(_ymd(dd)); dd.setDate(dd.getDate()+1); }
+  var sobre=0, seg=new Date(); seg.setHours(0,0,0,0); var lim=new Date(seg); lim.setDate(lim.getDate()+42);
+  for(var c=new Date(seg); c<lim; c.setDate(c.getDate()+1)){ var k=_ymd(c); if(_isUtil(c) && cargaDia(k)>cap+0.01) sobre++; }
+  var lim14=new Date(); lim14.setDate(lim14.getDate()+14); var l14=_ymd(lim14);
+  var entregas=dados.filter(function(x){ return x.r.prazo && x.r.prazo<=l14 && x.r.done<x.r.total; }).sort(function(a,b){return a.r.prazo<b.r.prazo?-1:1;});
+  function sec(titulo, link, corpo){ return '<div class="pmo-sec" style="margin:0"><div class="pmo-sec-hd">'+titulo+(link?'<a href="#" style="margin-left:auto;font-weight:600;color:var(--accent);font-size:11px" onclick="event.preventDefault();_pmoSetView(\''+link[0]+'\')">'+link[1]+' →</a>':'')+'</div>'+corpo+'</div>'; }
+  var vazio=function(t){ return '<div style="padding:12px 14px;font-size:12px;color:var(--text3)">'+t+'</div>'; };
+  var html='<div class="pmo-kpis">'+
+    _projKpi('Planejado para hoje', _fmtH(cargaDia(hoje)), 'de '+_fmtH(cap)+' disponíveis', cargaDia(hoje)>cap?'#EF4444':'#3B82F6')+
+    _projKpi('Tarefas atrasadas', atrasadas.length, atrasadas.length?'precisam de atenção':'nenhuma', atrasadas.length?'#EF4444':'#10B981')+
+    _projKpi('Projetos em risco', emRisco.length, 'de '+projetos.length+' ativos', emRisco.length?'#EF4444':'#10B981')+
+    _projKpi('Trabalho restante', _fmtH(restante), '≈ '+Math.ceil(restante/cap)+' dia(s) útil(eis)', '#7C3AED')+
+    _projKpi('Dias acima da capacidade', sobre, 'nas próximas 6 semanas', sobre?'#EF4444':'#10B981')+
+  '</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px">';
+  // Hoje
+  var listaHoje=rodando.concat(atrasadas.slice(0,5), deHoje.filter(function(x){return rodando.indexOf(x)<0;}), andamento.slice(0,3));
+  html+=sec('Hoje — '+fD(hoje).slice(0,5)+' <span style="font-weight:600;color:'+(cargaDia(hoje)>cap?'#DC2626':'var(--text3)')+'">'+_fmtH(cargaDia(hoje))+' de '+_fmtH(cap)+'</span>', ['semana','Semana'],
+    listaHoje.length ? listaHoje.map(function(x){ return _pmoTarefaRow(x, atrasadas.indexOf(x)>=0?'<span class="pmo-chip" style="background:#FEE2E2;color:#B91C1C">atrasada</span>':''); }).join('') : vazio('Nada planejado para hoje. Use "Sugerir cronograma" nos projetos sem datas.'));
+  // Próximas entregas
+  html+=sec('Entregas nos próximos 14 dias', ['carteira','Carteira'],
+    entregas.length ? entregas.map(function(x){
+      var venc=x.r.prazo<hoje, n=_diasUteis(venc?x.r.prazo:hoje, venc?hoje:x.r.prazo).length-1;
+      return '<div class="pmo-tr" style="cursor:pointer" onclick="_pmoAbrir(\''+x.d.id+'\')">'+
+        '<div style="width:44px;text-align:center;flex-shrink:0"><div style="font-size:15px;font-weight:800;color:'+(venc?'#DC2626':'var(--text)')+'">'+fD(x.r.prazo).slice(0,5)+'</div><div style="font-size:9px;color:var(--text3)">'+(venc?'vencido':n===0?'hoje':n+' d.ú.')+'</div></div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(x.d.servico||'')+'</div><div style="font-size:10px;color:var(--text3)"><b style="color:var(--accent);font-family:monospace">'+_esc(x.d.proposta||'')+'</b> · '+x.r.pct+'% · faltam '+_fmtH(x.r.restante)+'</div></div>'+
+        _pmoBadgeSaude(x.s)+'</div>';
+    }).join('') : vazio('Nenhum prazo de entrega nos próximos 14 dias.'+(dados.some(function(x){return !x.r.prazo;})?' Há projetos sem prazo definido.':'')));
+  // Precisam de atenção
+  html+=sec('Precisam de atenção', ['carteira','Carteira'],
+    atencao.length ? atencao.slice(0,7).map(function(x){
+      return '<div class="pmo-tr" style="cursor:pointer" onclick="_pmoAbrir(\''+x.d.id+'\')">'+_pmoBadgeSaude(x.s)+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(x.d.servico||'')+' <span style="font-family:monospace;color:var(--accent);font-size:10px">'+_esc(x.d.proposta||'')+'</span></div>'+
+        '<div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(x.s.motivos.join(' • '))+'</div></div></div>';
+    }).join('')+(atencao.length>7?vazio('+'+(atencao.length-7)+' projeto(s) na Carteira'):'') : vazio('Todos os projetos estão no prazo.'));
+  // Carga
+  html+=sec('Carga dos próximos 10 dias úteis', ['capacidade','Capacidade'],
+    '<div style="display:flex;gap:6px;align-items:flex-end;padding:14px 14px 10px;height:130px">'+dias10.map(function(k){
+      var h=cargaDia(k), p=Math.min(h/cap,1.25), cor=h>cap+0.01?'#EF4444':h/cap>=0.7?'#F59E0B':'#10B981', dt=_parseYmd(k);
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end" title="'+fD(k)+': '+_fmtH(h)+' de '+_fmtH(cap)+'">'+
+        '<span style="font-size:9px;color:var(--text3)">'+(h?_fmtH(h).replace(' h',''):'')+'</span>'+
+        '<div style="width:100%;max-width:34px;height:'+Math.max(p*72,2)+'px;background:'+(h?cor:'var(--border)')+';border-radius:4px 4px 0 0"></div>'+
+        '<span style="font-size:9px;color:'+(k===hoje?'var(--accent)':'var(--text3)')+';font-weight:'+(k===hoje?'700':'400')+'">'+['D','S','T','Q','Q','S','S'][dt.getDay()]+' '+dt.getDate()+'</span></div>';
+    }).join('')+'</div>');
+  html+='</div>';
+  return html;
+}
+
 function renderMarcosTab() {
   setTimeout(renderProjResumoBox,0);
   var list = document.getElementById('marcos-list');
@@ -15289,7 +15523,7 @@ function renderMarcosTab() {
   var _projColor = _projPct===100?'#10B981':_projPct>=50?'#3B82F6':'#F59E0B';
   var _projBanner = '<div id="proj-progress-banner" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-      + '<span style="font-size:11px;font-weight:700;color:var(--text2)">📊 Progresso Total do Projeto</span>'
+      + '<span style="font-size:11px;font-weight:700;color:var(--text2)">📊 Progresso Total (PMO)</span>'
       + '<span style="font-size:14px;font-weight:800;color:'+_projColor+'">'+_projPct+'%</span>'
     + '</div>'
     + '<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
