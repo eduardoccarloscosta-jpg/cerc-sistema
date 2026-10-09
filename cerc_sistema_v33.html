@@ -689,7 +689,9 @@ body.fv-open::after{display:none}
 .cal-week-slot{height:48px;border-bottom:1px dashed color-mix(in srgb,var(--border) 60%,transparent);cursor:pointer}
 .cal-week-slot:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
 .cal-week-event{position:absolute;left:3px;right:3px;border-radius:5px;padding:4px 7px;font-size:10px;font-weight:600;cursor:pointer;overflow:hidden;border-left:3px solid rgba(0,0,0,.2);z-index:2;transition:filter .1s}
-.cal-week-event:hover{filter:brightness(.92);z-index:20!important}
+.cal-week-event:hover{filter:brightness(.92)}
+.cal-now-line{position:absolute;left:0;right:0;height:2px;background:#EA4335;z-index:40;pointer-events:none}
+.cal-now-line::before{content:'';position:absolute;left:-6px;top:-5px;width:12px;height:12px;border-radius:50%;background:#EA4335}
 .cal-week-event-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
 .cal-week-event-sub{font-size:9px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* HISTÓRICO DE PRECIFICAÇÃO */
@@ -8335,6 +8337,11 @@ function calLayoutGoogle(items){
 // Cor sólida (estilo Google) por tipo de evento ou pela cor escolhida
 var CAL_COR_SOLIDA={'Evento':'#039BE5','Lembrete':'#F09300','Prazo':'#D50000','Reunião':'#0B8043','Vistoria':'#8E24AA','Tarefa':'#33B679'};
 function _calCorSolida(ev){ return (ev.cor && evtColorHex(ev.cor)) || CAL_COR_SOLIDA[ev.tipo] || '#616161'; }
+// Mantém a linha da hora atual no lugar enquanto a tela fica aberta
+setInterval(function(){
+  var a=new Date(), m=a.getHours()*60+a.getMinutes();
+  document.querySelectorAll('.cal-now-line').forEach(function(el){ el.style.top=((m/60-(+el.dataset.hs||0))*(+el.dataset.slot||48))+'px'; });
+},60000);
 function getWeekStart(d){var dt=new Date(d);dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-dt.getDay());return dt;}
 // gcFetchEvents() busca só o range visível no momento do fetch (mês ou semana, conforme calView) —
 // por isso toda navegação (mês, semana, mini-calendário, "Hoje") chama de novo aqui.
@@ -8895,10 +8902,10 @@ function renderCalendario() {
     var checkBtn=isTarefa?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\',\''+(ev._occDate||'')+'\')" style="margin-right:2px;cursor:pointer;font-size:11px" title="'+(conc?'Marcar como pendente':'Marcar como concluída')+'">'+(conc?'☑':'☐')+'</span>':'';
     if(ev._multi){
       // Evento de múltiplos dias: barra colorida contínua entre as células (como no Google)
-      var bg=_calCorSolida(ev), border='rgba(0,0,0,.18)';
+      var bg=conc?'color-mix(in srgb,'+_calCorSolida(ev)+' 45%, white)':_calCorSolida(ev), border='rgba(0,0,0,.18)';
       var brL=ev._isFirst?'4px':'0', brR=ev._isLast?'4px':'0';
       var titleLbl=ev._isFirst?checkBtn+'<span style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,60)+'</span>':'';
-      return '<div class="cal-event cal-event-bar" style="background:'+bg+';color:#fff;'+(conc?'opacity:.55;':'')+'border-left-color:'+border+';border-radius:'+brL+' '+brR+' '+brR+' '+brL+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+titleLbl+'</div>';
+      return '<div class="cal-event cal-event-bar" style="background:'+bg+';color:#fff;border-left-color:'+border+';border-radius:'+brL+' '+brR+' '+brR+' '+brL+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+titleLbl+'</div>';
     }
     return '<div class="cal-event" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+
       '<span class="cal-event-dot" style="background:'+cfg.border+'"></span>'+
@@ -9149,12 +9156,12 @@ function renderCalendario() {
         var concW=isTarefaW&&ocorrenciaConcluida(ev,ev._occDate);
         var icoW=isTarefaW?(concW?'☑':'☐'):cfg2.ico;
         var titleW=concW?'<span style="text-decoration:line-through;opacity:0.65">'+ev.titulo+'</span>':ev.titulo;
-        var bgW=_calCorSolida(ev);
+        var bgW=concW?'color-mix(in srgb,'+_calCorSolida(ev)+' 45%, white)':_calCorSolida(ev);
         var borderW='rgba(0,0,0,.18)';
         var checkSpanW=isTarefaW?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\',\''+(ev._occDate||'')+'\')" style="cursor:pointer;margin-right:2px" title="'+(concW?'Reabrir':'Concluir')+'">'+icoW+'</span> ':''+icoW+' ';
         dayItems.push({startMin:startMin, endMin:endMin, topPx:topPx, heightPx:heightPx,
           render:function(posStyle){
-            return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;'+posStyle+'background:'+bgW+';color:#fff;border-left-color:'+borderW+(concW?';opacity:.55':'')+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')">' +
+            return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;'+posStyle+'background:'+bgW+';color:#fff;border-left-color:'+borderW+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')">' +
               '<div class="cal-week-event-title">'+checkSpanW+titleW+'</div>'+
               '<div class="cal-week-event-sub">'+(ev.horaInicio?ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):(ev.descricao||''))+'</div></div>';
           }});
@@ -9190,6 +9197,10 @@ function renderCalendario() {
       }).join('');
 
       // Percentagem da posição: célula tem largura = 100%/7 da área, mas left calculada depois via JS
+      if(d.toDateString()===new Date().toDateString()){
+        var _agora=new Date();
+        evHtml+='<div class="cal-now-line" data-slot="'+SLOT_H+'" data-hs="'+HOURS_START+'" style="top:'+(((_agora.getHours()*60+_agora.getMinutes())/60-HOURS_START)*SLOT_H)+'px"></div>';
+      }
       return '<div data-colidx="'+colIdx+'" style="position:absolute;top:0;bottom:0;pointer-events:none">'+evHtml+'</div>';
     }).join('');
 
