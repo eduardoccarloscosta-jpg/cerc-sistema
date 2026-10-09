@@ -689,9 +689,9 @@ body.fv-open::after{display:none}
 .cal-week-slot{height:48px;border-bottom:1px dashed color-mix(in srgb,var(--border) 60%,transparent);cursor:pointer}
 .cal-week-slot:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
 .cal-week-event{position:absolute;left:3px;right:3px;border-radius:5px;padding:4px 7px;font-size:10px;font-weight:600;cursor:pointer;overflow:hidden;border-left:3px solid rgba(0,0,0,.2);z-index:2;transition:filter .1s}
-.cal-week-event:hover{filter:brightness(.92);z-index:3}
+.cal-week-event:hover{filter:brightness(.92);z-index:20!important}
 .cal-week-event-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
-.cal-week-event-sub{font-size:9px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-week-event-sub{font-size:9px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* HISTÓRICO DE PRECIFICAÇÃO */
 .prec-hist-card{border:1.5px solid #C4B5FD;border-radius:10px;background:#FAFAFA;overflow:hidden;margin-bottom:8px;transition:box-shadow .15s}
 .prec-hist-card:hover{box-shadow:0 2px 10px rgba(109,40,217,.12)}
@@ -8305,6 +8305,36 @@ function calLayoutDayEvents(items){
   }
   return result;
 }
+// Layout estilo Google Agenda: eventos que começam juntos (até 30 min de diferença) dividem a largura lado a lado;
+// um evento que começa depois de outro ainda em andamento é desenhado POR CIMA, com recuo à esquerda e largura até
+// a borda direita — assim os dois continuam legíveis. Retorna, por índice, {left, width, z} em CSS.
+function calLayoutGoogle(items){
+  var RECUO=14, order=items.map(function(_,i){return i;});
+  order.sort(function(a,b){ return items[a].startMin-items[b].startMin || (items[b].endMin-items[b].startMin)-(items[a].endMin-items[a].startMin); });
+  var grupos=[];
+  order.forEach(function(i){
+    var it=items[i], g=grupos[grupos.length-1];
+    if(g && it.startMin-g.start<30 && g.itens.some(function(j){ return items[j].startMin<it.endMin && it.startMin<items[j].endMin; })) g.itens.push(i);
+    else grupos.push({start:it.startMin, itens:[i], nivel:0});
+  });
+  grupos.forEach(function(g,gi){
+    g.fim=Math.max.apply(null, g.itens.map(function(j){return items[j].endMin;}));
+    var n=-1;
+    for(var k=0;k<gi;k++){ var p=grupos[k]; if(p.start<g.fim && g.start<p.fim) n=Math.max(n,p.nivel); }
+    g.nivel=n+1;
+  });
+  var res=[];
+  grupos.forEach(function(g){
+    var n=g.itens.length, rec=g.nivel*RECUO, livre='(100% - '+(rec+4)+'px)';
+    g.itens.forEach(function(j,k){
+      res[j]={ left:'calc('+(rec+2)+'px + '+livre+' * '+(k/n)+')', width:'calc('+livre+' / '+n+(n>1?' - 2px':'')+')', z:2+g.nivel, sobre:g.nivel>0||n>1 };
+    });
+  });
+  return res;
+}
+// Cor sólida (estilo Google) por tipo de evento ou pela cor escolhida
+var CAL_COR_SOLIDA={'Evento':'#039BE5','Lembrete':'#F09300','Prazo':'#D50000','Reunião':'#0B8043','Vistoria':'#8E24AA','Tarefa':'#33B679'};
+function _calCorSolida(ev){ return (ev.cor && evtColorHex(ev.cor)) || CAL_COR_SOLIDA[ev.tipo] || '#616161'; }
 function getWeekStart(d){var dt=new Date(d);dt.setHours(0,0,0,0);dt.setDate(dt.getDate()-dt.getDay());return dt;}
 // gcFetchEvents() busca só o range visível no momento do fetch (mês ou semana, conforme calView) —
 // por isso toda navegação (mês, semana, mini-calendário, "Hoje") chama de novo aqui.
@@ -8865,10 +8895,10 @@ function renderCalendario() {
     var checkBtn=isTarefa?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\',\''+(ev._occDate||'')+'\')" style="margin-right:2px;cursor:pointer;font-size:11px" title="'+(conc?'Marcar como pendente':'Marcar como concluída')+'">'+(conc?'☑':'☐')+'</span>':'';
     if(ev._multi){
       // Evento de múltiplos dias: barra colorida contínua entre as células (como no Google)
-      var bg=conc?'#D1FAE5':cfg.bg, border=conc?'#10B981':cfg.border;
+      var bg=_calCorSolida(ev), border='rgba(0,0,0,.18)';
       var brL=ev._isFirst?'4px':'0', brR=ev._isLast?'4px':'0';
       var titleLbl=ev._isFirst?checkBtn+'<span style="'+strikeStyle+'">'+hora+(ev.titulo||'').slice(0,60)+'</span>':'';
-      return '<div class="cal-event cal-event-bar" style="background:'+bg+';color:'+cfg.c+';border-left-color:'+border+';border-radius:'+brL+' '+brR+' '+brR+' '+brL+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+titleLbl+'</div>';
+      return '<div class="cal-event cal-event-bar" style="background:'+bg+';color:#fff;'+(conc?'opacity:.55;':'')+'border-left-color:'+border+';border-radius:'+brL+' '+brR+' '+brR+' '+brL+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+titleLbl+'</div>';
     }
     return '<div class="cal-event" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')" title="'+ev.titulo+(ev.horaInicio?' · '+ev.horaInicio:'')+'">'+
       '<span class="cal-event-dot" style="background:'+cfg.border+'"></span>'+
@@ -9091,9 +9121,9 @@ function renderCalendario() {
       demEvts.forEach(function(dv){
         var isFech=dv._tipo==='fechamento';
         var sc2=STATUS_CFG[dv.status];
-        var bg2=isFech?'#FEF3C7':(sc2?sc2.dot+'22':'#EDE9FE');
-        var c2=isFech?'#92400E':(sc2?sc2.dot:'#7C3AED');
-        var bd2=isFech?'#D97706':(sc2?sc2.dot:'#7C3AED');
+        var bg2=isFech?'#F09300':(sc2?sc2.dot:'#7C3AED');
+        var c2='#fff';
+        var bd2='rgba(0,0,0,.18)';
         var topPx=(9-HOURS_START)*SLOT_H, heightPx=42;
         dayItems.push({startMin:9*60, endMin:9*60+52, topPx:topPx, heightPx:heightPx,
           render:function(posStyle){
@@ -9119,12 +9149,12 @@ function renderCalendario() {
         var concW=isTarefaW&&ocorrenciaConcluida(ev,ev._occDate);
         var icoW=isTarefaW?(concW?'☑':'☐'):cfg2.ico;
         var titleW=concW?'<span style="text-decoration:line-through;opacity:0.65">'+ev.titulo+'</span>':ev.titulo;
-        var bgW=concW?'#D1FAE5':cfg2.bg;
-        var borderW=concW?'#10B981':cfg2.border;
+        var bgW=_calCorSolida(ev);
+        var borderW='rgba(0,0,0,.18)';
         var checkSpanW=isTarefaW?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\',\''+(ev._occDate||'')+'\')" style="cursor:pointer;margin-right:2px" title="'+(concW?'Reabrir':'Concluir')+'">'+icoW+'</span> ':''+icoW+' ';
         dayItems.push({startMin:startMin, endMin:endMin, topPx:topPx, heightPx:heightPx,
           render:function(posStyle){
-            return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;'+posStyle+'background:'+bgW+';color:'+cfg2.c+';border-left-color:'+borderW+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')">' +
+            return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;'+posStyle+'background:'+bgW+';color:#fff;border-left-color:'+borderW+(concW?';opacity:.55':'')+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')">' +
               '<div class="cal-week-event-title">'+checkSpanW+titleW+'</div>'+
               '<div class="cal-week-event-sub">'+(ev.horaInicio?ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):(ev.descricao||''))+'</div></div>';
           }});
@@ -9142,21 +9172,20 @@ function renderCalendario() {
         var heightPx2=Math.max(SLOT_H*0.6,(endMin2-startMin2)/60*SLOT_H);
         var horaSub=ev.allDay?'Dia todo':ev.inicio.slice(11,16)+(ev.fim?' – '+ev.fim.slice(11,16):'');
         var gcCor=gcColorHex(ev.colorId)||'#1A73E8';
-        var gcBg='color-mix(in srgb,'+gcCor+' 14%, white)';
+        var gcBg=gcCor;
         dayItems.push({startMin:startMin2, endMin:endMin2, topPx:topPx2, heightPx:heightPx2,
           render:function(posStyle){
-            return '<div class="cal-week-event" data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" style="top:'+topPx2+'px;height:'+heightPx2+'px;'+posStyle+'background:'+gcBg+';color:'+gcCor+';border-left-color:'+gcCor+'" onclick="event.stopPropagation();_openGcById(this,event)">'+
+            return '<div class="cal-week-event" data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" style="top:'+topPx2+'px;height:'+heightPx2+'px;'+posStyle+'background:'+gcBg+';color:#fff;border-left-color:rgba(0,0,0,.18)" onclick="event.stopPropagation();_openGcById(this,event)">'+
               '<div class="cal-week-event-title">🗓 '+(ev.titulo||'')+'</div>'+
               '<div class="cal-week-event-sub">'+horaSub+'</div></div>';
           }});
       });
 
       // Layout por colunas: divide a largura só entre eventos que realmente se sobrepõem no horário
-      var layout=calLayoutDayEvents(dayItems);
+      var layout=calLayoutGoogle(dayItems);
       var evHtml=dayItems.map(function(item,ii){
-        var lay=layout[ii], pct=100/lay.cols, leftPct=lay.col*pct;
-        var gap=lay.cols>1?2:3;
-        var posStyle='left:calc('+leftPct+'% + '+gap+'px);width:calc('+pct+'% - '+(gap*2)+'px);right:auto;';
+        var lay=layout[ii];
+        var posStyle='left:'+lay.left+';width:'+lay.width+';right:auto;z-index:'+lay.z+';'+(lay.sobre?'box-shadow:0 0 0 1px var(--surface);':'');
         return item.render(posStyle);
       }).join('');
 
@@ -14734,7 +14763,7 @@ function projAbrirCronograma(){
   var old=document.getElementById('proj-crono-overlay'); if(old) old.remove();
   document.body.insertAdjacentHTML('beforeend',
     '<div id="proj-crono-overlay" class="overlay" style="z-index:1100" onmousedown="this._downSelf=(event.target===this)" onclick="if(event.target===this&&this._downSelf)this.remove()">'+
-    '<div class="modal" style="max-width:720px"><div class="modal-hd"><div class="modal-hd-row">'+
+    '<div class="modal" style="max-width:min(1100px,96vw)"><div class="modal-hd"><div class="modal-hd-row">'+
       '<div class="modal-title">Sugerir cronograma</div>'+
       '<button class="btn btn-ghost btn-icon" onclick="document.getElementById(\'proj-crono-overlay\').remove()">✕</button>'+
     '</div></div>'+
@@ -14798,8 +14827,8 @@ function projCalcularCronograma(){
   });
   if(guard>=3000){ out.innerHTML='<div style="font-size:12px;color:var(--red)">Não foi possível encaixar as tarefas — a agenda está cheia por muito tempo. Revise as horas disponíveis por dia.</div>'; btn.disabled=true; return; }
   _projCronoCalc=pend;
-  var html='<div class="tw"><table><thead><tr><th>Marco</th><th>Tarefa</th><th style="text-align:right">Horas</th><th>Início</th><th>Término</th></tr></thead><tbody>'+
-    pend.map(function(p){ return '<tr><td style="font-size:12px;color:var(--text2)">'+_esc(p.marco)+'</td><td style="font-size:12px;font-weight:500">'+_esc(p.nome)+'</td><td style="text-align:right;font-size:12px">'+(p.h?_fmtH(p.h):'—')+'</td><td style="font-size:12px">'+fD(p.ini)+'</td><td style="font-size:12px">'+fD(p.fim)+'</td></tr>'; }).join('')+
+  var html='<div class="tw" style="overflow-x:auto"><table style="table-layout:fixed;width:100%;min-width:640px"><colgroup><col style="width:24%"><col><col style="width:70px"><col style="width:96px"><col style="width:96px"></colgroup><thead><tr><th>Marco</th><th>Tarefa</th><th style="text-align:right">Horas</th><th>Início</th><th>Término</th></tr></thead><tbody>'+
+    pend.map(function(p){ return '<tr><td style="font-size:12px;color:var(--text2);word-break:break-word">'+_esc(p.marco)+'</td><td style="font-size:12px;font-weight:500;word-break:break-word">'+_esc(p.nome)+'</td><td style="text-align:right;font-size:12px;white-space:nowrap">'+(p.h?_fmtH(p.h):'—')+'</td><td style="font-size:12px;white-space:nowrap">'+fD(p.ini)+'</td><td style="font-size:12px;white-space:nowrap">'+fD(p.fim)+'</td></tr>'; }).join('')+
     '</tbody></table></div>';
   html+='<div style="margin-top:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px">'+
     '<div><b>Término previsto: '+fD(fimGeral)+'</b></div>';
@@ -15442,64 +15471,137 @@ function _pmoBotaoAgenda(demId, t){
 }
 
 // ── Visão geral do PMO (painel) ──
+(function(){
+  var st=document.createElement('style');
+  st.textContent='.pmo-geral{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;grid-auto-flow:dense}'+
+    '.pmo-g-alto{grid-row:span 2}.pmo-g-largo{grid-column:span 2}'+
+    '.pmo-geral .pmo-sec{margin:0;display:flex;flex-direction:column}'+
+    '.pmo-g-scroll{overflow-y:auto;max-height:420px}'+
+    '@media(max-width:1200px){.pmo-geral{grid-template-columns:repeat(2,minmax(0,1fr))}}'+
+    '@media(max-width:760px){.pmo-geral{grid-template-columns:1fr}.pmo-g-alto{grid-row:auto}.pmo-g-largo{grid-column:auto}}';
+  document.head.appendChild(st);
+})();
+// Linha de tarefa em coluna estreita: nome inteiro em cima, detalhes e controles embaixo
+function _pmoTarefaRowCompacta(x, atrasada){
+  var t=x.t, d=x.d, orc=parseFloat(t.horasOrcadas)||0, real=parseFloat(t.horasRealizadas)||0;
+  return '<div class="pmo-tr" style="align-items:flex-start">'+_timerBotoes(d.id, t)+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:12px;font-weight:600;color:var(--text);cursor:pointer;line-height:1.35" onclick="_pmoAbrir(\x27'+d.id+'\x27)">'+_esc(t.nome)+'</div>'+
+      '<div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b style="color:var(--accent);font-family:monospace">'+_esc(d.proposta||"")+'</b> · '+_esc(d.cliente||"")+'</div>'+
+      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:5px;font-size:11px;color:var(--text2)">'+
+        (atrasada?'<span class="pmo-chip" style="background:#FEE2E2;color:#B91C1C">atrasada</span>':"")+
+        '<span style="color:'+(orc&&real>orc?"#DC2626":"var(--text2)")+'">'+_fmtH(real)+' / '+(orc?_fmtH(orc):"—")+'</span>'+
+        (t.dataPrevista?'<span style="color:'+(atrasada?"#DC2626":"var(--text3)")+'">até '+fD(t.dataPrevista).slice(0,5)+'</span>':"")+
+        _pmoBotaoAgenda(d.id, t)+_timerChip(t)+
+      '</div>'+
+    '</div></div>';
+}
 function _pmoGeral(projetos){
   if(!projetos.length) return _pmoVazio();
   var hoje=_pmoHoje(), cap=_projCapacidade(), carga=_projCargaOutras(null);
   function cargaDia(k){ return (carga[k]||[]).reduce(function(a,i){return a+i.horas;},0); }
   var dados=projetos.map(function(d){ var r=_pmoResumo(d); return {d:d,r:r,s:_pmoSaude(d,r)}; });
   var pend=[]; projetos.forEach(function(p){ _pmoTarefas(p).forEach(function(x){ if(x.t.status!=='done') pend.push(x); }); });
+  function janela(t){ return _diasUteis(t.dataInicioPrev||t.dataInicio||t.dataPrevista, t.dataPrevista); }
   var atrasadas=pend.filter(function(x){return x.t.dataPrevista && x.t.dataPrevista<hoje;});
-  var deHoje=pend.filter(function(x){ var t=x.t; return t.dataPrevista && t.dataPrevista>=hoje && _diasUteis(t.dataInicioPrev||t.dataInicio||t.dataPrevista, t.dataPrevista).indexOf(hoje)>=0; });
+  var deHoje=pend.filter(function(x){ return x.t.dataPrevista && x.t.dataPrevista>=hoje && janela(x.t).indexOf(hoje)>=0; });
   var rodando=pend.filter(function(x){return x.t.rodandoDesde;});
   var andamento=pend.filter(function(x){return x.t.status==='in_progress' && !x.t.rodandoDesde && deHoje.indexOf(x)<0 && atrasadas.indexOf(x)<0;});
   var emRisco=dados.filter(function(x){return x.s.nivel==='vermelho';});
-  var atencao=dados.filter(function(x){return x.s.nivel==='vermelho'||x.s.nivel==='amarelo'||x.s.nivel==='cinza';}).sort(function(a,b){ var o={vermelho:0,amarelo:1,cinza:2}; return o[a.s.nivel]-o[b.s.nivel]; });
+  var atencao=dados.filter(function(x){return x.s.nivel!=='verde';}).sort(function(a,b){ var o={vermelho:0,amarelo:1,cinza:2}; return o[a.s.nivel]-o[b.s.nivel]; });
   var restante=dados.reduce(function(a,x){return a+x.r.restante;},0);
   var dias10=[], dd=new Date(); dd.setHours(0,0,0,0);
   while(dias10.length<10){ if(_isUtil(dd)) dias10.push(_ymd(dd)); dd.setDate(dd.getDate()+1); }
-  var sobre=0, seg=new Date(); seg.setHours(0,0,0,0); var lim=new Date(seg); lim.setDate(lim.getDate()+42);
-  for(var c=new Date(seg); c<lim; c.setDate(c.getDate()+1)){ var k=_ymd(c); if(_isUtil(c) && cargaDia(k)>cap+0.01) sobre++; }
+  var sobre=0, lim=new Date(); lim.setHours(0,0,0,0); lim.setDate(lim.getDate()+42);
+  for(var c=new Date(); c<lim; c.setDate(c.getDate()+1)){ if(_isUtil(c) && cargaDia(_ymd(c))>cap+0.01) sobre++; }
   var lim14=new Date(); lim14.setDate(lim14.getDate()+14); var l14=_ymd(lim14);
   var entregas=dados.filter(function(x){ return x.r.prazo && x.r.prazo<=l14 && x.r.done<x.r.total; }).sort(function(a,b){return a.r.prazo<b.r.prazo?-1:1;});
-  function sec(titulo, link, corpo){ return '<div class="pmo-sec" style="margin:0"><div class="pmo-sec-hd">'+titulo+(link?'<a href="#" style="margin-left:auto;font-weight:600;color:var(--accent);font-size:11px" onclick="event.preventDefault();_pmoSetView(\''+link[0]+'\')">'+link[1]+' →</a>':'')+'</div>'+corpo+'</div>'; }
-  var vazio=function(t){ return '<div style="padding:12px 14px;font-size:12px;color:var(--text3)">'+t+'</div>'; };
+  // Tempo registrado pelo cronômetro nesta semana (seg → hoje), por projeto
+  var seg=new Date(); seg.setHours(0,0,0,0); seg.setDate(seg.getDate()-((seg.getDay()+6)%7));
+  var segIso=seg.toISOString(), hojeIni=new Date(); hojeIni.setHours(0,0,0,0); var hojeIso=hojeIni.toISOString();
+  var porProj={}, ordemP=[], hSemana=0, hHoje=0;
+  state.demandas.forEach(function(d){ _pmoTarefas(d).forEach(function(x){
+    var h=0, hh=0;
+    (x.t.sessoes||[]).forEach(function(s){ if(s.ini>=segIso){ h+=s.h||0; if(s.ini>=hojeIso) hh+=s.h||0; } });
+    if(x.t.rodandoDesde){ var e=(Date.now()-new Date(x.t.rodandoDesde).getTime())/3.6e6; h+=e; if(x.t.rodandoDesde>=hojeIso) hh+=e; }
+    if(h>0){ if(!porProj[d.id]){ porProj[d.id]={d:d,h:0}; ordemP.push(d.id); } porProj[d.id].h+=h; hSemana+=h; hHoje+=hh; }
+  }); });
+  function sec(titulo, link, corpo, cls){ return '<div class="pmo-sec '+(cls||'')+'"><div class="pmo-sec-hd">'+titulo+(link?'<a href="#" style="margin-left:auto;font-weight:600;color:var(--accent);font-size:11px" onclick="event.preventDefault();_pmoSetView(\''+link[0]+'\')">'+link[1]+' →</a>':'')+'</div>'+corpo+'</div>'; }
+  function vazio(t){ return '<div style="padding:12px 14px;font-size:12px;color:var(--text3)">'+t+'</div>'; }
+  function miniTarefa(x){
+    var t=x.t, d=x.d;
+    return '<div class="pmo-tr" style="padding:6px 14px">'+_timerBotoes(d.id, t)+
+      '<div style="flex:1;min-width:0;cursor:pointer" onclick="_pmoAbrir(\''+d.id+'\')"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(t.nome)+'</div>'+
+      '<div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b style="color:var(--accent);font-family:monospace">'+_esc(d.proposta||'')+'</b> · '+_esc(d.cliente||'')+'</div></div>'+
+      '<span style="font-size:10px;color:var(--text3);white-space:nowrap">'+(parseFloat(t.horasOrcadas)?_fmtH(parseFloat(t.horasOrcadas)):'')+'</span></div>';
+  }
   var html='<div class="pmo-kpis">'+
     _projKpi('Planejado para hoje', _fmtH(cargaDia(hoje)), 'de '+_fmtH(cap)+' disponíveis', cargaDia(hoje)>cap?'#EF4444':'#3B82F6')+
+    _projKpi('Registrado hoje', _fmtH(hHoje), 'semana: '+_fmtH(hSemana)+' no cronômetro', '#0891B2')+
     _projKpi('Tarefas atrasadas', atrasadas.length, atrasadas.length?'precisam de atenção':'nenhuma', atrasadas.length?'#EF4444':'#10B981')+
     _projKpi('Projetos em risco', emRisco.length, 'de '+projetos.length+' ativos', emRisco.length?'#EF4444':'#10B981')+
     _projKpi('Trabalho restante', _fmtH(restante), '≈ '+Math.ceil(restante/cap)+' dia(s) útil(eis)', '#7C3AED')+
     _projKpi('Dias acima da capacidade', sobre, 'nas próximas 6 semanas', sobre?'#EF4444':'#10B981')+
   '</div>';
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px">';
-  // Hoje
-  var listaHoje=rodando.concat(atrasadas.slice(0,5), deHoje.filter(function(x){return rodando.indexOf(x)<0;}), andamento.slice(0,3));
+  html+='<div class="pmo-geral">';
+  // Hoje (coluna alta)
+  var listaHoje=rodando.concat(atrasadas, deHoje.filter(function(x){return rodando.indexOf(x)<0;}), andamento);
   html+=sec('Hoje — '+fD(hoje).slice(0,5)+' <span style="font-weight:600;color:'+(cargaDia(hoje)>cap?'#DC2626':'var(--text3)')+'">'+_fmtH(cargaDia(hoje))+' de '+_fmtH(cap)+'</span>', ['semana','Semana'],
-    listaHoje.length ? listaHoje.map(function(x){ return _pmoTarefaRow(x, atrasadas.indexOf(x)>=0?'<span class="pmo-chip" style="background:#FEE2E2;color:#B91C1C">atrasada</span>':''); }).join('') : vazio('Nada planejado para hoje. Use "Sugerir cronograma" nos projetos sem datas.'));
-  // Próximas entregas
+    '<div class="pmo-g-scroll" style="max-height:640px">'+(listaHoje.length ? listaHoje.map(function(x){ return _pmoTarefaRowCompacta(x, atrasadas.indexOf(x)>=0); }).join('') : vazio('Nada planejado para hoje. Use "Sugerir cronograma" nos projetos sem datas.'))+'</div>', 'pmo-g-alto');
+  // Entregas
   html+=sec('Entregas nos próximos 14 dias', ['carteira','Carteira'],
-    entregas.length ? entregas.map(function(x){
+    '<div class="pmo-g-scroll">'+(entregas.length ? entregas.map(function(x){
       var venc=x.r.prazo<hoje, n=_diasUteis(venc?x.r.prazo:hoje, venc?hoje:x.r.prazo).length-1;
       return '<div class="pmo-tr" style="cursor:pointer" onclick="_pmoAbrir(\''+x.d.id+'\')">'+
         '<div style="width:44px;text-align:center;flex-shrink:0"><div style="font-size:15px;font-weight:800;color:'+(venc?'#DC2626':'var(--text)')+'">'+fD(x.r.prazo).slice(0,5)+'</div><div style="font-size:9px;color:var(--text3)">'+(venc?'vencido':n===0?'hoje':n+' d.ú.')+'</div></div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(x.d.servico||'')+'</div><div style="font-size:10px;color:var(--text3)"><b style="color:var(--accent);font-family:monospace">'+_esc(x.d.proposta||'')+'</b> · '+x.r.pct+'% · faltam '+_fmtH(x.r.restante)+'</div></div>'+
         _pmoBadgeSaude(x.s)+'</div>';
-    }).join('') : vazio('Nenhum prazo de entrega nos próximos 14 dias.'+(dados.some(function(x){return !x.r.prazo;})?' Há projetos sem prazo definido.':'')));
+    }).join('') : vazio('Nenhum prazo de entrega nos próximos 14 dias.'+(dados.some(function(x){return !x.r.prazo;})?' Há projetos sem prazo definido — preencha na aba PMO da demanda.':'')))+'</div>');
   // Precisam de atenção
-  html+=sec('Precisam de atenção', ['carteira','Carteira'],
-    atencao.length ? atencao.slice(0,7).map(function(x){
+  html+=sec('Precisam de atenção ('+atencao.length+')', ['carteira','Carteira'],
+    '<div class="pmo-g-scroll">'+(atencao.length ? atencao.map(function(x){
       return '<div class="pmo-tr" style="cursor:pointer" onclick="_pmoAbrir(\''+x.d.id+'\')">'+_pmoBadgeSaude(x.s)+
         '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(x.d.servico||'')+' <span style="font-family:monospace;color:var(--accent);font-size:10px">'+_esc(x.d.proposta||'')+'</span></div>'+
-        '<div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(x.s.motivos.join(' • '))+'</div></div></div>';
-    }).join('')+(atencao.length>7?vazio('+'+(atencao.length-7)+' projeto(s) na Carteira'):'') : vazio('Todos os projetos estão no prazo.'));
+        '<div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+_esc(x.s.motivos.join(' • '))+'">'+_esc(x.s.motivos.join(' • '))+'</div></div></div>';
+    }).join('') : vazio('Todos os projetos estão no prazo.'))+'</div>');
   // Carga
   html+=sec('Carga dos próximos 10 dias úteis', ['capacidade','Capacidade'],
-    '<div style="display:flex;gap:6px;align-items:flex-end;padding:14px 14px 10px;height:130px">'+dias10.map(function(k){
+    '<div style="display:flex;gap:6px;align-items:flex-end;padding:14px 14px 10px;height:150px">'+dias10.map(function(k){
       var h=cargaDia(k), p=Math.min(h/cap,1.25), cor=h>cap+0.01?'#EF4444':h/cap>=0.7?'#F59E0B':'#10B981', dt=_parseYmd(k);
       return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end" title="'+fD(k)+': '+_fmtH(h)+' de '+_fmtH(cap)+'">'+
-        '<span style="font-size:9px;color:var(--text3)">'+(h?_fmtH(h).replace(' h',''):'')+'</span>'+
-        '<div style="width:100%;max-width:34px;height:'+Math.max(p*72,2)+'px;background:'+(h?cor:'var(--border)')+';border-radius:4px 4px 0 0"></div>'+
+        '<span style="font-size:9px;color:var(--text3)">'+(h?_fmtH(h):'')+'</span>'+
+        '<div style="width:100%;max-width:38px;height:'+Math.max(p*88,2)+'px;background:'+(h?cor:'var(--border)')+';border-radius:4px 4px 0 0"></div>'+
         '<span style="font-size:9px;color:'+(k===hoje?'var(--accent)':'var(--text3)')+';font-weight:'+(k===hoje?'700':'400')+'">'+['D','S','T','Q','Q','S','S'][dt.getDay()]+' '+dt.getDate()+'</span></div>';
     }).join('')+'</div>');
+  // Tempo registrado
+  html+=sec('Tempo registrado nesta semana <span style="font-weight:600;color:var(--text3)">'+_fmtH(hSemana)+'</span>', null,
+    '<div class="pmo-g-scroll">'+(ordemP.length ? ordemP.sort(function(a,b){return porProj[b].h-porProj[a].h;}).map(function(id){
+      var p=porProj[id], pct=hSemana>0?p.h/hSemana*100:0;
+      return '<div class="pmo-tr" style="cursor:pointer;display:block" onclick="_pmoAbrir(\''+id+'\')">'+
+        '<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b style="font-family:monospace;color:var(--accent);font-size:11px">'+_esc(p.d.proposta||'')+'</b> '+_esc(p.d.servico||'')+'</span><b style="white-space:nowrap">'+_fmtH(p.h)+'</b></div>'+
+        '<div style="height:4px;background:var(--border);border-radius:2px;margin-top:5px"><div style="height:100%;width:'+pct+'%;background:#0891B2;border-radius:2px"></div></div></div>';
+    }).join('') : vazio('Nenhum tempo registrado nesta semana. Use ▶ nas tarefas para cronometrar.'))+'</div>');
+  // Próximos dias (amanhã em diante)
+  var prox=dias10.filter(function(k){return k>hoje;}).slice(0,4);
+  html+=sec('Próximos dias', ['semana','Semana'],
+    '<div class="pmo-g-scroll">'+prox.map(function(k){
+      var lst=pend.filter(function(x){ return x.t.dataPrevista && x.t.dataPrevista>=hoje && janela(x.t).indexOf(k)>=0; }), dt=_parseYmd(k), h=cargaDia(k);
+      return '<div style="padding:6px 14px 2px;font-size:11px;font-weight:700;color:var(--text2);display:flex;justify-content:space-between;background:var(--surface2);border-bottom:1px solid var(--border)"><span>'+['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dt.getDay()]+' '+fD(k).slice(0,5)+'</span><span style="color:'+(h>cap+0.01?'#DC2626':'var(--text3)')+'">'+_fmtH(h)+'</span></div>'+
+        (lst.length?lst.map(miniTarefa).join(''):'<div style="padding:6px 14px;font-size:11px;color:var(--text3);border-bottom:1px solid var(--border)">Livre</div>');
+    }).join('')+'</div>');
+  // Carteira resumida (todos os projetos ativos)
+  var ordemNivel={vermelho:0,amarelo:1,cinza:2,verde:3};
+  html+=sec('Carteira de projetos ('+dados.length+')', ['carteira','Detalhes'],
+    '<div class="pmo-g-scroll" style="max-height:none"><div class="tw" style="border:none;border-radius:0;box-shadow:none"><table><thead><tr><th>Projeto</th><th>Saúde</th><th style="min-width:110px">Progresso</th><th style="text-align:right">Horas</th><th>Entrega</th></tr></thead><tbody>'+
+    dados.slice().sort(function(a,b){ return (ordemNivel[a.s.nivel]-ordemNivel[b.s.nivel]) || ((a.r.prazo||'9999')<(b.r.prazo||'9999')?-1:1); }).map(function(x){
+      var cor=PMO_COR[x.s.nivel].dot;
+      return '<tr style="cursor:pointer" onclick="_pmoAbrir(\''+x.d.id+'\')">'+
+        '<td style="max-width:260px"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(x.d.servico||'')+'</div><div style="font-size:10px;color:var(--text3)"><b style="font-family:monospace;color:var(--accent)">'+_esc(x.d.proposta||'')+'</b> · '+_esc(x.d.status)+'</div></td>'+
+        '<td>'+_pmoBadgeSaude(x.s)+'</td>'+
+        '<td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:5px;background:var(--border);border-radius:3px"><div style="height:100%;width:'+x.r.pct+'%;background:'+cor+';border-radius:3px"></div></div><span style="font-size:10px;font-weight:700;color:'+cor+'">'+x.r.pct+'%</span></div></td>'+
+        '<td style="text-align:right;font-size:11px;white-space:nowrap;color:'+(x.r.orc>0&&x.r.real>x.r.orc?'#DC2626':'var(--text2)')+'">'+(x.r.total?_fmtH(x.r.real)+' / '+_fmtH(x.r.orc):'—')+'</td>'+
+        '<td style="font-size:11px;white-space:nowrap;color:'+(x.r.prazo&&x.r.prazo<hoje?'#DC2626':'var(--text2)')+'">'+(x.r.prazo?fD(x.r.prazo):'<span style="color:#B45309">sem prazo</span>')+'</td></tr>';
+    }).join('')+'</tbody></table></div></div>', 'pmo-g-largo');
   html+='</div>';
   return html;
 }
