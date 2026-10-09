@@ -690,6 +690,10 @@ body.fv-open::after{display:none}
 .cal-week-slot:hover{background:color-mix(in srgb,var(--accent) 5%,transparent)}
 .cal-week-event{position:absolute;left:3px;right:3px;border-radius:5px;padding:4px 7px;font-size:10px;font-weight:600;cursor:pointer;overflow:hidden;border-left:3px solid rgba(0,0,0,.2);z-index:2;transition:filter .1s}
 .cal-week-event:hover{filter:brightness(.92)}
+.cal-week-curto{padding:1px 6px!important;display:flex;align-items:center}
+.cal-week-curto .cal-week-event-title{line-height:1.15}
+.cal-allday-chip{font-size:10.5px;font-weight:600;color:#fff;border-radius:4px;padding:2px 6px;margin:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cal-allday-chip:hover{filter:brightness(.92)}
 .cal-now-line{position:absolute;left:0;right:0;height:2px;background:#EA4335;z-index:40;pointer-events:none}
 .cal-now-line::before{content:'';position:absolute;left:-6px;top:-5px;width:12px;height:12px;border-radius:50%;background:#EA4335}
 .cal-week-event-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
@@ -1447,7 +1451,7 @@ body.fv-open::after{display:none}
         </div>
         <div class="fgrid2">
           <div class="fg"><label>Data de Retorno</label><input class="finput" type="date" id="f-retorno" title="Data de retorno / follow-up"/></div>
-          <div class="fg"><label>Data de Fechamento (prevista)</label><input class="finput" type="date" id="f-fechamento"/></div>
+          <div class="fg"><label>Data de Fechamento (prevista)</label><input class="finput" type="date" id="f-fechamento" onchange="_fechamentoMudou(this.value)" title="Preenchida com 10 dias úteis após a abertura (validade da proposta) — pode alterar"/></div>
         </div>
       </div>
       <div class="fsec">
@@ -1637,7 +1641,7 @@ body.fv-open::after{display:none}
         <span id="sub-count" style="font-size:12px;color:var(--text3)"></span>
       </div>
       <div class="sub-pb"><div class="sub-pf" id="sub-pfill"></div></div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Cada etapa pode ter observação e data de retorno. ⚠️ <em>Fechamento do serviço</em> tem retorno fixo de 15 dias.</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Cada etapa pode ter observação e data de retorno. ⚠️ <em>Fechamento do serviço</em> é preenchido com 10 dias úteis após a abertura (acompanha a Data de Fechamento prevista).</div>
       <div id="sub-list"></div>
 
       <!-- CHECKLIST PERSONALIZADO DA VISITA -->
@@ -2384,7 +2388,7 @@ function demandaToDb(d) {
     motivo_perda: d.motivoPerda||'', categoria_perda: String(d.categoriaPerda||''),
     plano_acao_perda: d.planoAcaoPerda||'', data_resgate: d.dataResgate||'',
     log: d.log||[], subtarefas: d.subtarefas||[], comentarios: d.comentarios||[],
-    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||'',url:doc.url||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip),cnpjCliente:d.cnpj||'',prazoEntrega:d.prazoEntrega||''};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
+    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||'',url:doc.url||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip),cnpjCliente:d.cnpj||'',prazoEntrega:d.prazoEntrega||'',gcRetornoId:d.gcRetornoId||'',gcFechamentoId:d.gcFechamentoId||''};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
     parcelas: d.parcelas||[],
     pagamentos_parciais: d.pagamentosParciais||[],
     total_parcelas: parseInt(d.totalParcelas)||0,
@@ -2406,7 +2410,9 @@ function dbToDemanda(r) {
     id: r.id, proposta: r.proposta||'', servico: r.servico||'', tipo: r.tipo||'', status: r.status||'',
     cliente: r.cliente||'', contato: r.contato||'', email: r.email||'', telefone: r.telefone||'',
     cnpj: (r.docs_fiscais&&r.docs_fiscais.cnpjCliente)||'',
-    prazoEntrega: (r.docs_fiscais&&r.docs_fiscais.prazoEntrega)||'', // guardado dentro do jsonb docs_fiscais (tabela não tem coluna cnpj)
+    prazoEntrega: (r.docs_fiscais&&r.docs_fiscais.prazoEntrega)||'',
+    gcRetornoId: (r.docs_fiscais&&r.docs_fiscais.gcRetornoId)||'',
+    gcFechamentoId: (r.docs_fiscais&&r.docs_fiscais.gcFechamentoId)||'', // guardado dentro do jsonb docs_fiscais (tabela não tem coluna cnpj)
     ultimoContato: r.ultimo_contato||'', dataCriacao: r.data_criacao||'', dataFechamento: r.data_fechamento||'',
     dataRetorno: r.data_retorno||'', dataLembrete: r.data_lembrete||'',
     valorBruto: parseFloat(r.valor_bruto)||0, desconto: parseFloat(r.desconto)||0,
@@ -2539,7 +2545,7 @@ function demandaToDbSb(d) {
   if(base.link_files_contrato && base.link_files_contrato.dados) { var c=base.link_files_contrato; base.link_files_contrato={nome:c.nome,tipo:c.tipo,tamanho:c.tamanho,data:c.data}; }
   // Strip base64 dos docs fiscais
   function stripDoc(doc){ return doc&&doc.dados ? {nome:doc.nome,tipo:doc.tipo,tamanho:doc.tamanho,data:doc.data,prazo:doc.prazo||''} : doc; }
-  if(base.docs_fiscais) { base.docs_fiscais={nfs:(base.docs_fiscais.nfs||[]).map(stripDoc),boletos:(base.docs_fiscais.boletos||[]).map(stripDoc),laudos:(base.docs_fiscais.laudos||[]).map(stripDoc),cnpjCliente:base.docs_fiscais.cnpjCliente||'',prazoEntrega:base.docs_fiscais.prazoEntrega||''}; }
+  if(base.docs_fiscais) { base.docs_fiscais={nfs:(base.docs_fiscais.nfs||[]).map(stripDoc),boletos:(base.docs_fiscais.boletos||[]).map(stripDoc),laudos:(base.docs_fiscais.laudos||[]).map(stripDoc),cnpjCliente:base.docs_fiscais.cnpjCliente||'',prazoEntrega:base.docs_fiscais.prazoEntrega||'',gcRetornoId:base.docs_fiscais.gcRetornoId||'',gcFechamentoId:base.docs_fiscais.gcFechamentoId||''}; }
   return base;
 }
 async function sbUpsertDemanda(dem) {
@@ -3071,6 +3077,13 @@ function fR(v) { return new Intl.NumberFormat('pt-BR',{style:'currency',currency
 function fD(d) { return d?new Date(d+'T12:00').toLocaleDateString('pt-BR'):'—'; }
 function escapeHtml(s) { if(s==null) return ''; var m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}; return String(s).replace(/[&<>"']/g,function(c){return m[c];}); }
 function fDT(d) { if(!d) return '—'; var dt=new Date(d); return dt.toLocaleDateString('pt-BR')+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+function _addDiasUteis(ymd, n){ var d=_parseYmd(ymd), c=0; while(c<n){ d.setDate(d.getDate()+1); if(_isUtil(d)) c++; } return _ymd(d); }
+// Data de fechamento prevista alterada → etapa "Fechamento do serviço" acompanha
+function _fechamentoMudou(v){
+  if(!modalSubs || !modalSubs[IDX_FECHAMENTO] || !v) return;
+  modalSubs[IDX_FECHAMENTO].dataRetorno=v;
+  if(typeof renderSubList==='function') renderSubList();
+}
 function addDays(d,n) { var dt=new Date(d); dt.setDate(dt.getDate()+n); return dt.toISOString().slice(0,10); }
 function toast(msg,type) {
   var t=document.createElement('div');t.className='toast'+(type?' toast-'+type:'');t.textContent=msg;
@@ -4270,7 +4283,8 @@ function openModalNew() {
   _perdaTempData = null;
   editingId=null;
   var today=new Date().toISOString().slice(0,10);
-  modalSubs=SUBTAREFAS_PADRAO.map(function(n,i){return {nome:n,concluido:false,obs:'',anexos:[],dataRetorno:i===IDX_FECHAMENTO?addDays(today,15):''};});
+  var _fechPrev=_addDiasUteis(_ymd(new Date()),10);
+  modalSubs=SUBTAREFAS_PADRAO.map(function(n,i){return {nome:n,concluido:false,obs:'',anexos:[],dataRetorno:i===IDX_FECHAMENTO?_fechPrev:''};});
   modalComentarios=[];
   renderChat();
   modalDocsFiscais={nfs:[],boletos:[],laudos:[]}; modalLinkFiles={'pdf-prop':null,art:null,contrato:null}; modalLinkPropostas=[];
@@ -4280,6 +4294,7 @@ function openModalNew() {
   renderPacotesFinanceiro(null);
   renderLinkPropostas();
   setF('f-status','Negociação'); setF('f-proposta',nextPR()); setF('f-pagamento','Pendente');
+  setF('f-fechamento',_fechPrev);
   // Lock proposta field for new demandas
   var fpNew=document.getElementById('f-proposta');
   if(fpNew){fpNew.setAttribute('readonly','readonly');fpNew.style.background='var(--surface2)';fpNew.style.cursor='default';fpNew.style.color='var(--text2)';fpNew.style.fontWeight='600';}
@@ -4757,8 +4772,8 @@ function renderSubList() {
     return '<div class="sub-item">' +
       '<div class="sub-r1">' +
         '<input class="sub-ck" type="checkbox"'+(s.concluido?' checked':'')+' onchange="autoSaveSub('+i+',this.checked)"/>' +
-        '<span class="sub-lbl'+(s.concluido?' done':'')+'" style="flex:1">'+s.nome+(isFec?' <span style="font-size:10px;background:var(--amber-l);color:var(--amber);padding:1px 6px;border-radius:10px;font-weight:600">15 dias fixo</span>':'')+'</span>' +
-        '<input type="date" class="sub-date'+(isFec?' fixed':'')+'" value="'+(s.dataRetorno||'')+'"'+(isFec?' title="Data fixada: 15 dias após criação" ':'')+' onchange="modalSubs['+i+'].dataRetorno=this.value'+(editingId?';quickSaveSub()':'')+'" style="width:130px"/>' +
+        '<span class="sub-lbl'+(s.concluido?' done':'')+'" style="flex:1">'+s.nome+(isFec?' <span style="font-size:10px;background:var(--amber-l);color:var(--amber);padding:1px 6px;border-radius:10px;font-weight:600">10 dias úteis</span>':'')+'</span>' +
+        '<input type="date" class="sub-date'+(isFec?' fixed':'')+'" value="'+(s.dataRetorno||'')+'"'+(isFec?' title="Automática: 10 dias úteis após a abertura — pode alterar" ':'')+' onchange="modalSubs['+i+'].dataRetorno=this.value'+(editingId?';quickSaveSub()':'')+'" style="width:130px"/>' +
       '</div>' +
       ((s.anexos&&s.anexos.length)?'<div class="sub-r2">'+anxHtml+'</div>':'') +
     '</div>';
@@ -5446,7 +5461,7 @@ function _saveDemandaImpl() {
   // Sync retorno com Google Calendar (silencioso)
   if(gcIsConnected()) {
     var _demSalva = state.demandas.find(function(d){return d.id===editingId;});
-    if(_demSalva) gcSyncRetornoDemanda(_demSalva);
+    if(_demSalva){ gcSyncRetornoDemanda(_demSalva); gcSyncFechamentoDemanda(_demSalva); }
   }
 
   // Re-renderiza a página de fundo sem fechar o modal
@@ -8458,8 +8473,9 @@ function gcFetchEvents() {
           colorId: ev.colorId || null,
           source: 'google'
         };
-      });
+      }).filter(function(ev){ return !_gcEhLocal(ev); });
       renderCalendario();
+      setTimeout(_gcSyncPendentes, 800);
     })
     .catch(function(e) { toast('Erro ao buscar eventos Google: ' + e.message, 'error'); });
 }
@@ -8750,39 +8766,82 @@ function gcSyncEvent(evId) {
   .catch(function() {}); // sync silencioso — não bloqueia o fluxo
 }
 
+// Cria ou atualiza no Google um evento marcado com uma etiqueta [CERC_xxx:id] na descrição. Se o id do Google
+// não estiver salvo (ou sumiu), procura pela etiqueta antes de criar — assim nunca nasce um evento duplicado.
+function _gcUpsertTagged(tag, q, body, gcId, onId){
+  if(!gcIsConnected()) return;
+  var H={'Authorization':'Bearer '+gcToken,'Content-Type':'application/json'};
+  var base='https://www.googleapis.com/calendar/v3/calendars/primary/events';
+  function enviar(id){
+    fetch(id?base+'/'+encodeURIComponent(id):base,{method:id?'PUT':'POST',headers:H,body:JSON.stringify(body)})
+      .then(function(r){return r.json();}).then(function(data){
+        if(data.id){ if(data.id!==gcId) onId(data.id); }
+        else if(data.error && (data.error.code===404||data.error.code===410) && id){ buscar(); }
+        else if(data.error && data.error.code===401){ gcToken=null; }
+      }).catch(function(){});
+  }
+  function buscar(){
+    fetch(base+'?q='+encodeURIComponent(q)+'&maxResults=10',{headers:H}).then(function(r){return r.json();}).then(function(data){
+      var it=(data.items||[]).find(function(e){ return (e.description||'').indexOf(tag)>=0 && e.status!=='cancelled'; });
+      enviar(it?it.id:null);
+    }).catch(function(){ enviar(null); });
+  }
+  if(gcId) enviar(gcId); else buscar();
+}
+function _gcSalvarIdDemanda(demId, campo, id){
+  var d=state.demandas.find(function(x){return x.id===demId;}); if(!d) return;
+  d[campo]=id; d.updatedAt=_now(); saveState(); if(_sbUser) sbUpsertDemanda(d);
+}
 function gcSyncRetornoDemanda(dem) {
-  // Sincroniza o dataRetorno de uma demanda como evento no Google Calendar
-  if (!gcIsConnected()) return;
-  if (!dem || !dem.dataRetorno) {
-    // Se não tem retorno mas tinha gcRetornoId, deletar do Google
-    if (dem && dem.gcRetornoId) gcDeleteGEvent(dem.gcRetornoId);
+  // Sincroniza o dataRetorno de uma demanda como evento no Google Calendar (09:00–09:30)
+  if (!gcIsConnected() || !dem) return;
+  if (!dem.dataRetorno) {
+    if (dem.gcRetornoId) { gcDeleteGEvent(dem.gcRetornoId); _gcSalvarIdDemanda(dem.id,'gcRetornoId',''); }
     return;
   }
-  var start = dem.dataRetorno + 'T09:00:00';
-  var end   = dem.dataRetorno + 'T09:30:00';
-  var title = '📞 Retorno: ' + (dem.servico||'Demanda') + (dem.cliente?' — '+dem.cliente:'');
-  var desc  = 'Retorno CERC | '+(dem.proposta||'')+' | '+(dem.cliente||'')+' | '+(dem.status||'')+' [CERC_RET:'+dem.id+']';
-  var body = {
-    summary: title,
-    description: desc,
-    start: { dateTime: start, timeZone: 'America/Sao_Paulo' },
-    end:   { dateTime: end,   timeZone: 'America/Sao_Paulo' },
-    colorId: '5' // banana/amarelo
-  };
-  var gcId = dem.gcRetornoId;
-  var url = gcId
-    ? 'https://www.googleapis.com/calendar/v3/calendars/primary/events/' + encodeURIComponent(gcId)
-    : 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
-  fetch(url, {
-    method: gcId ? 'PUT' : 'POST',
-    headers: { 'Authorization': 'Bearer ' + gcToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  }).then(function(r){ return r.json(); }).then(function(data){
-    if (data.id) {
-      var idx = state.demandas.findIndex(function(d){ return d.id === dem.id; });
-      if (idx >= 0) { state.demandas[idx].gcRetornoId = data.id; state.demandas[idx].updatedAt=_now(); saveState(); if(_sbUser) sbUpsertDemanda(state.demandas[idx]); }
-    } else if (data.error && data.error.code === 401) { gcToken = null; }
-  }).catch(function(){});
+  var tag='[CERC_RET:'+dem.id+']';
+  _gcUpsertTagged(tag, dem.id, {
+    summary: '📞 Retorno: ' + (dem.servico||'Demanda') + (dem.cliente?' — '+dem.cliente:''),
+    description: 'Retorno CERC | '+(dem.proposta||'')+' | '+(dem.cliente||'')+' | '+(dem.status||'')+' '+tag,
+    start: { dateTime: dem.dataRetorno+'T09:00:00', timeZone: 'America/Sao_Paulo' },
+    end:   { dateTime: dem.dataRetorno+'T09:30:00', timeZone: 'America/Sao_Paulo' },
+    colorId: '5'
+  }, dem.gcRetornoId, function(id){ _gcSalvarIdDemanda(dem.id,'gcRetornoId',id); });
+}
+// Data de fechamento prevista (validade da proposta) → evento de dia inteiro no Google
+function gcSyncFechamentoDemanda(dem) {
+  if (!gcIsConnected() || !dem) return;
+  if (!dem.dataFechamento) {
+    if (dem.gcFechamentoId) { gcDeleteGEvent(dem.gcFechamentoId); _gcSalvarIdDemanda(dem.id,'gcFechamentoId',''); }
+    return;
+  }
+  var fim=_parseYmd(dem.dataFechamento); fim.setDate(fim.getDate()+1);
+  var tag='[CERC_FECH:'+dem.id+']';
+  _gcUpsertTagged(tag, dem.id, {
+    summary: '📋 Fechamento previsto: ' + (dem.servico||'Demanda') + (dem.cliente?' — '+dem.cliente:''),
+    description: 'Fechamento previsto (validade da proposta) CERC | '+(dem.proposta||'')+' | '+(dem.cliente||'')+' | '+(dem.status||'')+' '+tag,
+    start: { date: dem.dataFechamento },
+    end:   { date: _ymd(fim) },
+    colorId: '6'
+  }, dem.gcFechamentoId, function(id){ _gcSalvarIdDemanda(dem.id,'gcFechamentoId',id); });
+}
+// Evento do Google que é cópia de algo que já existe no sistema (retorno, fechamento ou evento do CERC)
+function _gcEhLocal(ev){
+  var m=/\[CERC_(RET|FECH|ID):([^\]]+)\]/.exec(ev.descricao||''); if(!m) return false;
+  if(m[1]==='ID') return (state.eventos||[]).some(function(e){return e.id===m[2];});
+  var d=state.demandas.find(function(x){return x.id===m[2];}); if(!d) return false;
+  return m[1]==='RET' ? !!d.dataRetorno : !!d.dataFechamento;
+}
+// Envia ao Google retornos e fechamentos futuros que ainda não subiram (uma vez por sessão)
+var _gcPendFeito=false;
+function _gcSyncPendentes(){
+  if(_gcPendFeito || !gcIsConnected()) return; _gcPendFeito=true;
+  var hoje=_ymd(new Date()), fila=[];
+  state.demandas.forEach(function(d){
+    if(d.dataFechamento && d.dataFechamento>=hoje && !d.gcFechamentoId && ['Lead','Negociação'].indexOf(d.status)>=0) fila.push(function(){ gcSyncFechamentoDemanda(d); });
+    if(d.dataRetorno && d.dataRetorno>=hoje && !d.gcRetornoId && ['Perdido','Arquivado','Concluído'].indexOf(d.status)<0) fila.push(function(){ gcSyncRetornoDemanda(d); });
+  });
+  fila.slice(0,30).forEach(function(fn,i){ setTimeout(fn, 400*i); });
 }
 
 function gcDeleteGEvent(gcEventId) {
@@ -9107,6 +9166,7 @@ function renderCalendario() {
 
     // ── Eventos posicionados com position:absolute sobre a table ────
     // Calculamos um overlay de eventos por coluna de dia
+    var _allDayCells=[];
     var evtOverlay=weekDays.map(function(d,colIdx){
       var ds3=d.toISOString().slice(0,10);
       var demEvts=(evtMap[ds3]||[]);
@@ -9125,66 +9185,84 @@ function renderCalendario() {
       // (só ficam lado a lado quando há conflito REAL de horário, como no Google)
       var dayItems=[];
 
-      demEvts.forEach(function(dv){
-        var isFech=dv._tipo==='fechamento';
-        var sc2=STATUS_CFG[dv.status];
-        var bg2=isFech?'#F09300':(sc2?sc2.dot:'#7C3AED');
-        var c2='#fff';
-        var bd2='rgba(0,0,0,.18)';
-        var topPx=(9-HOURS_START)*SLOT_H, heightPx=42;
-        dayItems.push({startMin:9*60, endMin:9*60+52, topPx:topPx, heightPx:heightPx,
+      // Faixa "dia todo" (como no Google): fechamentos previstos, eventos sem horário e eventos de dia inteiro do Google
+      var allDay=[];
+      demEvts.filter(function(dv){return dv._tipo==='fechamento';}).forEach(function(dv){
+        allDay.push('<div class="cal-allday-chip" style="background:#F09300" title="Fechamento previsto: '+_esc(dv.servico||'')+(dv.cliente?' — '+_esc(dv.cliente):'')+'" onclick="event.stopPropagation();openModalEdit(\''+dv.id+'\')">📋 '+_esc(dv.servico||'')+'</div>');
+      });
+      (evtCustomMap[ds3]||[]).filter(function(ev){return !ev.horaInicio;}).forEach(function(ev){
+        var concA=ev.tipo==='Tarefa'&&ocorrenciaConcluida(ev,ev._occDate), corA=_calCorSolida(ev);
+        allDay.push('<div class="cal-allday-chip" style="background:'+(concA?'color-mix(in srgb,'+corA+' 45%, white);text-decoration:line-through':corA)+'" title="'+_esc(ev.titulo||'')+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')">'+(ev.tipo==='Tarefa'?(concA?'☑ ':'☐ '):'')+_esc(ev.titulo||'')+'</div>');
+      });
+      gcEvents.filter(function(ev){
+        if(!ev.allDay || !ev.inicio) return false;
+        var ini=ev.inicio.slice(0,10), fim=(ev.fim||ev.inicio).slice(0,10);
+        if(!(ini<=ds3 && (ds3<fim || ds3===ini))) return false;
+        if(ev.gcEventId&&_localGcIds[ev.gcEventId]) return false;
+        return !_localTitleDates[(ev.titulo||'').trim().toLowerCase()+'|'+ini];
+      }).forEach(function(ev){
+        allDay.push('<div class="cal-allday-chip" data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" style="background:'+(gcColorHex(ev.colorId)||'#1A73E8')+'" title="'+_esc(ev.titulo||'')+'" onclick="event.stopPropagation();_openGcById(this,event)">'+_esc(ev.titulo||'')+'</div>');
+      });
+      _allDayCells[colIdx]=allDay;
+
+      // Altura exata da duração, com 2px de respiro embaixo (caixas vizinhas não grudam); curtos (< 45 min) em uma linha
+      demEvts.filter(function(dv){return dv._tipo!=='fechamento';}).forEach(function(dv){
+        var sc2=STATUS_CFG[dv.status], bg2=sc2?sc2.dot:'#7C3AED';
+        var topPx=(9-HOURS_START)*SLOT_H, heightPx=SLOT_H*0.5;
+        dayItems.push({startMin:9*60, endMin:9*60+30, topPx:topPx, heightPx:heightPx,
           render:function(posStyle){
-            return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;'+posStyle+'background:'+bg2+';color:'+c2+';border-left-color:'+bd2+'" onclick="event.stopPropagation();openModalEdit(\''+dv.id+'\')">' +
-              '<div class="cal-week-event-title">'+(isFech?'📋 ':'📞 ')+(dv.servico||'')+'</div>'+
-              '<div class="cal-week-event-sub">'+(dv.cliente||'')+'</div></div>';
+            return '<div class="cal-week-event cal-week-curto" style="top:'+topPx+'px;height:'+(heightPx-2)+'px;'+posStyle+'background:'+bg2+';color:#fff;border-left-color:rgba(0,0,0,.18)" title="Retorno: '+_esc(dv.servico||'')+(dv.cliente?' — '+_esc(dv.cliente):'')+'" onclick="event.stopPropagation();openModalEdit(\''+dv.id+'\')">' +
+              '<div class="cal-week-event-title">📞 '+_esc(dv.servico||'')+', 09:00</div></div>';
           }});
       });
 
-      custEvts.forEach(function(ev){
+      custEvts.filter(function(ev){return ev.horaInicio;}).forEach(function(ev){
         var cfg2=evtCfg(ev);
-        // Calcula posição pela hora ou usa padrão 10h
-        var hStart=10;
-        if(ev.horaInicio){var parts=ev.horaInicio.split(':');hStart=parseInt(parts[0])+(parseInt(parts[1]||0)/60);}
+        var parts=ev.horaInicio.split(':'), hStart=parseInt(parts[0])+(parseInt(parts[1]||0)/60);
         var startMin=Math.round(hStart*60), endMin=startMin+60;
-        if(ev.horaInicio&&ev.horaFim){
+        if(ev.horaFim){
           var pEnd=ev.horaFim.split(':');var hEnd=parseInt(pEnd[0])+(parseInt(pEnd[1]||0)/60);
-          endMin=Math.max(startMin+30,Math.round(hEnd*60));
+          endMin=Math.max(startMin+15,Math.round(hEnd*60));
         }
         var topPx=(startMin/60-HOURS_START)*SLOT_H;
-        var heightPx=Math.max(SLOT_H*0.6,(endMin-startMin)/60*SLOT_H);
+        var heightPx=Math.max(SLOT_H*0.25,(endMin-startMin)/60*SLOT_H);
+        var curto=heightPx<SLOT_H*0.75;
         var isTarefaW=ev.tipo==='Tarefa';
         var concW=isTarefaW&&ocorrenciaConcluida(ev,ev._occDate);
         var icoW=isTarefaW?(concW?'☑':'☐'):cfg2.ico;
         var titleW=concW?'<span style="text-decoration:line-through;opacity:0.65">'+ev.titulo+'</span>':ev.titulo;
         var bgW=concW?'color-mix(in srgb,'+_calCorSolida(ev)+' 45%, white)':_calCorSolida(ev);
-        var borderW='rgba(0,0,0,.18)';
         var checkSpanW=isTarefaW?'<span onclick="event.stopPropagation();toggleTarefaConcluida(\''+ev.id+'\',\''+(ev._occDate||'')+'\')" style="cursor:pointer;margin-right:2px" title="'+(concW?'Reabrir':'Concluir')+'">'+icoW+'</span> ':''+icoW+' ';
         dayItems.push({startMin:startMin, endMin:endMin, topPx:topPx, heightPx:heightPx,
           render:function(posStyle){
-            return '<div class="cal-week-event" style="top:'+topPx+'px;height:'+heightPx+'px;'+posStyle+'background:'+bgW+';color:#fff;border-left-color:'+borderW+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')">' +
-              '<div class="cal-week-event-title">'+checkSpanW+titleW+'</div>'+
-              '<div class="cal-week-event-sub">'+(ev.horaInicio?ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:''):(ev.descricao||''))+'</div></div>';
+            return '<div class="cal-week-event'+(curto?' cal-week-curto':'')+'" style="top:'+topPx+'px;height:'+(heightPx-2)+'px;'+posStyle+'background:'+bgW+';color:#fff;border-left-color:rgba(0,0,0,.18)" title="'+_esc(ev.titulo||'')+' · '+ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:'')+'" onclick="event.stopPropagation();openEventPopover(\''+ev.id+'\',event,\''+(ev._occDate||'')+'\')">' +
+              (curto
+                ? '<div class="cal-week-event-title">'+checkSpanW+titleW+', '+ev.horaInicio+'</div></div>'
+                : '<div class="cal-week-event-title">'+checkSpanW+titleW+'</div>'+
+                  '<div class="cal-week-event-sub">'+ev.horaInicio+(ev.horaFim?' – '+ev.horaFim:'')+'</div></div>');
           }});
       });
 
-      gEvts3.forEach(function(ev){
-        var hStart2=8;
-        if(!ev.allDay&&ev.inicio){var pi=ev.inicio.slice(11,16).split(':');hStart2=parseInt(pi[0])+(parseInt(pi[1]||0)/60);}
+      gEvts3.filter(function(ev){return !ev.allDay;}).forEach(function(ev){
+        var pi=ev.inicio.slice(11,16).split(':'), hStart2=parseInt(pi[0])+(parseInt(pi[1]||0)/60);
         var startMin2=Math.round(hStart2*60), endMin2=startMin2+60;
-        if(!ev.allDay&&ev.fim){
+        if(ev.fim){
           var pf=ev.fim.slice(11,16).split(':');var hEnd2=parseInt(pf[0])+(parseInt(pf[1]||0)/60);
-          endMin2=Math.max(startMin2+30,Math.round(hEnd2*60));
+          if(ev.fim.slice(0,10)>ev.inicio.slice(0,10)) hEnd2=24;
+          endMin2=Math.max(startMin2+15,Math.round(hEnd2*60));
         }
         var topPx2=(startMin2/60-HOURS_START)*SLOT_H;
-        var heightPx2=Math.max(SLOT_H*0.6,(endMin2-startMin2)/60*SLOT_H);
-        var horaSub=ev.allDay?'Dia todo':ev.inicio.slice(11,16)+(ev.fim?' – '+ev.fim.slice(11,16):'');
-        var gcCor=gcColorHex(ev.colorId)||'#1A73E8';
-        var gcBg=gcCor;
+        var heightPx2=Math.max(SLOT_H*0.25,(endMin2-startMin2)/60*SLOT_H);
+        var curto2=heightPx2<SLOT_H*0.75;
+        var horaIni=ev.inicio.slice(11,16), horaSub=horaIni+(ev.fim?' – '+ev.fim.slice(11,16):'');
+        var gcBg=gcColorHex(ev.colorId)||'#1A73E8';
         dayItems.push({startMin:startMin2, endMin:endMin2, topPx:topPx2, heightPx:heightPx2,
           render:function(posStyle){
-            return '<div class="cal-week-event" data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" style="top:'+topPx2+'px;height:'+heightPx2+'px;'+posStyle+'background:'+gcBg+';color:#fff;border-left-color:rgba(0,0,0,.18)" onclick="event.stopPropagation();_openGcById(this,event)">'+
-              '<div class="cal-week-event-title">🗓 '+(ev.titulo||'')+'</div>'+
-              '<div class="cal-week-event-sub">'+horaSub+'</div></div>';
+            return '<div class="cal-week-event'+(curto2?' cal-week-curto':'')+'" data-gcid="'+(ev.gcEventId||'').replace(/"/g,'&quot;')+'" style="top:'+topPx2+'px;height:'+(heightPx2-2)+'px;'+posStyle+'background:'+gcBg+';color:#fff;border-left-color:rgba(0,0,0,.18)" title="'+_esc(ev.titulo||'')+' · '+horaSub+'" onclick="event.stopPropagation();_openGcById(this,event)">'+
+              (curto2
+                ? '<div class="cal-week-event-title">'+_esc(ev.titulo||'')+', '+horaIni+'</div></div>'
+                : '<div class="cal-week-event-title">'+_esc(ev.titulo||'')+'</div>'+
+                  '<div class="cal-week-event-sub">'+horaSub+'</div></div>');
           }});
       });
 
@@ -9211,7 +9289,14 @@ function renderCalendario() {
         '<div style="overflow:hidden;flex-shrink:0">'+
           '<table style="table-layout:fixed;width:100%;border-collapse:collapse">'+
             '<colgroup><col style="width:52px">'+weekDays.map(function(){return '<col>';}).join('')+'</colgroup>'+
-            '<tbody><tr><td style="width:52px;border-right:1px solid var(--border)"></td>'+wHdCells+'</tr></tbody>'+
+            '<tbody><tr><td style="width:52px;border-right:1px solid var(--border)"></td>'+wHdCells+'</tr>'+
+            (_allDayCells.some(function(c){return c&&c.length;})
+              ? '<tr><td style="width:52px;border-right:1px solid var(--border);border-top:1px solid var(--border);font-size:9px;color:var(--text3);text-align:right;padding:4px 6px 2px 0;vertical-align:top">dia todo</td>'+
+                weekDays.map(function(_,i){ var c=_allDayCells[i]||[];
+                  return '<td style="vertical-align:top;padding:2px 0;border-top:1px solid var(--border);border-left:1px solid var(--border)">'+c.slice(0,3).join('')+(c.length>3?'<div class="cal-allday-chip" style="background:var(--surface2);color:var(--text2)" title="Veja todos na visão Mês">+'+(c.length-3)+' mais</div>':'')+'</td>';
+                }).join('')+'</tr>'
+              : '')+
+            '</tbody>'+
           '</table>'+
           '<div style="height:1px;background:var(--border)"></div>'+
         '</div>'+
