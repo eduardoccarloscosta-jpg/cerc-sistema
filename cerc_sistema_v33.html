@@ -8325,6 +8325,7 @@ function calLayoutDayEvents(items){
 // Layout estilo Google Agenda: eventos que começam juntos (até 30 min de diferença) dividem a largura lado a lado;
 // um evento que começa depois de outro ainda em andamento é desenhado POR CIMA, com recuo à esquerda e largura até
 // a borda direita — assim os dois continuam legíveis. Retorna, por índice, {left, width, z} em CSS.
+var _calDiaTodoAberto=false; // faixa "dia todo" expandida (clique em "+N mais"), como no Google
 function calLayoutGoogle(items){
   var RECUO=14, order=items.map(function(_,i){return i;});
   order.sort(function(a,b){ return items[a].startMin-items[b].startMin || (items[b].endMin-items[b].startMin)-(items[a].endMin-items[a].startMin); });
@@ -9293,7 +9294,10 @@ function renderCalendario() {
             (_allDayCells.some(function(c){return c&&c.length;})
               ? '<tr><td style="width:52px;border-right:1px solid var(--border);border-top:1px solid var(--border);font-size:9px;color:var(--text3);text-align:right;padding:4px 6px 2px 0;vertical-align:top">dia todo</td>'+
                 weekDays.map(function(_,i){ var c=_allDayCells[i]||[];
-                  return '<td style="vertical-align:top;padding:2px 0;border-top:1px solid var(--border);border-left:1px solid var(--border)">'+c.slice(0,3).join('')+(c.length>3?'<div class="cal-allday-chip" style="background:var(--surface2);color:var(--text2)" title="Veja todos na visão Mês">+'+(c.length-3)+' mais</div>':'')+'</td>';
+                  return '<td style="vertical-align:top;padding:2px 0;border-top:1px solid var(--border);border-left:1px solid var(--border)">'+
+                    (_calDiaTodoAberto ? c.join('')+(c.length>3?'<div class="cal-allday-chip" style="background:var(--surface2);color:var(--text2)" onclick="event.stopPropagation();_calDiaTodoAberto=false;renderCalendario()">▲ mostrar menos</div>':'')
+                      : c.slice(0,3).join('')+(c.length>3?'<div class="cal-allday-chip" style="background:var(--surface2);color:var(--text2)" title="Mostrar todos" onclick="event.stopPropagation();_calDiaTodoAberto=true;renderCalendario()">+'+(c.length-3)+' mais</div>':''))+
+                  '</td>';
                 }).join('')+'</tr>'
               : '')+
             '</tbody>'+
