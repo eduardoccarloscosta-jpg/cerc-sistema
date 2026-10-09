@@ -15,27 +15,27 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#F1F3F5;--surface:#FFFFFF;--surface2:#F8F9FA;--border:#E2E5EA;--border2:#C8CDD6;
-  --text:#111827;--text2:#4B5563;--text3:#9CA3AF;
+  --text:#111827;--text2:#4B5563;--text3:#6B7280;
   --accent:#7C3AED;--accent-l:#EDE9FE;--accent2:#6D28D9;
   /* Status vivos */
   --s-lead:#2563EB;--s-lead-l:#DBEAFE;
-  --s-neg:#EA580C;--s-neg-l:#FFEDD5;
+  --s-neg:#C2410C;--s-neg-l:#FFEDD5;
   --s-fec:#6B7280;--s-fec-l:#F3F4F6;
   --s-rev:#7C3AED;--s-rev-l:#EDE9FE;
-  --s-exe:#0891B2;--s-exe-l:#CFFAFE;
-  --s-con:#16A34A;--s-con-l:#DCFCE7;
+  --s-exe:#0E7490;--s-exe-l:#CFFAFE;
+  --s-con:#15803D;--s-con-l:#DCFCE7;
   --s-per:#DC2626;--s-per-l:#FEE2E2;
   --s-arq:#57534E;--s-arq-l:#F5F5F4;
   /* Tipos vivos */
   --t-tre:#2563EB;--t-tre-l:#DBEAFE;
-  --t-per:#D97706;--t-per-l:#FEF3C7;
+  --t-per:#B45309;--t-per-l:#FEF3C7;
   --t-ins:#7C3AED;--t-ins-l:#EDE9FE;
-  --t-lau:#16A34A;--t-lau-l:#DCFCE7;
+  --t-lau:#15803D;--t-lau-l:#DCFCE7;
   --t-pro:#DC2626;--t-pro-l:#FEE2E2;
-  --t-rt:#0891B2;--t-rt-l:#CFFAFE;
+  --t-rt:#0E7490;--t-rt-l:#CFFAFE;
   /* Utilitários */
-  --green:#16A34A;--green-l:#DCFCE7;
-  --amber:#D97706;--amber-l:#FEF3C7;
+  --green:#15803D;--green-l:#DCFCE7;
+  --amber:#B45309;--amber-l:#FEF3C7;
   --red:#DC2626;--red-l:#FEE2E2;
   --blue:#2563EB;--blue-l:#DBEAFE;
   --r:6px;--rl:10px;--rxl:14px;
@@ -52,7 +52,30 @@ html[data-theme="dark"]{
   --t-pro-l:#450A0A;--t-rt-l:#0C4A6E;
   --green-l:#052E16;--amber-l:#451A03;--red-l:#450A0A;--blue-l:#1E3A5F;
   --sh:0 1px 3px rgba(0,0,0,.3);--shm:0 8px 30px rgba(0,0,0,.5);
+  --s-lead:#60A5FA;--s-neg:#FB923C;--s-fec:#A3A3A3;--s-rev:#A78BFA;--s-exe:#22D3EE;--s-con:#4ADE80;--s-per:#F87171;--s-arq:#A8A29E;
+  --t-tre:#60A5FA;--t-per:#FBBF24;--t-ins:#A78BFA;--t-lau:#4ADE80;--t-pro:#F87171;--t-rt:#22D3EE;
+  --green:#4ADE80;--amber:#FBBF24;--red:#F87171;--blue:#60A5FA;
+  color-scheme:dark;
 }
+/* Modo escuro — campos sem cor definida herdavam preto do navegador */
+html[data-theme="dark"] input:not([type=checkbox]):not([type=radio]):not([type=range]),
+html[data-theme="dark"] select,html[data-theme="dark"] textarea{color:var(--text)}
+/* Modo escuro — fundos pastel fixos no código (estilo inline) viram tons escuros equivalentes */
+html[data-theme="dark"] [style*="background:#FEE2E2" i],html[data-theme="dark"] [style*="background:#FEF2F2" i],html[data-theme="dark"] [style*="background:#FECACA" i]{background:#3B1212!important}
+html[data-theme="dark"] [style*="background:#FEF3C7" i],html[data-theme="dark"] [style*="background:#FFFBEB" i],html[data-theme="dark"] [style*="background:#FFEDD5" i],html[data-theme="dark"] [style*="background:#FDE68A" i]{background:#3A2A06!important}
+html[data-theme="dark"] [style*="background:#DCFCE7" i],html[data-theme="dark"] [style*="background:#D1FAE5" i],html[data-theme="dark"] [style*="background:#F0FDF4" i],html[data-theme="dark"] [style*="background:#ECFDF5" i]{background:#0B2E1A!important}
+html[data-theme="dark"] [style*="background:#DBEAFE" i],html[data-theme="dark"] [style*="background:#EFF6FF" i]{background:#13294B!important}
+html[data-theme="dark"] [style*="background:#EDE9FE" i],html[data-theme="dark"] [style*="background:#F5F3FF" i]{background:#2A1752!important}
+html[data-theme="dark"] [style*="background:#CFFAFE" i],html[data-theme="dark"] [style*="background:#ECFEFF" i]{background:#0B3340!important}
+html[data-theme="dark"] [style*="background:#F3F4F6" i],html[data-theme="dark"] [style*="background:#F1F5F9" i],html[data-theme="dark"] [style*="background:#F8FAFC" i],html[data-theme="dark"] [style*="background:#F9FAFB" i]{background:var(--surface2)!important}
+/* … e os textos escuros fixos ganham versões claras */
+html[data-theme="dark"] [style^="color:#B91C1C" i],html[data-theme="dark"] [style*=";color:#B91C1C" i],html[data-theme="dark"] [style^="color:#991B1B" i],html[data-theme="dark"] [style*=";color:#991B1B" i],html[data-theme="dark"] [style^="color:#7F1D1D" i],html[data-theme="dark"] [style*=";color:#7F1D1D" i]{color:#FCA5A5!important}
+html[data-theme="dark"] [style^="color:#15803D" i],html[data-theme="dark"] [style*=";color:#15803D" i],html[data-theme="dark"] [style^="color:#166534" i],html[data-theme="dark"] [style*=";color:#166534" i],html[data-theme="dark"] [style^="color:#14532D" i],html[data-theme="dark"] [style*=";color:#14532D" i],html[data-theme="dark"] [style^="color:#065F46" i],html[data-theme="dark"] [style*=";color:#065F46" i]{color:#86EFAC!important}
+html[data-theme="dark"] [style^="color:#B45309" i],html[data-theme="dark"] [style*=";color:#B45309" i],html[data-theme="dark"] [style^="color:#92400E" i],html[data-theme="dark"] [style*=";color:#92400E" i],html[data-theme="dark"] [style^="color:#78350F" i],html[data-theme="dark"] [style*=";color:#78350F" i]{color:#FCD34D!important}
+html[data-theme="dark"] [style^="color:#1D4ED8" i],html[data-theme="dark"] [style*=";color:#1D4ED8" i],html[data-theme="dark"] [style^="color:#1E40AF" i],html[data-theme="dark"] [style*=";color:#1E40AF" i],html[data-theme="dark"] [style^="color:#1E3A8A" i],html[data-theme="dark"] [style*=";color:#1E3A8A" i]{color:#93C5FD!important}
+html[data-theme="dark"] [style^="color:#5B21B6" i],html[data-theme="dark"] [style*=";color:#5B21B6" i],html[data-theme="dark"] [style^="color:#6D28D9" i],html[data-theme="dark"] [style*=";color:#6D28D9" i],html[data-theme="dark"] [style^="color:#4C1D95" i],html[data-theme="dark"] [style*=";color:#4C1D95" i]{color:#C4B5FD!important}
+html[data-theme="dark"] [style^="color:#0E7490" i],html[data-theme="dark"] [style*=";color:#0E7490" i],html[data-theme="dark"] [style^="color:#155E75" i],html[data-theme="dark"] [style*=";color:#155E75" i]{color:#67E8F9!important}
+html[data-theme="dark"] [style^="color:#374151" i],html[data-theme="dark"] [style*=";color:#374151" i],html[data-theme="dark"] [style^="color:#1F2937" i],html[data-theme="dark"] [style*=";color:#1F2937" i],html[data-theme="dark"] [style^="color:#111827" i],html[data-theme="dark"] [style*=";color:#111827" i],html[data-theme="dark"] [style^="color:#475569" i],html[data-theme="dark"] [style*=";color:#475569" i],html[data-theme="dark"] [style^="color:#1e3a5f" i],html[data-theme="dark"] [style*=";color:#1e3a5f" i]{color:var(--text2)!important}
 /* Marca d'água: a imagem tem fundo branco. No claro, "multiply" some com o branco; no escuro, a imagem é
    invertida (fundo vira preto, logo vira clara) e "screen" some com o preto — fica só a logo clara. */
 html body::after{mix-blend-mode:multiply}
@@ -1236,6 +1259,29 @@ body.fv-open::after{display:none}
   .nr12-kpi-grid{grid-template-columns:1fr 1fr}
   .hrn-param-grid{grid-template-columns:1fr}
 }
+/* ══ CONTRASTE — ajustes por classe/id (2026-10) ══ */
+html[data-theme="dark"] .alert-urgent,html[data-theme="dark"] .perda-banner,html[data-theme="dark"] .pmoc-alerta-banner-vencido,html[data-theme="dark"] .proj-conflict-badge,html[data-theme="dark"] #despesas-box{background:#3B1212!important;border-color:#7F1D1D!important}
+html[data-theme="dark"] .alert-warn,html[data-theme="dark"] .pmoc-alerta-banner-renovacao,html[data-theme="dark"] .pmoc-card-renovacao{background:#3A2A06!important;border-color:#78350F!important}
+html[data-theme="dark"] .alert-info{background:#13294B!important;border-color:#1E3A8A!important}
+html[data-theme="dark"] .perda-categ-btn.sel,html[data-theme="dark"] .perda-categ-btn:hover{background:#3B1212;color:#FCA5A5}
+html[data-theme="dark"] .pmoc-status-vencido,html[data-theme="dark"] .hrn-muitoalto,html[data-theme="dark"] .nr12-naoconforme{background:#3B1212;color:#FCA5A5;border-color:#7F1D1D}
+html[data-theme="dark"] .pmoc-status-renovacao,html[data-theme="dark"] .hrn-medio,html[data-theme="dark"] .nr12-emadequacao{background:#3A2A06;color:#FCD34D;border-color:#78350F}
+html[data-theme="dark"] .hrn-alto{background:#3A1A06;color:#FDBA74;border-color:#7C2D12}
+html[data-theme="dark"] .pmoc-status-ativo,html[data-theme="dark"] .hrn-aceitavel,html[data-theme="dark"] .nr12-conforme{background:#0B2E1A;color:#86EFAC;border-color:#14532D}
+html[data-theme="dark"] .hrn-baixo{background:#1F2D0A;color:#BEF264;border-color:#365314}
+/* contador de notificações: vermelho escuro fixo para o número branco continuar legível */
+html[data-theme="dark"] #notif-badge,html[data-theme="dark"] #notif-count-bell{background:#DC2626!important}
+html[data-theme="dark"] .status-dd-label{filter:brightness(1.7)}
+html[data-theme="dark"] [style*="background:#fff;" i],html[data-theme="dark"] [style$="background:#fff" i],html[data-theme="dark"] [style*="background:#ffffff" i],html[data-theme="dark"] [style*="background:white" i]{background:var(--surface)!important}
+/* textos com cor fixa (inline) fracos no escuro */
+html[data-theme="dark"] [style^="color:#7C3AED" i],html[data-theme="dark"] [style*=";color:#7C3AED" i],html[data-theme="dark"] [style^="color:#8B5CF6" i],html[data-theme="dark"] [style*=";color:#8B5CF6" i]{color:#C4B5FD!important}
+html[data-theme="dark"] [style^="color:#2563EB" i],html[data-theme="dark"] [style*=";color:#2563EB" i]{color:#93C5FD!important}
+html[data-theme="dark"] [style^="color:#0891B2" i],html[data-theme="dark"] [style*=";color:#0891B2" i]{color:#67E8F9!important}
+/* … e fracos no claro */
+html:not([data-theme="dark"]) [style^="color:#10B981" i],html:not([data-theme="dark"]) [style*=";color:#10B981" i]{color:#047857!important}
+html:not([data-theme="dark"]) [style^="color:#F59E0B" i],html:not([data-theme="dark"]) [style*=";color:#F59E0B" i],html:not([data-theme="dark"]) [style^="color:#D97706" i],html:not([data-theme="dark"]) [style*=";color:#D97706" i]{color:#B45309!important}
+html:not([data-theme="dark"]) [style^="color:#94A3B8" i],html:not([data-theme="dark"]) [style*=";color:#94A3B8" i]{color:#64748B!important}
+html:not([data-theme="dark"]) [style^="color:#16A34A" i],html:not([data-theme="dark"]) [style*=";color:#16A34A" i]{color:#15803D!important}
 /* ══ SMARTPHONE — ajustes de responsividade (2026-10) ══ */
 @media(max-width:768px){
   /* Topo: título com reticências, busca vira ícone que expande, ações compactas */
@@ -1449,7 +1495,7 @@ body.fv-open::after{display:none}
   </nav>
   <div class="sb-foot">
     <div style="padding:6px 10px 4px;display:flex;align-items:center;gap:6px">
-      <span id="sb-online-badge" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#FEF3C7;color:#D97706;border:1px solid #FCD34D" title="Status da conexão com Supabase">
+      <span id="sb-online-badge" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--amber-l);color:var(--amber);border:1px solid var(--amber)" title="Status da conexão com Supabase">
         <span id="sb-online-dot" style="width:7px;height:7px;border-radius:50%;background:#D97706;flex-shrink:0"></span>
         <span id="sb-online-label">Verificando</span>
       </span>
@@ -1626,7 +1672,10 @@ body.fv-open::after{display:none}
         <!-- Linha 2: ISS auto | Custo Operacional -->
         <div class="fgrid2" style="margin-bottom:10px">
           <div class="fg">
-            <label>ISS Estimado (R$) <span id="iss-hint" style="font-size:10px;color:var(--text3);font-weight:400">(10,5% sobre Bruto líq.)</span></label>
+            <label style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">Impostos NF (R$)
+              <span id="f-aliq-wrap" style="display:inline-flex;align-items:center;gap:3px;text-transform:none;letter-spacing:0;font-weight:400"><input id="f-aliq-nf" type="text" inputmode="decimal" style="width:44px;padding:1px 4px;border:1px solid var(--border);border-radius:5px;font-size:11px;text-align:center;background:var(--surface);color:var(--text)" onchange="setAliqModal(this.value)" title="Alíquota desta demanda"/>%</span>
+              <span id="iss-hint" style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0"></span>
+              <button type="button" id="nf-toggle" class="btn btn-ghost btn-sm btn-icon" style="margin-left:auto;width:26px;height:26px;min-height:26px;padding:0" onclick="toggleSemNFModal()"></button></label>
             <input class="finput" id="f-imposto" type="text" placeholder="0,00" onblur="mascValor(this)" oninput="autoCalcLiq();updateDespesasBox()"/>
           </div>
           <div class="fg"><label>Custo Operacional (R$)</label>
@@ -1645,7 +1694,7 @@ body.fv-open::after{display:none}
             <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Valor Bruto</span><span id="cc-bruto" style="font-family:'JetBrains Mono',monospace;font-weight:600"></span></div>
             <div id="cc-desc-row" style="display:flex;justify-content:space-between;display:none"><span style="color:#D97706">(-) Desconto</span><span id="cc-desc" style="font-family:'JetBrains Mono',monospace;color:#D97706"></span></div>
             <div id="cc-base-row" style="display:flex;justify-content:space-between;display:none;border-top:1px dashed var(--border);padding-top:4px"><span style="color:var(--text2);font-weight:600">= Base cobrada</span><span id="cc-base" style="font-family:'JetBrains Mono',monospace;font-weight:700"></span></div>
-            <div style="display:flex;justify-content:space-between"><span style="color:var(--red)">(-) ISS 10,5%</span><span id="cc-iss" style="font-family:'JetBrains Mono',monospace;color:var(--red)"></span></div>
+            <div style="display:flex;justify-content:space-between"><span id="cc-iss-lbl" style="color:var(--red)">(-) Impostos NF</span><span id="cc-iss" style="font-family:'JetBrains Mono',monospace;color:var(--red)"></span></div>
             <div id="cc-cop-row" style="display:flex;justify-content:space-between;display:none"><span style="color:var(--amber)">(-) Custo Operacional</span><span id="cc-cop" style="font-family:'JetBrains Mono',monospace;color:var(--amber)"></span></div>
             <div style="display:flex;justify-content:space-between;border-top:2px solid var(--border);padding-top:6px;margin-top:2px"><span style="font-weight:700">= Valor Líquido</span><span id="cc-liq" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)"></span></div>
           </div>
@@ -2502,7 +2551,7 @@ function demandaToDb(d) {
     motivo_perda: d.motivoPerda||'', categoria_perda: String(d.categoriaPerda||''),
     plano_acao_perda: d.planoAcaoPerda||'', data_resgate: d.dataResgate||'',
     log: d.log||[], subtarefas: d.subtarefas||[], comentarios: d.comentarios||[],
-    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||'',url:doc.url||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip),cnpjCliente:d.cnpj||'',prazoEntrega:d.prazoEntrega||'',gcRetornoId:d.gcRetornoId||'',gcFechamentoId:d.gcFechamentoId||''};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
+    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||'',url:doc.url||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip),cnpjCliente:d.cnpj||'',prazoEntrega:d.prazoEntrega||'',gcRetornoId:d.gcRetornoId||'',gcFechamentoId:d.gcFechamentoId||'',aliqNF:(typeof d.aliqNF==='number'?d.aliqNF:null)};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
     parcelas: d.parcelas||[],
     pagamentos_parciais: d.pagamentosParciais||[],
     total_parcelas: parseInt(d.totalParcelas)||0,
@@ -2526,7 +2575,8 @@ function dbToDemanda(r) {
     cnpj: (r.docs_fiscais&&r.docs_fiscais.cnpjCliente)||'',
     prazoEntrega: (r.docs_fiscais&&r.docs_fiscais.prazoEntrega)||'',
     gcRetornoId: (r.docs_fiscais&&r.docs_fiscais.gcRetornoId)||'',
-    gcFechamentoId: (r.docs_fiscais&&r.docs_fiscais.gcFechamentoId)||'', // guardado dentro do jsonb docs_fiscais (tabela não tem coluna cnpj)
+    gcFechamentoId: (r.docs_fiscais&&r.docs_fiscais.gcFechamentoId)||'',
+    aliqNF: (r.docs_fiscais&&typeof r.docs_fiscais.aliqNF==='number') ? r.docs_fiscais.aliqNF : undefined, // guardado dentro do jsonb docs_fiscais (tabela não tem coluna cnpj)
     ultimoContato: r.ultimo_contato||'', dataCriacao: r.data_criacao||'', dataFechamento: r.data_fechamento||'',
     dataRetorno: r.data_retorno||'', dataLembrete: r.data_lembrete||'',
     valorBruto: parseFloat(r.valor_bruto)||0, desconto: parseFloat(r.desconto)||0,
@@ -2659,7 +2709,7 @@ function demandaToDbSb(d) {
   if(base.link_files_contrato && base.link_files_contrato.dados) { var c=base.link_files_contrato; base.link_files_contrato={nome:c.nome,tipo:c.tipo,tamanho:c.tamanho,data:c.data}; }
   // Strip base64 dos docs fiscais
   function stripDoc(doc){ return doc&&doc.dados ? {nome:doc.nome,tipo:doc.tipo,tamanho:doc.tamanho,data:doc.data,prazo:doc.prazo||''} : doc; }
-  if(base.docs_fiscais) { base.docs_fiscais={nfs:(base.docs_fiscais.nfs||[]).map(stripDoc),boletos:(base.docs_fiscais.boletos||[]).map(stripDoc),laudos:(base.docs_fiscais.laudos||[]).map(stripDoc),cnpjCliente:base.docs_fiscais.cnpjCliente||'',prazoEntrega:base.docs_fiscais.prazoEntrega||'',gcRetornoId:base.docs_fiscais.gcRetornoId||'',gcFechamentoId:base.docs_fiscais.gcFechamentoId||''}; }
+  if(base.docs_fiscais) { base.docs_fiscais={nfs:(base.docs_fiscais.nfs||[]).map(stripDoc),boletos:(base.docs_fiscais.boletos||[]).map(stripDoc),laudos:(base.docs_fiscais.laudos||[]).map(stripDoc),cnpjCliente:base.docs_fiscais.cnpjCliente||'',prazoEntrega:base.docs_fiscais.prazoEntrega||'',gcRetornoId:base.docs_fiscais.gcRetornoId||'',gcFechamentoId:base.docs_fiscais.gcFechamentoId||'',aliqNF:(typeof base.docs_fiscais.aliqNF==='number'?base.docs_fiscais.aliqNF:null)}; }
   return base;
 }
 async function sbUpsertDemanda(dem) {
@@ -2998,13 +3048,13 @@ function setSbStatus(st) {
   var label=document.getElementById('sb-online-label');
   if(badge && dot && label){
     if(st==='online'){
-      badge.style.background='#DCFCE7'; badge.style.color='#16A34A'; badge.style.borderColor='#86EFAC';
+      badge.style.background='var(--green-l)'; badge.style.color='var(--green)'; badge.style.borderColor='var(--green)';
       dot.style.background='#16A34A'; label.textContent='Online';
     } else if(st==='syncing'){
-      badge.style.background='#FEF3C7'; badge.style.color='#D97706'; badge.style.borderColor='#FCD34D';
+      badge.style.background='var(--amber-l)'; badge.style.color='var(--amber)'; badge.style.borderColor='var(--amber)';
       dot.style.background='#D97706'; label.textContent='Sincronizando';
     } else {
-      badge.style.background='#FEE2E2'; badge.style.color='#DC2626'; badge.style.borderColor='#FCA5A5';
+      badge.style.background='var(--red-l)'; badge.style.color='var(--red)'; badge.style.borderColor='var(--red)';
       dot.style.background='#DC2626'; label.textContent='Offline';
     }
   }
@@ -4056,7 +4106,9 @@ function renderCascataBox(){
   var cop = parseValorBR('f-custo-op');
   var liq = parseValorBR('f-liquido');
   var hint = document.getElementById('iss-hint');
-  if(hint) hint.textContent = '(10,5% de ' + fR(base) + ')';
+  if(hint) hint.textContent = modalAliqNF>0 ? 'de ' + fR(base) : 'sem nota fiscal';
+  var ccl = document.getElementById('cc-iss-lbl');
+  if(ccl) ccl.textContent = modalAliqNF>0 ? '(-) Impostos NF ' + _fmtPct(modalAliqNF) : '(-) Sem nota fiscal';
   var cb = document.getElementById('cascata-box');
   if(cb && b>0) {
     cb.style.display='block';
@@ -4079,8 +4131,8 @@ function recalcCascata(skipParcelas){
   var b   = parseValorBR('f-bruto');
   var desc= parseValorBR('f-desconto-r');
   var base= Math.max(0, b - desc); // base cobrada após desconto
-  // ISS: 10,5% sobre a base
-  var novoISS = base * 0.105;
+  // Impostos da NF: alíquota desta demanda sobre a base (0 = sem nota fiscal)
+  var novoISS = base * modalAliqNF;
   setValorBR('f-imposto', novoISS);
   // Custo Operacional: mantém valor atual
   var cop = parseValorBR('f-custo-op');
@@ -4423,6 +4475,7 @@ function openModalNew() {
   modalChecklistCustom=[]; renderChecklistCustom();
   modalMarcos=[];
   var _fpeN=document.getElementById('f-prazo-entrega'); if(_fpeN) _fpeN.value='';
+  _setAliqModal(_aliqNFGlobal());
   var _ptbNew=document.getElementById('modal-tab-projeto-btn'); if(_ptbNew) _ptbNew.style.display='none';
   switchTab('geral'); document.getElementById('modal-demanda').style.display='flex';
 }
@@ -4474,6 +4527,7 @@ function openModalEdit(id) {
   modalComentarios=(dem.comentarios||[]).slice();
   modalMarcos=(dem.marcos||[]).map(function(m){return JSON.parse(JSON.stringify(m));});
   var _fpe=document.getElementById('f-prazo-entrega'); if(_fpe) _fpe.value=dem.prazoEntrega||'';
+  _setAliqModal(typeof dem.aliqNF==='number' ? dem.aliqNF : ALIQ_NF_PADRAO); // demandas antigas: 10,5%
   renderChat();
   var _ptb=document.getElementById('modal-tab-projeto-btn');
   if(_ptb) _ptb.style.display=(dem.status==='Fechado'||dem.status==='Em Execução'||dem.status==='Em Revisão')?'flex':'none';
@@ -5509,7 +5563,7 @@ function _saveDemandaImpl() {
   var fStatus=document.getElementById('f-status').value;
   // Se status mudou de Perdido para outro, limpar campos de perda
   var old2=editingId?state.demandas.find(function(x){return x.id===editingId;}):null;
-  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,cnpj:document.getElementById('f-cnpj').value.trim(),ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:dataParcialDerivada,pagamentosParciais:pag==='Parcial'?modalPagamentosParciais.slice():[],parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].url||''):''),linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkGdrive:document.getElementById('f-gdrive').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkPropostas:modalLinkPropostas.slice(),linkFilesPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].arquivo||null):null),linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nfs:(modalDocsFiscais.nfs||[]).slice(),boletos:(modalDocsFiscais.boletos||[]).slice(),laudos:(modalDocsFiscais.laudos||[]).slice()},marcos:modalMarcos.map(function(m){return JSON.parse(JSON.stringify(m));}),prazoEntrega:(document.getElementById('f-prazo-entrega')||{}).value||'',
+  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,cnpj:document.getElementById('f-cnpj').value.trim(),ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:dataParcialDerivada,pagamentosParciais:pag==='Parcial'?modalPagamentosParciais.slice():[],parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].url||''):''),linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkGdrive:document.getElementById('f-gdrive').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkPropostas:modalLinkPropostas.slice(),linkFilesPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].arquivo||null):null),linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nfs:(modalDocsFiscais.nfs||[]).slice(),boletos:(modalDocsFiscais.boletos||[]).slice(),laudos:(modalDocsFiscais.laudos||[]).slice()},marcos:modalMarcos.map(function(m){return JSON.parse(JSON.stringify(m));}),prazoEntrega:(document.getElementById('f-prazo-entrega')||{}).value||'',aliqNF:modalAliqNF,
     motivoPerda:   fStatus==='Perdido'?(old2?old2.motivoPerda||'':(_perdaTempData?_perdaTempData.motivoPerda||'':'')):''   ,
     categoriaPerda:fStatus==='Perdido'?(old2?old2.categoriaPerda||'':(_perdaTempData?_perdaTempData.categoriaPerda||'':'')):''  ,
     planoAcaoPerda:fStatus==='Perdido'?(old2?old2.planoAcaoPerda||'':(_perdaTempData?_perdaTempData.planoAcaoPerda||'':'')):'' ,
@@ -6858,7 +6912,7 @@ function _applyDespPago(id,btn,mk,dataPag){
 }
 
 // ══ PRECIFICAÇÃO ═════════════════════════════════════════
-var precState={pessoal:[{prof:'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),pacotes:[],complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:2000};
+var precState={pessoal:[{prof:'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),pacotes:[],complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:2000,aliqNF:null,semNF:false};
 var _precCliList=[]; // cache ordenado {i:índice original em state.clientes, c:cliente} para busca/seleção da Precificação
 function filterPrecClienteList(list,q){
   q=normBusca(q).trim();
@@ -6953,6 +7007,69 @@ function pacotesOcultosMap(){
   (precState.pacotes||[]).forEach(function(p){if(p.oculto)m[p.id]=true;});
   return m;
 }
+// ══ IMPOSTOS DA NOTA FISCAL ═══════════════════════════════════════════
+// Alíquota da empresa fica em profiles.config.aliquotaNF (%), com cópia local para uso offline.
+// Cada precificação/demanda guarda a alíquota que usou (aliqNF, fração) — mudar a configuração não altera o passado.
+// aliqNF = 0 → serviço sem nota fiscal (ex.: pessoa física).
+var ALIQ_NF_PADRAO=0.105;
+function _cfgEmpresa(){
+  var c=(_sbProfile&&_sbProfile.config)||null;
+  if(!c || !Object.keys(c).length){ try{ c=JSON.parse(localStorage.getItem('cerc_cfg_empresa')||'{}'); }catch(e){ c={}; } }
+  return c||{};
+}
+function _aliqNFGlobal(){ var p=parseFloat(_cfgEmpresa().aliquotaNF); return (p>=0 && p<100) ? p/100 : ALIQ_NF_PADRAO; }
+function _fmtPct(a){ return String(Math.round((a||0)*1000)/10).replace('.',',')+'%'; }
+// Alíquota da precificação aberta: sem NF = 0; número salvo = ele; null = configuração atual; sem campo (precificação antiga) = 10,5%
+function _precAliq(){
+  if(precState.semNF) return 0;
+  if(typeof precState.aliqNF==='number') return precState.aliqNF;
+  return precState.aliqNF===null ? _aliqNFGlobal() : ALIQ_NF_PADRAO;
+}
+function precToggleNF(){ precState.semNF=!precState.semNF; renderPrecificacao(); }
+function precSetAliq(v){ var p=parseFloat(String(v).replace(',','.')); if(p>=0 && p<100){ precState.aliqNF=p/100; precState.semNF=(p===0); } renderPrecificacao(); }
+async function salvarCfgImpostos(){
+  var pct=parseFloat(String(document.getElementById('cfg-aliq-nf').value).replace(',','.'));
+  var revisar=document.getElementById('cfg-aliq-revisar').value;
+  if(!(pct>=0 && pct<100)){ toast('Informe uma alíquota válida (ex.: 10,5).','warning'); return; }
+  var cfg=Object.assign({}, _cfgEmpresa(), {aliquotaNF:pct, revisarAliquotaEm:revisar||''});
+  try{ localStorage.setItem('cerc_cfg_empresa', JSON.stringify(cfg)); }catch(e){}
+  if(_sbProfile) _sbProfile.config=cfg;
+  if(_sbUser){
+    var res=await _sb.from('profiles').update({config:cfg, updated_at:new Date().toISOString()}).eq('id', _sbUser.id);
+    if(res.error){ toast('Erro ao salvar na nuvem: '+res.error.message,'danger'); return; }
+  }
+  _cfgLembreteAliquota(revisar, pct);
+  toast('Alíquota salva: '+String(pct).replace('.',',')+'%'+(revisar?' — lembrete criado para '+fD(revisar):''),'success');
+}
+// Lembrete no Calendário para revisar a alíquota (um só; atualizado a cada salvamento)
+function _cfgLembreteAliquota(data, pct){
+  var evs=state.eventos=state.eventos||[];
+  var ev=evs.find(function(e){return e.obs==='cfg:aliquotaNF';});
+  if(!data){ return; }
+  if(!ev){ ev={id:uid(), criado:new Date().toISOString(), cor:'', repetir:null}; evs.push(ev); }
+  Object.assign(ev, {titulo:'Revisar alíquota de imposto da nota fiscal (atual '+String(pct).replace('.',',')+'%)', data:data, dataFim:null,
+    horaInicio:'09:00', horaFim:'09:30', tipo:'Lembrete', demandaId:'', obs:'cfg:aliquotaNF', concluida:false,
+    descricao:'Conferir com o contador a alíquota do novo ano e atualizar em Configurações → Empresa → Impostos da nota fiscal.'});
+  _pmoGravarEvento(ev);
+}
+function _proxAnoInicio(){ var d=new Date(); return (d.getFullYear()+1)+'-01-02'; }
+
+// ── Demanda (modal): alíquota usada nesta demanda ──
+var modalAliqNF=ALIQ_NF_PADRAO, _aliqAntesSemNF=null;
+function _setAliqModal(a){ modalAliqNF=(typeof a==='number' && a>=0) ? a : ALIQ_NF_PADRAO; _syncAliqUI(); }
+function _syncAliqUI(){
+  var inp=document.getElementById('f-aliq-nf'), bt=document.getElementById('nf-toggle'), wrap=document.getElementById('f-aliq-wrap');
+  if(inp) inp.value=String(Math.round(modalAliqNF*1000)/10).replace('.',',');
+  if(wrap) wrap.style.display=modalAliqNF>0?'inline-flex':'none';
+  if(bt){ bt.innerHTML=modalAliqNF>0?ICON_EYE_OFF:ICON_EYE; bt.title=modalAliqNF>0?'Sem nota fiscal (ex.: pessoa física) — zera os impostos desta demanda':'Voltar a emitir nota fiscal'; }
+}
+function setAliqModal(v){ var p=parseFloat(String(v).replace(',','.')); if(p>=0 && p<100){ modalAliqNF=p/100; } _syncAliqUI(); recalcCascata(); }
+function toggleSemNFModal(){
+  if(modalAliqNF>0){ _aliqAntesSemNF=modalAliqNF; modalAliqNF=0; }
+  else { modalAliqNF=_aliqAntesSemNF||_aliqNFGlobal(); }
+  _syncAliqUI(); recalcCascata();
+}
+
 function calcPrec() {
   var ocultos=pacotesOcultosMap();
   var cp=precState.pessoal.reduce(function(a,b){if(b.pacoteId&&ocultos[b.pacoteId])return a;return a+(b.qtd||0)*(b.pessoas||1)*(getProfRate(b.prof)||150);},0);
@@ -6962,10 +7079,11 @@ function calcPrec() {
   var tPct={'1--10':0.02,'10--100':0.05,'100--300':0.08,'300 + --':0.10}[precState.tamanho]||0.05;
   var fPct=(parseFloat(precState.fixo)||0)/100;
   var totPct=cPct+tPct+fPct,lucro=sub*totPct,ss=(sub+lucro)*0.05,semISS=sub+lucro+ss;
-  // ISS = 10,5% do próprio Valor Bruto (não do subtotal pré-imposto) — mesma convenção usada na aba Financeiro
-  // da Demanda (ver recalcCascata()), pra Valor Bruto/ISS baterem exatamente entre as duas telas.
-  var bruto=semISS/0.895,iss=bruto-semISS;
-  return {cp:cp,co:co,sub:sub,lucro:lucro,cPct:cPct,tPct:tPct,fPct:fPct,totPct:totPct,ss:ss,semISS:semISS,iss:iss,bruto:bruto,liq:bruto-iss-co};
+  // Impostos da NF = alíquota × o próprio Valor Bruto (não do subtotal pré-imposto) — mesma convenção usada na aba
+  // Financeiro da Demanda (ver recalcCascata()), pra Valor Bruto/impostos baterem exatamente entre as duas telas.
+  var aliq=_precAliq();
+  var bruto=semISS/(1-aliq),iss=bruto-semISS;
+  return {cp:cp,co:co,sub:sub,lucro:lucro,cPct:cPct,tPct:tPct,fPct:fPct,totPct:totPct,ss:ss,semISS:semISS,iss:iss,bruto:bruto,liq:bruto-iss-co,aliq:aliq};
 }
 
 function renderPrecificacao() {
@@ -7088,7 +7206,7 @@ function renderPrecificacao() {
       '<div style="background:var(--bg);border-radius:var(--r);padding:10px 13px;font-size:12px">' +
         '<div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="color:var(--text2)">Complexidade ('+precState.complexidade+')</span><span style="font-family:\'JetBrains Mono\',monospace">'+(res.cPct*100).toFixed(0)+'%</span></div>' +
         '<div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="color:var(--text2)">Tamanho ('+precState.tamanho+')</span><span style="font-family:\'JetBrains Mono\',monospace">'+(res.tPct*100).toFixed(0)+'%</span></div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--border);margin-top:4px"><span style="color:var(--text2)">Lucro Fixo (%)</span><div style="display:flex;align-items:center;gap:6px"><input type="number" min="0" max="100" step="0.5" style="width:52px;padding:4px 6px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;text-align:center;background:var(--surface);font-family:\'JetBrains Mono\',monospace" value="'+precState.fixo+'" onchange="precState.fixo=parseFloat(this.value)||0;renderPrecificacao()"/><span>%</span></div></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--border);margin-top:4px"><span style="color:var(--text2)">Lucro Fixo (%)</span><div style="display:flex;align-items:center;gap:6px"><input type="number" min="0" max="100" step="0.5" style="width:52px;padding:4px 6px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;text-align:center;background:var(--surface);color:var(--text);font-family:\'JetBrains Mono\',monospace" value="'+precState.fixo+'" onchange="precState.fixo=parseFloat(this.value)||0;renderPrecificacao()"/><span>%</span></div></div>' +
         '<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid var(--border);margin-top:6px;font-weight:700"><span>Total % Lucro</span><span style="font-family:\'JetBrains Mono\',monospace;color:var(--accent)">'+(res.totPct*100).toFixed(1)+'%</span></div>' +
       '</div>' +
     '</div></div>' +
@@ -7104,8 +7222,11 @@ function renderPrecificacao() {
         '<div class="rp-row"><span class="rp-label">Lucro ('+(res.totPct*100).toFixed(1)+'%)</span><span class="rp-val">'+fR(res.lucro)+'</span></div>' +
         '<div class="rp-row"><span class="rp-label">Caixa SS (5%)</span><span class="rp-val">'+fR(res.ss)+'</span></div>' +
         '<div class="rp-div"></div>' +
-        '<div class="rp-row"><span class="rp-label">Sem ISS</span><span class="rp-val">'+fR(res.semISS)+'</span></div>' +
-        '<div class="rp-row"><span class="rp-label" style="color:var(--red)">(+) ISS 10,5%</span><span class="rp-val" style="color:var(--red)">'+fR(res.iss)+'</span></div>' +
+        '<div class="rp-row"><span class="rp-label">Sem impostos</span><span class="rp-val">'+fR(res.semISS)+'</span></div>' +
+        '<div class="rp-row" style="align-items:center"><span class="rp-label" style="display:flex;align-items:center;gap:6px;color:'+(precState.semNF?'var(--text3)':'var(--red)')+'">'+
+          '<button class="btn btn-ghost btn-sm btn-icon" style="width:26px;height:26px;min-height:26px;padding:0" title="'+(precState.semNF?'Voltar a emitir nota fiscal':'Sem nota fiscal (ex.: pessoa física) — não inclui impostos')+'" onclick="precToggleNF()">'+(precState.semNF?ICON_EYE:ICON_EYE_OFF)+'</button>'+
+          (precState.semNF?'Sem nota fiscal':'(+) Nota fiscal <input type="number" min="0" max="50" step="0.1" value="'+String(Math.round(res.aliq*1000)/10)+'" title="Alíquota desta proposta (padrão em Configurações → Empresa)" style="width:52px;padding:2px 4px;border:1.5px solid var(--border);border-radius:var(--r);font-size:11px;text-align:center;background:var(--surface);color:var(--text)" onchange="precSetAliq(this.value)"/>%')+
+        '</span><span class="rp-val" style="color:'+(precState.semNF?'var(--text3)':'var(--red)')+'">'+fR(res.iss)+'</span></div>' +
         '<div class="rp-div"></div>' +
         '<div class="rp-row"><span style="font-weight:700;font-size:14px">VALOR BRUTO</span><span class="rp-total">'+fR(res.bruto)+'</span></div>' +
       '</div>' +
@@ -7153,7 +7274,7 @@ function renderPrecificacao() {
       // ─────────────────────────────────────────────────────────────────────────
       '<div class="net-panel"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">Resultado para CERC</div>' +
         '<div class="rp-row"><span class="rp-label">Valor Bruto cobrado</span><span class="rp-val">'+fR(res.bruto)+'</span></div>' +
-        '<div class="rp-row"><span class="rp-label" style="color:var(--red)">(&#8722;) ISS 10,5% <small style="font-size:10px">[Bruto]</small></span><span class="rp-val" style="color:var(--red)">'+fR(res.iss)+'</span></div>' +
+        '<div class="rp-row"><span class="rp-label" style="color:var(--red)">'+(res.aliq>0?'(&#8722;) Impostos NF '+_fmtPct(res.aliq)+' <small style="font-size:10px">[Bruto]</small>':'Sem nota fiscal')+'</span><span class="rp-val" style="color:var(--red)">'+fR(res.iss)+'</span></div>' +
         '<div class="rp-row"><span class="rp-label" style="color:var(--amber)">(&#8722;) Custo Operacional <small style="font-size:10px">[Bruto]</small></span><span class="rp-val" style="color:var(--amber)">'+fR(res.co)+'</span></div>' +
         '<div style="border-top:2px solid var(--border);margin:8px 0"></div>' +
         '<div class="rp-row"><span style="font-weight:700;font-size:14px">= VALOR LÍQUIDO</span><span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:16px;color:var(--s-con)">'+fR(res.liq)+'</span></div>' +
@@ -7161,7 +7282,7 @@ function renderPrecificacao() {
       '</div>' +
       // Valor que efetivamente vai pra Demanda: reconciliado com o que aparece em "Valores dos Pacotes" (mão de obra+margem)
       // + Custo Operacional (a custo) — sem a Caixa SS embutida, que fica só nesta barra lateral como referência interna.
-      // ISS é "estourado" pra cima da soma pra continuar valendo 10,5% do Bruto e ainda assim bater: Pacotes+CustoOp+ISS = Bruto.
+      // ISS é "estourado" pra cima da soma pra continuar valendo a alíquota da NF sobre o Bruto e ainda assim bater: Pacotes+CustoOp+ISS = Bruto.
       // Valor que vai pra Demanda: o mesmo Valor Bruto/ISS cheios desta barra lateral (nada some) — só redistribuídos
       // entre "Pacotes" (mão de obra + margem + Caixa SS) e "Custo Operacional" (que passa a levar sua própria margem
       // também), pra Pacotes + Custo Operacional + ISS baterem exatamente com o Bruto em qualquer uma das telas.
@@ -7210,7 +7331,7 @@ var _pendingPrecDados = null;    // precDados a salvar ao criar nova demanda via
 var _precLinkedDemandaId = null; // id (ou '__new__') da demanda cujo fechamento do modal deve limpar a precificação em memória
 
 function precStateBlank(prof){
-  return {pessoal:[{prof:prof||'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),pacotes:[],complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:(precState&&precState.teto)||2000};
+  return {pessoal:[{prof:prof||'',qtd:0,pessoas:1}],ops:OPS_DEFAULT.map(function(o){return Object.assign({},o);}),pacotes:[],complexidade:'',tamanho:'',fixo:5,cliIdx:'',teto:(precState&&precState.teto)||2000,aliqNF:null,semNF:false};
 }
 
 function novaPrec() {
@@ -7277,6 +7398,8 @@ function cancelarPrecEdit(){
 }
 
 function usarNaDemanda(bruto,imp,custo,liq) {
+  var _aliqUsada=_precAliq();
+  precState.aliqNF=_aliqUsada; // congela: a demanda guarda a alíquota com que foi precificada
   var cliSelecionado=(precState.cliIdx!==''&&precState.cliIdx!==null&&precState.cliIdx!==undefined)?state.clientes[parseInt(precState.cliIdx)]:null;
   var b = document.getElementById('prec-back-banner'); if(b) b.remove();
 
@@ -7315,6 +7438,7 @@ function usarNaDemanda(bruto,imp,custo,liq) {
     showPage('demandas');
     setTimeout(function(){
       openModalEdit(editId);
+      _setAliqModal(_aliqUsada);
       setValorBR('f-bruto',bruto);setValorBR('f-imposto',imp);setValorBR('f-custo-op',custo);setValorBR('f-liquido',liq);
       // Recalcula desconto e líquido
       recalcCascata();
@@ -7329,6 +7453,7 @@ function usarNaDemanda(bruto,imp,custo,liq) {
   showPage('demandas');
   setTimeout(function(){
     openModalNew();
+    _setAliqModal(_aliqUsada);
     setValorBR('f-bruto',bruto);setValorBR('f-imposto',imp);setValorBR('f-custo-op',custo);setValorBR('f-liquido',liq);
     renderPacotesFinanceiro({precDados:_pendingPrecDados});
     if(cliSelecionado){
@@ -7768,7 +7893,7 @@ function puxarPrecificacao() {
     propState.itens.push({desc: pac.nome||'Pacote', valor: valorComMargem(cpPac)});
   });
   if(res.co>0) propState.itens.push({desc:'Custos Operacionais', valor: res.co*(1+res.totPct)});
-  propState.itens.push({desc:'Despesas, NF e Impostos (ISS 10,5%)', valor: res.iss});
+  if(res.iss>0) propState.itens.push({desc:'Despesas, NF e Impostos ('+_fmtPct(res.aliq)+')', valor: res.iss});
   renderPropostaOverlay();
   renderPropPreview();
   toast('Dados da precificação importados!','success');
@@ -12696,6 +12821,17 @@ function renderConfiguracoes() {
       '</div>'+
 
       '<div class="settings-section">'+
+        '<div class="settings-title">🧾 Impostos da nota fiscal</div>'+
+        '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">Alíquota usada nas novas precificações e demandas. Propostas já feitas mantêm a alíquota com que foram calculadas. Em cada proposta/demanda dá para ajustar o valor ou marcar <b>sem nota fiscal</b> (ícone de olho).</div>'+
+        '<div class="settings-row" style="margin-bottom:12px">'+
+          '<div class="fg"><label>Alíquota total da NF (%)</label><input class="finput" id="cfg-aliq-nf" type="text" inputmode="decimal" value="'+String(Math.round(_aliqNFGlobal()*1000)/10).replace('.',',')+'" placeholder="10,5"/></div>'+
+          '<div class="fg"><label>Lembrete para revisar em</label><input class="finput" id="cfg-aliq-revisar" type="date" value="'+(_cfgEmpresa().revisarAliquotaEm||_proxAnoInicio())+'"/></div>'+
+        '</div>'+
+        '<button class="btn btn-primary btn-sm" onclick="salvarCfgImpostos()">💾 Salvar alíquota</button>'+
+        '<span style="font-size:11px;color:var(--text3);margin-left:8px">O lembrete aparece no Calendário (e no Google, se conectado).</span>'+
+      '</div>'+
+
+      '<div class="settings-section">'+
         '<div class="settings-title">📄 Dados para Contratos</div>'+
         '<div style="background:var(--amber-l);border:1px solid #FCD34D;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400E">'+
           '💡 Estes dados serão preenchidos automaticamente nos contratos gerados pela IA.'+
@@ -14074,8 +14210,8 @@ function _renderProjetosAntigo() {
   // KPIs
   html += '<div class="proj-kpi-grid">'
     + _projKpi('Projetos Ativos', total, 'Em Execução + Revisão + Fechados', '#3B82F6')
-    + _projKpi('Em Andamento', emExec, 'Com pelo menos 1 marco pendente', '#F59E0B')
-    + _projKpi('Concluídos', concluidos, 'Todos os marcos realizados', '#10B981')
+    + _projKpi('Em Andamento', emExec, 'Com pelo menos 1 marco pendente', '#D97706')
+    + _projKpi('Concluídos', concluidos, 'Todos os marcos realizados', '#059669')
     + _projKpi('Conflitos de Prazo', nConflitos, 'Mesmo prazo que outro projeto', nConflitos>0?'#EF4444':'#6B7280')
     + '</div>';
 
@@ -14154,8 +14290,8 @@ function _renderProjetosList(projetos, conflitosSet, today){
 function _renderProjetosKpis(total, emExec, concluidos, nConflitos, projetos, today){
   var h = '<div class="proj-kpi-grid">'
     + _projKpi('Projetos Ativos', total, 'Em Execução + Revisão + Fechados', '#3B82F6')
-    + _projKpi('Em Andamento', emExec, 'Com pelo menos 1 marco pendente', '#F59E0B')
-    + _projKpi('Concluídos', concluidos, 'Todos os marcos realizados', '#10B981')
+    + _projKpi('Em Andamento', emExec, 'Com pelo menos 1 marco pendente', '#D97706')
+    + _projKpi('Concluídos', concluidos, 'Todos os marcos realizados', '#059669')
     + _projKpi('Conflitos de Prazo', nConflitos, 'Mesmo prazo que outro projeto', nConflitos>0?'#EF4444':'#6B7280')
     + '</div>';
 
@@ -15369,8 +15505,8 @@ function _pmoSemana(projetos){
   var html='<div class="pmo-kpis">'+
     _projKpi('Planejado para hoje', _fmtH(cargaDia(hoje)), 'de '+_fmtH(cap)+' disponíveis', cargaDia(hoje)>cap?'#EF4444':'#3B82F6')+
     _projKpi('Próximos 5 dias úteis', _fmtH(h5), 'de '+_fmtH(cap*5)+' disponíveis', h5>cap*5?'#EF4444':'#3B82F6')+
-    _projKpi('Tarefas atrasadas', atrasadas.length, atrasadas.length?'precisam de nova data ou conclusão':'nenhuma', atrasadas.length?'#EF4444':'#10B981')+
-    _projKpi('Sem data prevista', semData.length, _fmtH(hSemData)+' fora do planejamento', semData.length?'#F59E0B':'#10B981')+
+    _projKpi('Tarefas atrasadas', atrasadas.length, atrasadas.length?'precisam de nova data ou conclusão':'nenhuma', atrasadas.length?'#EF4444':'#059669')+
+    _projKpi('Sem data prevista', semData.length, _fmtH(hSemData)+' fora do planejamento', semData.length?'#D97706':'#059669')+
   '</div>';
   if(atrasadas.length){
     html+='<div class="pmo-sec" style="border-color:#FECACA"><div class="pmo-sec-hd" style="background:#FEF2F2;color:#B91C1C">Atrasadas <span class="pmo-chip" style="background:#EF4444;color:#fff">'+atrasadas.length+'</span></div>'+
@@ -15416,9 +15552,9 @@ function _pmoCarteira(projetos){
   var desvio=oT>0 ? Math.round((rT/oT-1)*100) : null;
   var html='<div class="pmo-kpis">'+
     _projKpi('Projetos ativos', projetos.length, 'Fechados + Em Execução + Em Revisão', '#3B82F6')+
-    _projKpi('Em risco', emRisco, emRisco?'prazo, atraso ou horas estouradas':'nenhum projeto em risco', emRisco?'#EF4444':'#10B981')+
+    _projKpi('Em risco', emRisco, emRisco?'prazo, atraso ou horas estouradas':'nenhum projeto em risco', emRisco?'#EF4444':'#059669')+
     _projKpi('Trabalho restante', _fmtH(restante), '≈ '+Math.ceil(restante/cap)+' dia(s) útil(eis) de '+_fmtH(cap), '#7C3AED')+
-    _projKpi('Precisão das estimativas', desvio===null?'—':(desvio>0?'+':'')+desvio+'%', desvio===null?'aparece após concluir tarefas com horas':(desvio>0?'gasto acima do orçado':'gasto abaixo do orçado'), desvio===null?'#6B7280':Math.abs(desvio)<=10?'#10B981':'#F59E0B')+
+    _projKpi('Precisão das estimativas', desvio===null?'—':(desvio>0?'+':'')+desvio+'%', desvio===null?'aparece após concluir tarefas com horas':(desvio>0?'gasto acima do orçado':'gasto abaixo do orçado'), desvio===null?'#6B7280':Math.abs(desvio)<=10?'#059669':'#D97706')+
   '</div>';
   if(!projetos.length) html+=_pmoVazio();
   var ordemNivel={vermelho:0,amarelo:1,cinza:2,verde:3};
@@ -15512,9 +15648,9 @@ function _pmoCapacidade(projetos){
   projetos.forEach(function(p){ _pmoTarefas(p).forEach(function(x){ if(x.t.status==='done') return; var o=parseFloat(x.t.horasOrcadas)||0;
     if(!x.t.dataPrevista){ semData++; hSemData+=o; } else if(x.t.dataPrevista<hoje){ atras++; hAtras+=Math.max(o-(parseFloat(x.t.horasRealizadas)||0),0); } }); });
   html+='<div class="pmo-kpis">'+
-    _projKpi('Dias acima da capacidade', diasSobre, 'nas próximas 6 semanas', diasSobre?'#EF4444':'#10B981')+
-    _projKpi('Horas livres', _fmtH(livre), 'nas próximas 6 semanas', '#10B981')+
-    _projKpi('Fora do mapa', semData+atras, _fmtH(hSemData+hAtras)+' (sem data ou atrasadas)', semData+atras?'#F59E0B':'#6B7280')+
+    _projKpi('Dias acima da capacidade', diasSobre, 'nas próximas 6 semanas', diasSobre?'#EF4444':'#059669')+
+    _projKpi('Horas livres', _fmtH(livre), 'nas próximas 6 semanas', '#059669')+
+    _projKpi('Fora do mapa', semData+atras, _fmtH(hSemData+hAtras)+' (sem data ou atrasadas)', semData+atras?'#D97706':'#6B7280')+
   '</div>';
   html+='<div style="overflow-x:auto;margin-bottom:16px">'+tab+'</div>';
   html+='<div class="pmo-sec"><div class="pmo-sec-hd">Simular um novo projeto</div><div style="padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">'+
@@ -15770,10 +15906,10 @@ function _pmoGeral(projetos){
   var html='<div class="pmo-kpis">'+
     _projKpi('Planejado para hoje', _fmtH(cargaDia(hoje)), 'de '+_fmtH(cap)+' disponíveis', cargaDia(hoje)>cap?'#EF4444':'#3B82F6')+
     _projKpi('Registrado hoje', _fmtH(hHoje), 'semana: '+_fmtH(hSemana)+' no cronômetro', '#0891B2')+
-    _projKpi('Tarefas atrasadas', atrasadas.length, atrasadas.length?'precisam de atenção':'nenhuma', atrasadas.length?'#EF4444':'#10B981')+
-    _projKpi('Projetos em risco', emRisco.length, 'de '+projetos.length+' ativos', emRisco.length?'#EF4444':'#10B981')+
+    _projKpi('Tarefas atrasadas', atrasadas.length, atrasadas.length?'precisam de atenção':'nenhuma', atrasadas.length?'#EF4444':'#059669')+
+    _projKpi('Projetos em risco', emRisco.length, 'de '+projetos.length+' ativos', emRisco.length?'#EF4444':'#059669')+
     _projKpi('Trabalho restante', _fmtH(restante), '≈ '+Math.ceil(restante/cap)+' dia(s) útil(eis)', '#7C3AED')+
-    _projKpi('Dias acima da capacidade', sobre, 'nas próximas 6 semanas', sobre?'#EF4444':'#10B981')+
+    _projKpi('Dias acima da capacidade', sobre, 'nas próximas 6 semanas', sobre?'#EF4444':'#059669')+
   '</div>';
   html+='<div class="pmo-geral">';
   // Hoje (coluna alta)
