@@ -408,6 +408,8 @@ input[type="time"]::-webkit-calendar-picker-indicator{position:absolute;left:0;t
 /* MOBILE NAV — oculto em desktop */
 #mobile-nav{display:none}
 #mobile-fab{display:none}
+.mob-more-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit;color:var(--accent)}
+.mob-more-btn span{font-size:11px;font-weight:600;color:var(--text2);text-align:center;line-height:1.2}
 
 @media(max-width:768px){
   .sb{display:none}
@@ -541,6 +543,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{position:absolute;left:0;t
   .ct-row{flex-direction:column;align-items:flex-start!important;gap:8px}
 
 }
+
 
 /* ── TABLET (769px – 1024px) ── */
 @media(min-width:769px) and (max-width:1024px){
@@ -1226,6 +1229,110 @@ body.fv-open::after{display:none}
   .nr12-kpi-grid{grid-template-columns:1fr 1fr}
   .hrn-param-grid{grid-template-columns:1fr}
 }
+/* ══ SMARTPHONE — ajustes de responsividade (2026-10) ══ */
+@media(max-width:768px){
+  /* Topo: título com reticências, busca vira ícone que expande, ações compactas */
+  .sb-toggle-btn{display:none!important}
+  .topbar{gap:6px;position:relative;padding:0 10px}
+  .topbar-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+  .gs-wrap{flex:0 0 36px!important;max-width:36px!important;margin:0!important}
+  .gs-wrap input{height:36px;padding:0 0 0 34px!important;color:transparent;cursor:pointer}
+  .gs-wrap input::placeholder{color:transparent}
+  .gs-wrap:focus-within{position:absolute!important;left:8px;right:8px;top:5px;max-width:none!important;z-index:60}
+  .gs-wrap:focus-within input{color:var(--text);cursor:text;padding:0 12px 0 34px!important}
+  .gs-wrap:focus-within input::placeholder{color:var(--text3)}
+  .topbar-actions{overflow:visible!important;flex-shrink:0;gap:4px}
+  .topbar-actions .btn{min-height:34px;padding:6px 10px;font-size:12px}
+  .topbar-actions .btn-icon{padding:0!important;width:36px;min-width:36px;justify-content:center}
+  .topbar-actions input.fi{min-width:0!important;width:118px!important;font-size:13px!important;min-height:34px}
+  #mobile-fab{display:none!important}
+  .content{padding:12px 10px 84px}
+  #page-content [style*="padding:20px 24px"]{padding:4px 2px!important}
+
+  /* Cartões de indicadores: 2 por linha, sem vazar */
+  .kpi-grid,.fin-kpi-grid,.proj-kpi-grid,.pmo-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  .kpi,.proj-kpi,.card-flat,.card{min-width:0}
+  .kpi-label,.proj-kpi-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi-value{font-size:18px!important;overflow-wrap:anywhere}
+  .proj-kpi-val{font-size:22px!important}
+
+  /* Grades fixas (estilo inline) → 1 ou 2 colunas */
+  #page-content [style*="grid-template-columns:1fr 1fr"],
+  #page-content [style*="grid-template-columns:1.1fr .9fr"],
+  #page-content [style*="grid-template-columns:2fr 1fr"],
+  #page-content [style*="grid-template-columns:1fr 2fr"],
+  #page-content [style*="grid-template-columns:3fr 2fr"],
+  #page-content [style*="grid-template-columns:2fr 3fr"]{grid-template-columns:1fr!important}
+  #page-content [style*="grid-template-columns:repeat(3,1fr)"],
+  #page-content [style*="grid-template-columns:repeat(4,1fr)"],
+  #page-content [style*="grid-template-columns:repeat(5,1fr)"],
+  #page-content [style*="grid-template-columns:repeat(6,1fr)"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #page-content [style*="display:grid"]>*{min-width:0}
+  .prec-main-grid{grid-template-columns:1fr!important}
+  .proj-cards-grid{grid-template-columns:1fr!important}
+  /* Precificação — Custo Operacional: cabe na tela (sem rolar de lado); item/tipo/qtd em cima, valor e total embaixo */
+  .prec-ops-inner{min-width:0!important}
+  #page-content [style*="grid-template-columns:minmax(120px,1.4fr) 55px 68px 130px 80px"]{grid-template-columns:minmax(0,1fr) 56px 64px!important;row-gap:4px!important}
+  #page-content [style*="grid-template-columns:minmax(120px,1.4fr) 55px 68px 130px 80px"]>*:nth-child(4){grid-column:1/3}
+  #page-content [style*="grid-template-columns:minmax(120px,1.4fr) 55px 68px 130px 80px"]>*:nth-child(5){text-align:right}
+
+  /* Demandas: totais quebram em duas linhas */
+  #page-content [style*="display:flex;gap:10px;margin-bottom:14px"]{flex-wrap:wrap}
+  #page-content [style*="display:flex;gap:10px;margin-bottom:14px"]>.card-flat{flex:1 1 40%!important;min-width:0}
+
+  /* Calendário: barra de ferramentas quebra linha; semana mais compacta */
+  .cal-toolbar{flex-wrap:wrap;padding:8px 10px}
+  .cal-toolbar-title{font-size:16px;flex:1 1 100%;order:-1}
+  .cal-view-grp{margin-left:auto!important}
+  .cal-allday-chip{font-size:9.5px;padding:2px 4px;margin:1px}
+  .cal-week-event{padding:2px 4px;font-size:9px}
+  .cal-shell table{min-width:0!important}
+  .cal-week-event-sub{display:none}
+  .cal-week-event-title{white-space:normal!important;word-break:break-word;line-height:1.15}
+
+  /* PMO */
+  .pmo-tr-meta{padding-left:0!important;flex-wrap:wrap;gap:6px!important}
+  .pmo-sec-hd{flex-wrap:wrap}
+  .gantt-label-col,.gantt-row-label{width:118px!important;min-width:118px!important}
+
+  /* Modais: sobem de baixo, largura total; modal da demanda em tela cheia */
+  .overlay{padding:0!important;align-items:flex-end!important}
+  .modal{width:100vw!important;max-width:100vw!important;max-height:94dvh!important;border-radius:16px 16px 0 0!important}
+  #modal-demanda .modal{height:100dvh!important;max-height:100dvh!important;border-radius:0!important}
+  .modal-tab{padding:8px 10px}
+  /* Comentários recolhidos por padrão (tocar no título abre) — o formulário fica com a tela */
+  .modal-side{max-height:44px!important;overflow:hidden;transition:max-height .2s}
+  .modal-side.aberto{max-height:72dvh!important}
+  .modal-side-hd{cursor:pointer}
+  .modal-side-hd::after{content:'▾';margin-left:auto;font-size:13px;transition:transform .2s}
+  .modal-side.aberto .modal-side-hd::after{transform:rotate(180deg)}
+  /* Rodapé da demanda numa linha só (o X do topo já fecha) */
+  #modal-demanda .modal-ft{flex-wrap:nowrap!important;gap:6px}
+  #modal-demanda .modal-ft>div{display:contents}
+  #modal-demanda .modal-ft>div:first-child>.btn:first-child{display:none}
+  #modal-demanda .modal-ft .btn{flex:1 1 0;min-width:0!important;font-size:12px;padding:6px 6px;min-height:40px;white-space:normal;line-height:1.15;justify-content:center;text-align:center}
+
+  /* Cronômetro flutuante não cobre o rodapé nem o topo dos modais */
+  #timer-pill.tp-top{top:auto!important;bottom:62px!important;left:auto!important;right:8px!important;transform:none!important}
+  #timer-pill.tp-top .tp-nome{display:none}
+
+  /* Menu "Mais" */
+  #mob-more-menu{max-height:72dvh;overflow-y:auto}
+
+  /* Aba PMO do modal: cabeçalho, marcos e tarefas */
+  #tab-projeto .fsec>div:first-child{flex-wrap:wrap;gap:8px}
+  #tab-projeto .fsec>div:first-child>.fsec-title{flex:1 1 100%}
+  #tab-projeto .fsec>div:first-child>div{justify-content:flex-start!important}
+  #tab-projeto .fsec>div:nth-child(2){display:none}
+  #tab-projeto [style*="grid-template-columns:2fr 1fr"]{grid-template-columns:1fr!important}
+  .marco-hd{flex-wrap:wrap;row-gap:4px}
+  .marco-nome{flex:1 1 calc(100% - 40px)!important;min-width:0}
+  .tarefa-hd{flex-wrap:wrap;row-gap:6px}
+  .tarefa-hd>input.finput{flex:1 1 calc(100% - 30px)!important;min-width:0}
+  [id^="tar-l2-"]{padding-left:10px!important}
+  [id^="tar-dates-"] input[type=date]{width:140px!important}
+}
+
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -1367,7 +1474,7 @@ body.fv-open::after{display:none}
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
     </button>
     <span class="topbar-title" id="topbar-title">Dashboard</span>
-    <div style="position:relative;flex:1;max-width:320px;margin:0 12px">
+    <div class="gs-wrap" style="position:relative;flex:1;max-width:320px;margin:0 12px">
       <input id="global-search-input" type="text" placeholder="🔍 Buscar demandas, clientes, contratos..." autocomplete="off"
         style="width:100%;padding:7px 12px 7px 32px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-family:inherit;outline:none;background:var(--surface2);color:var(--text);transition:border .12s"
         oninput="onGlobalSearch(this.value)" onkeydown="onGlobalSearchKey(event)" onfocus="if(this.value)showGlobalResults()" />
@@ -1767,7 +1874,7 @@ body.fv-open::after{display:none}
   </div><!-- /modal-left -->
   <!-- PAINEL LATERAL — Atividade & Comentários -->
   <div class="modal-side">
-    <div class="modal-side-hd">💬 Atividade &amp; Comentários</div>
+    <div class="modal-side-hd" onclick="if(window.innerWidth<=768)this.parentElement.classList.toggle('aberto')">💬 Atividade &amp; Comentários</div>
     <div class="modal-side-msgs" id="chat-msgs-list"></div>
     <div class="modal-side-input">
       <div id="comment-anexo-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px"></div>
@@ -3267,14 +3374,14 @@ function showPage(pg) {
   var titles={dashboard:'Dashboard',demandas:'Demandas',clientes:'Cadastro de Clientes',financeiro:'Financeiro',projetos:'PMO — Gestão de Projetos',precificacao:'Calculadora de Precificação',servicos:'Tabela de Serviços',calendario:'Calendário',contratos:'Contratos',documentos:'Documentos Técnicos',configuracoes:'Configurações',pmoc:'PMOC — Plano de Manutenção',nr12:'NR-12 — Segurança em Máquinas'};
   document.getElementById('topbar-title').textContent=titles[pg]||pg;
   var acts=document.getElementById('topbar-actions'); acts.innerHTML='';
-  if(pg==='demandas') acts.innerHTML='<button class="btn btn-primary" onclick="openModalNew()">+ Nova Demanda</button>';
-  if(pg==='clientes') acts.innerHTML='<input id="cli-search" class="fi" placeholder="🔍 CNPJ, Razão Social ou Fantasia..." style="width:min(260px,45vw);padding:5px 10px" oninput="renderClientes(this.value)" /><button class="btn btn-primary" onclick="openClienteModal(null)">+ Novo Cliente</button>';
+  if(pg==='demandas') acts.innerHTML='<button class="btn btn-primary" onclick="openModalNew()">+<span class="hide-xs"> Nova</span> Demanda</button>';
+  if(pg==='clientes') acts.innerHTML='<input id="cli-search" class="fi" placeholder="🔍 CNPJ, Razão Social ou Fantasia..." style="width:min(260px,45vw);padding:5px 10px" oninput="renderClientes(this.value)" /><button class="btn btn-primary" onclick="openClienteModal(null)">+<span class="hide-xs"> Novo</span> Cliente</button>';
   if(pg==='financeiro') acts.innerHTML='<button class="btn btn-primary" onclick="openModalDespesa()"><span class="hide-xs">+ Nova </span>Despesa</button><button class="btn btn-ghost" onclick="openModalReceita()" style="margin-left:4px"><span class="hide-xs">+ </span>Receita</button>';
-  if(pg==='servicos') acts.innerHTML='<button class="btn btn-primary" onclick="openServicoModal(null)">+ Novo Serviço</button>';
-  if(pg==='contratos') acts.innerHTML='<button class="btn btn-primary" onclick="openNovoContrato()">+ Novo Contrato</button>';
-  if(pg==='pmoc') acts.innerHTML='<button class="btn btn-primary" onclick="openPmocModal(null)">+ Novo PMOC</button>';
-  if(pg==='documentos') acts.innerHTML='<button class="btn btn-primary" onclick="docTecNovo()">+ Novo Documento</button>';
-  if(pg==='nr12') acts.innerHTML='<button class="btn btn-primary" style="background:#0891B2;border-color:#0891B2" onclick="openNR12MaqModal(null)">🛡️ + Nova Máquina</button>';
+  if(pg==='servicos') acts.innerHTML='<button class="btn btn-primary" onclick="openServicoModal(null)">+<span class="hide-xs"> Novo</span> Serviço</button>';
+  if(pg==='contratos') acts.innerHTML='<button class="btn btn-primary" onclick="openNovoContrato()">+<span class="hide-xs"> Novo</span> Contrato</button>';
+  if(pg==='pmoc') acts.innerHTML='<button class="btn btn-primary" onclick="openPmocModal(null)">+<span class="hide-xs"> Novo</span> PMOC</button>';
+  if(pg==='documentos') acts.innerHTML='<button class="btn btn-primary" onclick="docTecNovo()">+<span class="hide-xs"> Novo</span> Documento</button>';
+  if(pg==='nr12') acts.innerHTML='<button class="btn btn-primary" style="background:#0891B2;border-color:#0891B2" onclick="openNR12MaqModal(null)">+<span class="hide-xs"> Nova</span> Máquina</button>';
   if(pg==='calendario'){setTimeout(function(){var l=document.getElementById('cal-mes-label');if(l){l.textContent='';}},50); setTimeout(function(){if(gcIsConnected())gcFetchEvents();},300);} if(pg==='calendario') acts.innerHTML='<span id="cal-mes-label" style="font-size:13px;font-weight:600;color:var(--text2)"></span>';
   // notif bell always visible
   var bellHtml='<button class="btn btn-ghost btn-icon" onclick="toggleNotifPanel()" title="Notificações" style="position:relative">'
@@ -8380,9 +8487,14 @@ function calMiniPrev(){calMes--;if(calMes<0){calMes=11;calAno--;}renderCalendari
 function calMiniNext(){calMes++;if(calMes>11){calMes=0;calAno++;}renderCalendario();calSyncGoogleIfNeeded();}
 function setCalView(v){calView=v;if(v==='week'&&!calWeekStart)calWeekStart=getWeekStart(new Date());renderCalendario();calSyncGoogleIfNeeded();}
 // Painel esquerdo do Calendário (mini calendário, retornos, eventos): recolher/expandir, independente do menu principal
+// No celular o painel lateral começa recolhido (chave própria), para o calendário aparecer primeiro
+function _calLadoRecolhido(){
+  if(window.innerWidth<=768) return localStorage.getItem('cerc_calLeftCollapsedMob')!=='0';
+  return localStorage.getItem('cerc_calLeftCollapsed')==='1';
+}
 function toggleCalSidebar(){
-  var collapsed = localStorage.getItem('cerc_calLeftCollapsed')==='1';
-  localStorage.setItem('cerc_calLeftCollapsed', collapsed?'0':'1');
+  var chave = window.innerWidth<=768 ? 'cerc_calLeftCollapsedMob' : 'cerc_calLeftCollapsed';
+  localStorage.setItem(chave, _calLadoRecolhido()?'0':'1');
   renderCalendario();
 }
 // ══════════════════════════════════════════════════════════════════════════════
@@ -9339,7 +9451,7 @@ function renderCalendario() {
 
   // ── Monta shell ──────────────────────────────────────────────────
   // padding:0 no page-content → altura sem os 40px de padding vertical
-  var calLeftCollapsed = localStorage.getItem('cerc_calLeftCollapsed')==='1';
+  var calLeftCollapsed = _calLadoRecolhido();
   var calShell=
     '<div class="cal-shell'+(calLeftCollapsed?' cal-left-collapsed':'')+'" style="height:calc(100vh - 56px);border-radius:0;border-left:none;border-right:none;border-top:none">'+
       '<div class="cal-left">'+sideCriar+miniCal+sideGc+sideRet+sideEvt+'</div>'+
@@ -12874,17 +12986,32 @@ function checkAutoSaveRestore() {
 var mobMenuOpen = false;
 
 function mobNav(page, el) {
-  // Update active state
-  document.querySelectorAll('.mob-nav-item').forEach(function(b){ b.classList.remove('active'); });
-  if(el) el.classList.add('active');
-  // Navigate
-  showPage(page);
-  // Close more menu if open
   if(mobMenuOpen) toggleMobMenu();
+  showPage(page);
 }
+// Abre uma tela a partir do menu "Mais" (fecha o menu uma vez só — antes ele fechava e reabria)
+function mobMenuIr(page){ if(mobMenuOpen) toggleMobMenu(); showPage(page); }
+function mobMenuAcao(fn){ if(mobMenuOpen) toggleMobMenu(); fn(); }
+function _montarMenuMais(){
+  var grid=document.getElementById('mob-more-grid'); if(!grid) return;
+  var naBarra={dashboard:1,demandas:1,projetos:1,calendario:1};
+  var html='';
+  document.querySelectorAll('.sb-nav .ni').forEach(function(ni){
+    var m=(ni.getAttribute('onclick')||'').match(/showPage\('([a-z0-9]+)'\)/); if(!m || naBarra[m[1]]) return;
+    var svg=ni.querySelector('svg'), lbl=ni.cloneNode(true);
+    lbl.querySelectorAll('span').forEach(function(x){ x.remove(); }); // tira o contador de notificações
+    var nome=lbl.textContent.trim();
+    html+='<button class="mob-more-btn" onclick="mobMenuIr(\''+m[1]+'\')">'+(svg?svg.outerHTML.replace(/width="14" height="14"/,'width="22" height="22"'):'')+'<span>'+nome+'</span></button>';
+  });
+  html+='<button class="mob-more-btn" onclick="mobMenuAcao(exportarDados)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Exportar</span></button>'+
+    '<button class="mob-more-btn" onclick="mobMenuAcao(importarDados)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Importar</span></button>';
+  grid.innerHTML=html;
+}
+document.addEventListener('DOMContentLoaded',_montarMenuMais);
 
 function toggleMobMenu() {
   mobMenuOpen = !mobMenuOpen;
+  var _g=document.getElementById('mob-more-grid'); if(mobMenuOpen && _g && !_g.children.length) _montarMenuMais();
   var menu = document.getElementById('mob-more-menu');
   if(menu) menu.style.display = mobMenuOpen ? 'block' : 'none';
   var maisBtn = document.getElementById('mob-mais');
@@ -12907,12 +13034,10 @@ var _origShowPage = showPage;
 showPage = function(pg) {
   _origShowPage(pg);
   // Update mobile nav
-  var map = {dashboard:'mob-dashboard',demandas:'mob-demandas',clientes:'mob-clientes',financeiro:'mob-financeiro',contratos:'mob-contratos'};
+  var map = {dashboard:'mob-dashboard',demandas:'mob-demandas',projetos:'mob-pmo',calendario:'mob-calendario'};
   document.querySelectorAll('.mob-nav-item').forEach(function(b){ b.classList.remove('active'); });
-  if(map[pg]) {
-    var el = document.getElementById(map[pg]);
-    if(el) el.classList.add('active');
-  }
+  var el = document.getElementById(map[pg]||'mob-mais');
+  if(el) el.classList.add('active');
   // Add New button for mobile
   var acts = document.getElementById('topbar-actions');
   if(acts && window.innerWidth <= 768) {
@@ -13341,7 +13466,7 @@ function renderNR12MaquinasList(maqs, riscos) {
     +'<div style="font-size:48px;margin-bottom:12px">🏭</div>'
     +'<div style="font-size:16px;font-weight:700;margin-bottom:8px">Nenhuma máquina cadastrada</div>'
     +'<div style="font-size:13px;color:var(--text3);margin-bottom:20px">Clique em "+ Nova Máquina" para iniciar o inventário NR-12</div>'
-    +'<button class="btn btn-primary" style="background:#0891B2;border-color:#0891B2" onclick="openNR12MaqModal(null)">🛡️ + Nova Máquina</button>'
+    +'<button class="btn btn-primary" style="background:#0891B2;border-color:#0891B2" onclick="openNR12MaqModal(null)">+<span class="hide-xs"> Nova</span> Máquina</button>'
     +'</div>';
 
   var statusCls={'Conforme':'nr12-conforme','Não Conforme':'nr12-naoconforme','Em Adequação':'nr12-emadequacao','Não Avaliado':'nr12-naoavaliado'};
@@ -16055,13 +16180,13 @@ initAuth();
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
     <span>Demandas</span>
   </button>
-  <button class="mob-nav-item" id="mob-clientes" onclick="mobNav('clientes',this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-    <span>Clientes</span>
+  <button class="mob-nav-item" id="mob-pmo" onclick="mobNav('projetos',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="12" height="4" rx="1"/><rect x="3" y="17" width="7" height="4" rx="1"/></svg>
+    <span>PMO</span>
   </button>
-  <button class="mob-nav-item" id="mob-financeiro" onclick="mobNav('financeiro',this)">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-    <span>Financeiro</span>
+  <button class="mob-nav-item" id="mob-calendario" onclick="mobNav('calendario',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>Calendário</span>
   </button>
   <button class="mob-nav-item" id="mob-mais" onclick="toggleMobMenu()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
@@ -16081,32 +16206,7 @@ initAuth();
     <span style="font-size:14px;font-weight:700">Mais opções</span>
     <button onclick="toggleMobMenu()" style="background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer">✕</button>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <button onclick="mobNav('calendario',null);toggleMobMenu()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span style="font-size:12px;font-weight:600;color:var(--text2)">Calendário</span>
-    </button>
-    <button onclick="mobNav('contratos',null);toggleMobMenu()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      <span style="font-size:12px;font-weight:600;color:var(--text2)">Contratos</span>
-    </button>
-    <button onclick="mobNav('documentos',null);toggleMobMenu()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-      <span style="font-size:12px;font-weight:600;color:var(--text2)">Documentos</span>
-    </button>
-    <button onclick="mobNav('servicos',null);toggleMobMenu()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-      <span style="font-size:12px;font-weight:600;color:var(--text2)">Serviços</span>
-    </button>
-    <button onclick="mobNav('precificacao',null);toggleMobMenu()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      <span style="font-size:12px;font-weight:600;color:var(--text2)">Precificação</span>
-    </button>
-    <button onclick="exportarDados();toggleMobMenu()" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--s-con)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <span style="font-size:12px;font-weight:600;color:var(--text2)">Exportar</span>
-    </button>
-  </div>
+  <div id="mob-more-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"></div>
   <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
     <div class="avatar">CE</div>
     <div>
