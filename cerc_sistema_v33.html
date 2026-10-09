@@ -1746,6 +1746,10 @@ body.fv-open::after{display:none}
         <div style="font-size:11px;color:var(--text3);margin-bottom:14px">
           Etapas padrão: Levantamento → Elaboração → Revisão → Entrega → Fechamento
         </div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px">
+          <div class="fg" style="margin:0"><label>Prazo de entrega ao cliente</label><input type="date" class="finput" id="f-prazo-entrega" style="width:170px" onchange="renderProjResumoBox()"/></div>
+        </div>
+        <div id="proj-resumo-box"></div>
         <div id="marcos-list">
           <!-- renderMarcosTab() preenche aqui -->
         </div>
@@ -2378,7 +2382,7 @@ function demandaToDb(d) {
     motivo_perda: d.motivoPerda||'', categoria_perda: String(d.categoriaPerda||''),
     plano_acao_perda: d.planoAcaoPerda||'', data_resgate: d.dataResgate||'',
     log: d.log||[], subtarefas: d.subtarefas||[], comentarios: d.comentarios||[],
-    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||'',url:doc.url||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip),cnpjCliente:d.cnpj||''};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
+    docs_fiscais: (function(df){var strip=function(doc){return {nome:doc.nome||'',tipo:doc.tipo||'',tamanho:doc.tamanho||0,data:doc.data||'',prazo:doc.prazo||'',dados:doc.dados||'',url:doc.url||''};};return {nfs:(df.nfs||[]).map(strip),boletos:(df.boletos||[]).map(strip),laudos:(df.laudos||[]).map(strip),cnpjCliente:d.cnpj||'',prazoEntrega:d.prazoEntrega||''};})(d.docsFiscais||{nfs:[],boletos:[],laudos:[]}),
     parcelas: d.parcelas||[],
     pagamentos_parciais: d.pagamentosParciais||[],
     total_parcelas: parseInt(d.totalParcelas)||0,
@@ -2399,7 +2403,8 @@ function dbToDemanda(r) {
   return {
     id: r.id, proposta: r.proposta||'', servico: r.servico||'', tipo: r.tipo||'', status: r.status||'',
     cliente: r.cliente||'', contato: r.contato||'', email: r.email||'', telefone: r.telefone||'',
-    cnpj: (r.docs_fiscais&&r.docs_fiscais.cnpjCliente)||'', // guardado dentro do jsonb docs_fiscais (tabela não tem coluna cnpj)
+    cnpj: (r.docs_fiscais&&r.docs_fiscais.cnpjCliente)||'',
+    prazoEntrega: (r.docs_fiscais&&r.docs_fiscais.prazoEntrega)||'', // guardado dentro do jsonb docs_fiscais (tabela não tem coluna cnpj)
     ultimoContato: r.ultimo_contato||'', dataCriacao: r.data_criacao||'', dataFechamento: r.data_fechamento||'',
     dataRetorno: r.data_retorno||'', dataLembrete: r.data_lembrete||'',
     valorBruto: parseFloat(r.valor_bruto)||0, desconto: parseFloat(r.desconto)||0,
@@ -2532,7 +2537,7 @@ function demandaToDbSb(d) {
   if(base.link_files_contrato && base.link_files_contrato.dados) { var c=base.link_files_contrato; base.link_files_contrato={nome:c.nome,tipo:c.tipo,tamanho:c.tamanho,data:c.data}; }
   // Strip base64 dos docs fiscais
   function stripDoc(doc){ return doc&&doc.dados ? {nome:doc.nome,tipo:doc.tipo,tamanho:doc.tamanho,data:doc.data,prazo:doc.prazo||''} : doc; }
-  if(base.docs_fiscais) { base.docs_fiscais={nfs:(base.docs_fiscais.nfs||[]).map(stripDoc),boletos:(base.docs_fiscais.boletos||[]).map(stripDoc),laudos:(base.docs_fiscais.laudos||[]).map(stripDoc),cnpjCliente:base.docs_fiscais.cnpjCliente||''}; }
+  if(base.docs_fiscais) { base.docs_fiscais={nfs:(base.docs_fiscais.nfs||[]).map(stripDoc),boletos:(base.docs_fiscais.boletos||[]).map(stripDoc),laudos:(base.docs_fiscais.laudos||[]).map(stripDoc),cnpjCliente:base.docs_fiscais.cnpjCliente||'',prazoEntrega:base.docs_fiscais.prazoEntrega||''}; }
   return base;
 }
 async function sbUpsertDemanda(dem) {
@@ -2842,6 +2847,7 @@ async function loadStateFromSupabase() {
     state.nr12Riscos   = mergeAndPush(rRisc.error?[]:rRisc.data, state.nr12Riscos||[], dbToNr12Risco, nr12RiscoToDb, 'nr12_riscos');
     sbOnline=true;
     docTecCarregar(true);
+    setTimeout(_timerPill,0);
     try{ localStorage.setItem(SK,JSON.stringify({demandas:state.demandas,despesas:state.despesas,clientes:state.clientes,collapseStatus:state.collapseStatus,servicos:state.servicos,svCatCollapsed:state.svCatCollapsed||{},eventos:state.eventos||[],contratos:state.contratos||[],pmocs:state.pmocs||[],nr12Maquinas:state.nr12Maquinas||[],nr12Riscos:state.nr12Riscos||[]})); }catch(e){}
     setSbStatus('online');
     var actPg=document.querySelector('.ni.active');
@@ -4285,6 +4291,7 @@ function openModalNew() {
   _initChecklistLev(null); _clevOpen=false; var _cb=document.getElementById('clev-body'); var _ci=document.getElementById('clev-toggle-icon'); if(_cb)_cb.style.display='none'; if(_ci)_ci.textContent='▼ expandir';
   modalChecklistCustom=[]; renderChecklistCustom();
   modalMarcos=[];
+  var _fpeN=document.getElementById('f-prazo-entrega'); if(_fpeN) _fpeN.value='';
   var _ptbNew=document.getElementById('modal-tab-projeto-btn'); if(_ptbNew) _ptbNew.style.display='none';
   switchTab('geral'); document.getElementById('modal-demanda').style.display='flex';
 }
@@ -4335,6 +4342,7 @@ function openModalEdit(id) {
   renderLinkPropostas();
   modalComentarios=(dem.comentarios||[]).slice();
   modalMarcos=(dem.marcos||[]).map(function(m){return JSON.parse(JSON.stringify(m));});
+  var _fpe=document.getElementById('f-prazo-entrega'); if(_fpe) _fpe.value=dem.prazoEntrega||'';
   renderChat();
   var _ptb=document.getElementById('modal-tab-projeto-btn');
   if(_ptb) _ptb.style.display=(dem.status==='Fechado'||dem.status==='Em Execução'||dem.status==='Em Revisão')?'flex':'none';
@@ -5370,7 +5378,7 @@ function _saveDemandaImpl() {
   var fStatus=document.getElementById('f-status').value;
   // Se status mudou de Perdido para outro, limpar campos de perda
   var old2=editingId?state.demandas.find(function(x){return x.id===editingId;}):null;
-  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,cnpj:document.getElementById('f-cnpj').value.trim(),ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:dataParcialDerivada,pagamentosParciais:pag==='Parcial'?modalPagamentosParciais.slice():[],parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].url||''):''),linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkGdrive:document.getElementById('f-gdrive').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkPropostas:modalLinkPropostas.slice(),linkFilesPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].arquivo||null):null),linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nfs:(modalDocsFiscais.nfs||[]).slice(),boletos:(modalDocsFiscais.boletos||[]).slice(),laudos:(modalDocsFiscais.laudos||[]).slice()},marcos:modalMarcos.map(function(m){return JSON.parse(JSON.stringify(m));}),
+  var nw={servico:servico,tipo:document.getElementById('f-tipo').value,status:fStatus,proposta:document.getElementById('f-proposta').value,dataFechamento:document.getElementById('f-fechamento').value,dataRetorno:document.getElementById('f-retorno').value,cliente:document.getElementById('f-cliente').value,contato:document.getElementById('f-contato').value,email:document.getElementById('f-email').value,telefone:document.getElementById('f-telefone').value,cnpj:document.getElementById('f-cnpj').value.trim(),ultimoContato:document.getElementById('f-ultimo-contato').value,valorBruto:bruto,desconto:desc,impostoEstimado:imp,custoOperacional:cop,valorLiquido:liq,statusPagamento:pag,valorPago:vpago,dataPagamento:document.getElementById('f-data-pagamento').value||'',dataPagamentoParcial:dataParcialDerivada,pagamentosParciais:pag==='Parcial'?modalPagamentosParciais.slice():[],parcelas:pag==='Parcelado'?modalParcelas.slice():[],totalParcelas:parseInt(document.getElementById('f-total-parcelas').value)||0,valorParcela:parseFloat(document.getElementById('f-valor-parcela').value)||0,dataPrimeiraParcela:document.getElementById('f-data-primeira-parcela').value||'',linkPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].url||''):''),linkArt:document.getElementById('f-art').value,linkCanva:document.getElementById('f-canva').value,linkGdrive:document.getElementById('f-gdrive').value,linkExtraLink:document.getElementById('f-extra-link').value,linkExtraDesc:document.getElementById('f-extra-desc').value,observacoes:'',comentarios:modalComentarios.slice(),linkPropostas:modalLinkPropostas.slice(),linkFilesPdfProp:(modalLinkPropostas.length?(modalLinkPropostas[modalLinkPropostas.length-1].arquivo||null):null),linkFilesArt:modalLinkFiles.art,linkFilesContrato:modalLinkFiles.contrato,subtarefas:modalSubs.map(function(s){return {nome:s.nome,concluido:s.concluido,obs:s.obs,anexos:s.anexos||[],dataRetorno:s.dataRetorno||''};}),docsFiscais:{nfs:(modalDocsFiscais.nfs||[]).slice(),boletos:(modalDocsFiscais.boletos||[]).slice(),laudos:(modalDocsFiscais.laudos||[]).slice()},marcos:modalMarcos.map(function(m){return JSON.parse(JSON.stringify(m));}),prazoEntrega:(document.getElementById('f-prazo-entrega')||{}).value||'',
     motivoPerda:   fStatus==='Perdido'?(old2?old2.motivoPerda||'':(_perdaTempData?_perdaTempData.motivoPerda||'':'')):''   ,
     categoriaPerda:fStatus==='Perdido'?(old2?old2.categoriaPerda||'':(_perdaTempData?_perdaTempData.categoriaPerda||'':'')):''  ,
     planoAcaoPerda:fStatus==='Perdido'?(old2?old2.planoAcaoPerda||'':(_perdaTempData?_perdaTempData.planoAcaoPerda||'':'')):'' ,
@@ -13761,7 +13769,7 @@ var _projExpanded = {};    // demandaId → bool (linha pai expandida)
 var _projMarcosOpen = {};  // demandaId+'-'+mi → bool (marco expandido)
 
 // ── renderProjetos: tela principal (tudo em uma página) ───
-function renderProjetos() {
+function _renderProjetosAntigo() {
   var pc = document.getElementById('page-content');
   if(!pc) return;
   var projetos = state.demandas.filter(function(d){
@@ -13976,6 +13984,8 @@ function _renderGantt(projetos, prazoMap) {
   projetos.forEach(function(d){
     if(d.dataCriacao) allDates.push(new Date(d.dataCriacao));
     (d.marcos||[]).forEach(function(m){ if(m.dataPrevista) allDates.push(new Date(m.dataPrevista)); });
+    _pmoTarefas(d).forEach(function(x){ ['dataInicioPrev','dataInicio','dataPrevista','dataRealizada'].forEach(function(f){ if(x.t[f]) allDates.push(new Date(x.t[f])); }); });
+    if(d.prazoEntrega) allDates.push(new Date(d.prazoEntrega));
   });
   var now = new Date();
   if(!allDates.length){
@@ -14129,8 +14139,12 @@ function _renderGantt(projetos, prazoMap) {
   // Linhas de projetos
   projetos.forEach(function(d){
     var marcos = d.marcos||[];
-    var inicio = d.dataCriacao ? new Date(d.dataCriacao) : new Date(minDate);
+    var _iniT = '';
+    _pmoTarefas(d).forEach(function(x){ var st=x.t.dataInicio||x.t.dataInicioPrev; if(st && (!_iniT||st<_iniT)) _iniT=st; });
+    var inicio = _iniT ? new Date(_iniT) : (d.dataFechamento ? new Date(d.dataFechamento) : (d.dataCriacao ? new Date(d.dataCriacao) : new Date(minDate)));
     var fim    = new Date(inicio);
+    _pmoTarefas(d).forEach(function(x){ var en=x.t.dataRealizada||x.t.dataPrevista; if(en){ var de=new Date(en); if(de>fim) fim=de; } });
+    if(d.prazoEntrega){ var dpz=new Date(d.prazoEntrega); if(dpz>fim) fim=dpz; }
     marcos.forEach(function(m){
       if(m.dataPrevista){ var dt=new Date(m.dataPrevista); if(dt>fim) fim=dt; }
     });
@@ -14144,7 +14158,7 @@ function _renderGantt(projetos, prazoMap) {
     var barW    = Math.max(endPx - startPx, 28);
 
     var hasConflito = Object.keys(prazoMap||{}).some(function(dt){ return prazoMap[dt].length>1 && prazoMap[dt].indexOf(d.id)>=0; });
-    var barColor = hasConflito ? '#EF4444' : (d.status==='Fechado'?'#64748B':'#3B82F6');
+    var barColor = _pmoSaude(d).nivel==='vermelho' ? '#EF4444' : (d.status==='Fechado'?'#64748B':'#3B82F6');
 
     var allTarefas = [];
     (d.marcos||[]).forEach(function(m){ (m.tarefas||[]).forEach(function(t){ allTarefas.push(t); }); });
@@ -14315,7 +14329,7 @@ function _renderGantt(projetos, prazoMap) {
   html += '<div style="display:flex;flex-wrap:wrap;gap:14px;padding:10px 8px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);width:'+totalRowW+'px;box-sizing:border-box">'
     + '<span>🟦 Em Execução / Em Revisão</span>'
     + '<span>⬛ Fechado</span>'
-    + '<span>🟥 Conflito de prazo</span>'
+    + '<span>🟥 Projeto em risco</span>'
     + '<span>🟢 Marco Realizado</span>'
     + '<span>🟡 Marco Pendente</span>'
     + '<span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:2px;height:12px;background:#F59E0B;border-radius:1px"></span> Hoje</span>'
@@ -14605,28 +14619,28 @@ function _projSetData(mi, ti, campo, el){
   _tarRefreshLinha2(mi, ti);
 }
 
-// ── Linha de horas / início / término exibida em cada tarefa ──
+// ── Linha de horas / cronômetro exibida em cada tarefa ──
 function _tarLinha2Html(tar, mi, ti){
+  if(!tar.id) tar.id=uid();
   var orc=parseFloat(tar.horasOrcadas)||0, real=parseFloat(tar.horasRealizadas)||0;
   function hm(iso){ var d=new Date(iso); return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
   var inp='width:52px;font-size:11px;padding:1px 4px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);text-align:center';
-  var btn='font-size:10px;padding:1px 8px';
   var prev=(tar.dataPrevista||tar.dataInicioPrev)
     ? '<span>Previsto: '+(tar.dataInicioPrev&&tar.dataInicioPrev!==tar.dataPrevista?fD(tar.dataInicioPrev)+' → ':'')+fD(tar.dataPrevista)+'</span>'
     : '<span style="opacity:.75">Sem data prevista</span>';
-  var ini=tar.iniciadoEm ? '<span style="color:#1D4ED8;font-weight:600">▶ Iniciado '+hm(tar.iniciadoEm)+'</span>'
-    : tar.dataInicio ? '<span style="color:#1D4ED8;font-weight:600">▶ Iniciado '+fD(tar.dataInicio)+'</span>'
-    : tar.status!=='done' ? '<button class="btn btn-ghost btn-sm" style="'+btn+'" onclick="_tarIniciar('+mi+','+ti+')">▶ Iniciar</button>' : '';
-  var fim=tar.concluidoEm ? '<span style="color:#15803D;font-weight:600">✓ Concluído '+hm(tar.concluidoEm)+'</span>'
-    : tar.status==='done' ? '<span style="color:#15803D;font-weight:600">✓ Concluído'+(tar.dataRealizada?' '+fD(tar.dataRealizada):'')+'</span>'
-    : '<button class="btn btn-ghost btn-sm" style="'+btn+'" onclick="_tarConcluir('+mi+','+ti+')">✓ Concluir</button>';
-  return '<span>Orçado <input type="number" min="0" step="0.5" style="'+inp+'" value="'+(tar.horasOrcadas===0||tar.horasOrcadas?tar.horasOrcadas:'')+'" onfocus="this.select()" oninput="modalMarcos['+mi+'].tarefas['+ti+'].horasOrcadas=this.value===\'\'?\'\':(parseFloat(this.value)||0)" onchange="_tarRefreshLinha2('+mi+','+ti+')"/> h</span>'+
-    '<span>Real <input id="tar-real-'+mi+'-'+ti+'" type="number" min="0" step="0.5" style="'+inp+';color:'+(real&&orc&&real>orc?'#DC2626':'var(--text)')+'" value="'+(tar.horasRealizadas===0||tar.horasRealizadas?tar.horasRealizadas:'')+'" onfocus="this.select()" oninput="modalMarcos['+mi+'].tarefas['+ti+'].horasRealizadas=this.value===\'\'?\'\':(parseFloat(this.value)||0)" onchange="_tarRefreshLinha2('+mi+','+ti+')"/> h</span>'+
-    prev+ini+fim;
+  var ses=(tar.sessoes||[]).length;
+  return '<span style="display:inline-flex;align-items:center;gap:6px">'+_timerBotoes(editingId||'', tar)+_timerChip(tar)+'</span>'+
+    '<span>Orçado <input type="number" min="0" step="0.5" style="'+inp+'" value="'+(tar.horasOrcadas===0||tar.horasOrcadas?tar.horasOrcadas:'')+'" onfocus="this.select()" oninput="modalMarcos['+mi+'].tarefas['+ti+'].horasOrcadas=this.value===\'\'?\'\':(parseFloat(this.value)||0)" onchange="_tarRefreshLinha2('+mi+','+ti+')"/> h</span>'+
+    '<span>Real <input id="tar-real-'+mi+'-'+ti+'" type="number" min="0" step="0.25" style="'+inp+';color:'+(real&&orc&&real>orc?'#DC2626':'var(--text)')+'" value="'+(tar.horasRealizadas===0||tar.horasRealizadas?Math.round(tar.horasRealizadas*100)/100:'')+'" onfocus="this.select()" oninput="modalMarcos['+mi+'].tarefas['+ti+'].horasRealizadas=this.value===\'\'?\'\':(parseFloat(this.value)||0)" onchange="_tarRefreshLinha2('+mi+','+ti+')" title="Somado automaticamente pelo cronômetro — pode corrigir à mão"/> h</span>'+
+    prev+
+    (ses?'<span title="Períodos de trabalho registrados pelo cronômetro">'+ses+' sessão'+(ses>1?'ões':'')+'</span>':'')+
+    (tar.iniciadoEm?'<span style="color:#1D4ED8">Início '+hm(tar.iniciadoEm)+'</span>':'')+
+    (tar.concluidoEm?'<span style="color:#15803D;font-weight:600">✓ Concluída '+hm(tar.concluidoEm)+'</span>':'');
 }
 function _tarRefreshLinha2(mi, ti){
   var el=document.getElementById('tar-l2-'+mi+'-'+ti), t=modalMarcos[mi]&&modalMarcos[mi].tarefas&&modalMarcos[mi].tarefas[ti];
   if(el && t) el.innerHTML=_tarLinha2Html(t, mi, ti);
+  renderProjResumoBox();
 }
 function _tarSyncCampos(mi, ti){
   var t=modalMarcos[mi].tarefas[ti];
@@ -14636,29 +14650,8 @@ function _tarSyncCampos(mi, ti){
   var dr=document.getElementById('tar-dr-'+mi+'-'+ti); if(dr) dr.value=t.dataRealizada||'';
   _tarRefreshLinha2(mi, ti);
 }
-function _tarIniciar(mi, ti){
-  var t=modalMarcos[mi].tarefas[ti];
-  t.iniciadoEm=new Date().toISOString();
-  t.dataInicio=_ymd(new Date());
-  if(t.status==='pending') t.status='in_progress';
-  _tarSyncCampos(mi, ti);
-  toast('Início registrado. Salve a demanda para gravar.','success');
-}
-function _tarConcluir(mi, ti){
-  var t=modalMarcos[mi].tarefas[ti];
-  var pend=(t.subtarefas||[]).filter(function(s){return s.status!=='done';}).length;
-  if(pend){ alert('⚠️ Conclua as '+pend+' subtarefa(s) pendente(s) antes de concluir a tarefa.'); return; }
-  t.concluidoEm=new Date().toISOString();
-  t.dataRealizada=_ymd(new Date());
-  if(!t.dataInicio) t.dataInicio=t.dataRealizada;
-  t.status='done';
-  _syncMarcoDates(mi);
-  _tarSyncCampos(mi, ti);
-  if(t.horasRealizadas===undefined || t.horasRealizadas===''){
-    var r=document.getElementById('tar-real-'+mi+'-'+ti); if(r) r.focus();
-    toast('Tarefa concluída — informe as horas realmente gastas.','info');
-  } else toast('Tarefa concluída. Salve a demanda para gravar.','success');
-}
+function _tarIniciar(mi, ti){ _timerAcao(editingId||'', modalMarcos[mi].tarefas[ti].id, 'play'); }
+function _tarConcluir(mi, ti){ _timerAcao(editingId||'', modalMarcos[mi].tarefas[ti].id, 'concluir'); }
 
 // ── Importar pacotes/tarefas da Precificação ──
 function _projUnidade(prof){
@@ -14831,7 +14824,454 @@ function projAplicarCronograma(){
   toast('Cronograma aplicado. Salve a demanda para gravar.','success');
 }
 
+// ══ PMO — visões Semana / Carteira / Capacidade / Cronograma + cronômetro das tarefas ══
+// Prazo de entrega ao cliente fica em dem.prazoEntrega (gravado dentro do jsonb docs_fiscais, como o CNPJ).
+// Cronômetro: t.rodandoDesde (ISO da sessão em andamento) e t.sessoes [{ini,fim,h}] — cada pausa soma em horasRealizadas.
+(function(){
+  var css=
+    '.pmo-tabs{display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:4px;width:max-content;max-width:100%;overflow-x:auto;margin-bottom:16px}'+
+    '.pmo-tab{padding:6px 16px;border-radius:7px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;white-space:nowrap;font-family:inherit}'+
+    '.pmo-tab.on{background:var(--surface);color:var(--accent);box-shadow:var(--sh)}'+
+    '.pmo-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:16px}'+
+    '.pmo-sec{margin-bottom:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}'+
+    '.pmo-sec-hd{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text2)}'+
+    '.pmo-tr{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border)}'+
+    '.pmo-tr:last-child{border-bottom:none}'+
+    '.pmo-btn-r{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--text2);padding:0}'+
+    '.pmo-btn-r.play{color:#15803D;border-color:#86EFAC}.pmo-btn-r.play:hover{background:#F0FDF4}'+
+    '.pmo-btn-r.pause{color:#B45309;border-color:#FCD34D;background:#FFFBEB}'+
+    '.pmo-btn-r.ok:hover{color:#15803D;border-color:#86EFAC}'+
+    '.pmo-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}'+
+    '.pmo-heat{width:100%;border-collapse:separate;border-spacing:6px}'+
+    '.pmo-heat td{border-radius:8px;padding:8px 10px;vertical-align:top;font-size:11px;border:1px solid var(--border);min-width:90px}'+
+    '.pmo-dot-run{width:8px;height:8px;border-radius:50%;background:#EF4444;animation:pmoPulse 1.2s infinite;flex-shrink:0}'+
+    '@keyframes pmoPulse{0%,100%{opacity:1}50%{opacity:.3}}'+
+    '#timer-pill{position:fixed;right:18px;bottom:18px;z-index:1200;display:flex;align-items:center;gap:10px;background:#111827;color:#fff;border-radius:24px;padding:7px 8px 7px 14px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:12px;max-width:calc(100vw - 36px)}'+
+    '#timer-pill .tp-nome{cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;opacity:.9}'+
+    '#timer-pill button{width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}'+
+    '#timer-pill.tp-top{top:10px;bottom:auto;right:auto;left:50%;transform:translateX(-50%)}'+
+    '@media(max-width:768px){#timer-pill{bottom:76px;right:10px}#timer-pill.tp-top{top:6px}#timer-pill .tp-nome{max-width:130px}.pmo-tr{flex-wrap:wrap}.pmo-tr-meta{width:100%;padding-left:76px}}';
+  var st=document.createElement('style'); st.textContent=css; document.head.appendChild(st);
+})();
+var PMO_ICON_PLAY='<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="7 4 20 12 7 20 7 4"/></svg>';
+var PMO_ICON_PAUSE='<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+var PMO_ICON_CHECK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+var PMO_COR={verde:{fg:'#15803D',bg:'#DCFCE7',dot:'#10B981'},amarelo:{fg:'#B45309',bg:'#FEF3C7',dot:'#F59E0B'},vermelho:{fg:'#B91C1C',bg:'#FEE2E2',dot:'#EF4444'},cinza:{fg:'#475569',bg:'#F1F5F9',dot:'#94A3B8'}};
+var _pmoView=(function(){ try{ return localStorage.getItem('cerc_pmo_view')||'semana'; }catch(e){ return 'semana'; } })();
+var _pmoConclAberto=false, _pmoSemDataAberto=false;
+function _pmoSetView(v){ _pmoView=v; try{ localStorage.setItem('cerc_pmo_view',v); }catch(e){} renderProjetos(); }
+function _pmoHoje(){ return _ymd(new Date()); }
+function _fmtDur(ms){ var s=Math.max(0,Math.floor(ms/1000)), h=Math.floor(s/3600), m=Math.floor(s%3600/60); s=s%60; return (h<10?'0':'')+h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
+function _pmoTarefas(d){
+  var out=[];
+  (d.marcos||[]).forEach(function(m,mi){ (m.tarefas||[]).forEach(function(t,ti){ if(!t.id) t.id=uid(); out.push({t:t,m:m,mi:mi,ti:ti,d:d}); }); });
+  return out;
+}
+function _tarHorasReal(t){ var h=parseFloat(t.horasRealizadas)||0; if(t.rodandoDesde) h+=(Date.now()-new Date(t.rodandoDesde).getTime())/3.6e6; return h; }
+function _pmoResumo(d){
+  var ts=_pmoTarefas(d), hoje=_pmoHoje();
+  var r={tarefas:ts,total:ts.length,done:0,orc:0,real:0,orcDone:0,atrasadas:0,prevFim:'',semData:0,prazo:d.prazoEntrega||'',restante:0,rodando:null,proxima:null};
+  ts.forEach(function(x){
+    var t=x.t, o=parseFloat(t.horasOrcadas)||0;
+    r.orc+=o; r.real+=_tarHorasReal(t);
+    if(t.status==='done'){ r.done++; r.orcDone+=o; return; }
+    r.restante+=Math.max(o-(parseFloat(t.horasRealizadas)||0),0);
+    if(t.rodandoDesde) r.rodando=x;
+    if(t.dataPrevista){
+      if(t.dataPrevista<hoje) r.atrasadas++;
+      if(t.dataPrevista>r.prevFim) r.prevFim=t.dataPrevista;
+      if(!r.proxima || t.dataPrevista<r.proxima.t.dataPrevista) r.proxima=x;
+    } else r.semData++;
+  });
+  r.pct=r.total ? Math.round((r.orc>0 ? r.orcDone/r.orc : r.done/r.total)*100) : 0;
+  return r;
+}
+function _pmoSaude(d, r){
+  r=r||_pmoResumo(d);
+  var hoje=_pmoHoje(), motivos=[], nivel='verde';
+  function sobe(n,m){ motivos.push(m); if(n==='vermelho' || (n==='amarelo' && nivel==='verde')) nivel=n; }
+  if(!r.total) return {nivel:'cinza',label:'Sem tarefas',motivos:['Projeto ainda sem tarefas — importe da precificação']};
+  if(r.done===r.total) return {nivel:'verde',label:'Tarefas concluídas',motivos:['Todas as tarefas concluídas']};
+  if(r.prazo && r.prazo<hoje) sobe('vermelho','Prazo de entrega vencido ('+fD(r.prazo)+')');
+  if(r.prazo && r.prevFim && r.prevFim>r.prazo) sobe('vermelho','Previsão de término ('+fD(r.prevFim)+') depois do prazo');
+  if(r.atrasadas) sobe('vermelho',r.atrasadas+' tarefa(s) atrasada(s)');
+  if(r.orc>0 && r.real>r.orc*1.1) sobe('vermelho','Horas gastas acima do orçado ('+_fmtH(r.real)+' de '+_fmtH(r.orc)+')');
+  else if(r.orc>0 && r.real>r.orc*0.9 && r.pct<90) sobe('amarelo','Horas quase esgotadas com '+r.pct+'% concluído');
+  if(r.prazo && r.prazo>=hoje && _diasUteis(hoje,r.prazo).length<=5 && r.pct<80) sobe('amarelo','Prazo em até 5 dias úteis com '+r.pct+'% concluído');
+  if(!r.prazo) sobe('amarelo','Sem prazo de entrega definido');
+  if(r.semData) sobe('amarelo',r.semData+' tarefa(s) sem data prevista');
+  return {nivel:nivel,label:{verde:'No prazo',amarelo:'Atenção',vermelho:'Em risco'}[nivel],motivos:motivos.length?motivos:['Tudo dentro do planejado']};
+}
+function _pmoBadgeSaude(s){
+  var c=PMO_COR[s.nivel];
+  return '<span title="'+_esc(s.motivos.join(' • '))+'" class="pmo-chip" style="display:inline-flex;align-items:center;gap:5px;background:'+c.bg+';color:'+c.fg+'"><span style="width:7px;height:7px;border-radius:50%;background:'+c.dot+'"></span>'+s.label+'</span>';
+}
+function _pmoAbrir(demId){ openModalEdit(demId); switchTab('projeto'); }
+
+// ── Cronômetro ──────────────────────────────────────────
+var TIMER_CAMPOS=['status','iniciadoEm','concluidoEm','dataInicio','dataRealizada','horasRealizadas','rodandoDesde','sessoes'];
+function _achaTarefa(marcos, id){
+  var r=null;
+  (marcos||[]).forEach(function(m,mi){ (m.tarefas||[]).forEach(function(t,ti){ if(!r && t.id===id) r={t:t,mi:mi,ti:ti}; }); });
+  return r;
+}
+function _modalDemAberto(demId){
+  var md=document.getElementById('modal-demanda');
+  return !!md && md.style.display!=='none' && (editingId||'')===(demId||'');
+}
+function _syncMarcoObj(marco){
+  if(!marco) return;
+  var ts=marco.tarefas||[];
+  var dps=ts.filter(function(t){return t.dataPrevista;}).map(function(t){return t.dataPrevista;}).sort();
+  if(dps.length) marco.dataPrevista=dps[dps.length-1];
+  if(ts.length && ts.every(function(t){return t.status==='done';})){
+    var drs=ts.filter(function(t){return t.dataRealizada;}).map(function(t){return t.dataRealizada;}).sort();
+    if(drs.length) marco.dataRealizadaData=drs[drs.length-1];
+  }
+}
+// acao: 'play' | 'pause' | 'concluir'. Grava na hora (não depende do "Salvar Demanda") e mantém a cópia do modal em sincronia.
+function _timerAcao(demId, tarId, acao){
+  var dem=demId ? state.demandas.find(function(d){return d.id===demId;}) : null;
+  var s=dem ? _achaTarefa(dem.marcos, tarId) : null;
+  var m=_modalDemAberto(demId) ? _achaTarefa(modalMarcos, tarId) : null;
+  var base=m ? m.t : (s ? s.t : null);
+  if(!base) return;
+  if(acao==='concluir'){
+    var pend=(base.subtarefas||[]).filter(function(x){return x.status!=='done';}).length;
+    if(pend){ alert('⚠️ Conclua as '+pend+' subtarefa(s) pendente(s) antes de concluir a tarefa.'); return; }
+  }
+  if(acao==='play'){ if(base.status==='done') return; _timerPausarTodos(tarId); }
+  var agora=new Date().toISOString(), hoje=_ymd(new Date());
+  if(base.rodandoDesde && (acao==='pause' || acao==='concluir')){
+    var h=(Date.now()-new Date(base.rodandoDesde).getTime())/3.6e6;
+    base.sessoes=(base.sessoes||[]).concat([{ini:base.rodandoDesde,fim:agora,h:Math.round(h*10000)/10000}]);
+    base.horasRealizadas=Math.round(((parseFloat(base.horasRealizadas)||0)+h)*10000)/10000;
+    base.rodandoDesde='';
+  }
+  if(acao==='play'){ base.rodandoDesde=agora; if(!base.iniciadoEm) base.iniciadoEm=agora; if(!base.dataInicio) base.dataInicio=hoje; base.status='in_progress'; }
+  if(acao==='concluir'){ base.status='done'; base.concluidoEm=agora; base.dataRealizada=hoje; if(!base.dataInicio) base.dataInicio=hoje; }
+  _timerEspelhar(base, m, s, dem);
+  if(acao==='concluir' && !(parseFloat(base.horasRealizadas)>0)){
+    if(m){
+      var r=document.getElementById('tar-real-'+m.mi+'-'+m.ti); if(r) r.focus();
+      toast('Tarefa concluída — informe as horas realmente gastas.','info');
+    } else {
+      var v=prompt('Tarefa concluída. Quantas horas foram gastas em "'+(base.nome||'')+'"?','');
+      var hv=v ? parseFloat(String(v).replace(',','.')) : 0;
+      if(hv>0){ base.horasRealizadas=hv; _timerEspelhar(base, m, s, dem); }
+    }
+  }
+}
+function _timerEspelhar(base, m, s, dem){
+  if(m && s) TIMER_CAMPOS.forEach(function(f){ s.t[f]=(f==='sessoes') ? JSON.parse(JSON.stringify(base.sessoes||[])) : base[f]; });
+  if(m) _syncMarcoDates(m.mi);
+  if(s) _syncMarcoObj(dem.marcos[s.mi]);
+  if(s){ dem.updatedAt=_now(); saveState(); if(_sbUser) sbUpsertDemanda(dem); }
+  else if(m) toast('Tarefa ainda não salva — clique em "Salvar Demanda" para gravar o tempo.','warning');
+  if(m){ _tarSyncCampos(m.mi, m.ti); renderProjResumoBox(); }
+  if(currentPage==='projetos') renderProjetos();
+  _timerPill();
+}
+// Só uma tarefa roda por vez: ao dar play numa, pausa qualquer outra
+function _timerPausarTodos(excetoId){
+  state.demandas.forEach(function(d){
+    _pmoTarefas(d).forEach(function(x){ if(x.t.rodandoDesde && x.t.id!==excetoId) _timerAcao(d.id, x.t.id, 'pause'); });
+  });
+  var md=document.getElementById('modal-demanda');
+  if(md && md.style.display!=='none') modalMarcos.forEach(function(mm){ (mm.tarefas||[]).forEach(function(t){ if(t.rodandoDesde && t.id!==excetoId) _timerAcao(editingId||'', t.id, 'pause'); }); });
+}
+function _timerRodando(){
+  var r=null, md=document.getElementById('modal-demanda');
+  if(md && md.style.display!=='none') modalMarcos.forEach(function(mm){ (mm.tarefas||[]).forEach(function(t){
+    if(!r && t.rodandoDesde){ var p=document.getElementById('f-proposta'); r={demId:editingId||'',t:t,proposta:p?p.value:''}; }
+  }); });
+  if(!r) state.demandas.forEach(function(d){ _pmoTarefas(d).forEach(function(x){ if(!r && x.t.rodandoDesde) r={demId:d.id,t:x.t,proposta:d.proposta||''}; }); });
+  return r;
+}
+function _timerPill(){
+  var r=_timerRodando(), el=document.getElementById('timer-pill');
+  if(!r){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement('div'); el.id='timer-pill'; document.body.appendChild(el); }
+  var chave=r.demId+'|'+r.t.id+'|'+r.t.rodandoDesde;
+  if(el.dataset.chave===chave) return;
+  el.dataset.chave=chave;
+  el.innerHTML='<span class="pmo-dot-run"></span>'+
+    '<span class="tmr-live" data-ini="'+r.t.rodandoDesde+'" style="font-family:\'JetBrains Mono\',monospace;font-weight:700">'+_fmtDur(Date.now()-new Date(r.t.rodandoDesde).getTime())+'</span>'+
+    '<span class="tp-nome" title="Abrir projeto" onclick="'+(r.demId?'_pmoAbrir(\''+r.demId+'\')':'')+'">'+_esc((r.proposta?r.proposta+' · ':'')+(r.t.nome||''))+'</span>'+
+    '<button title="Pausar" style="background:#FBBF24;color:#111827" onclick="_timerAcao(\''+r.demId+'\',\''+r.t.id+'\',\'pause\')">'+PMO_ICON_PAUSE+'</button>'+
+    '<button title="Concluir" style="background:#10B981;color:#fff" onclick="_timerAcao(\''+r.demId+'\',\''+r.t.id+'\',\'concluir\')">'+PMO_ICON_CHECK+'</button>';
+}
+var _timerTicks=0;
+setInterval(function(){
+  document.querySelectorAll('.tmr-live').forEach(function(el){ if(el.dataset.ini) el.textContent=_fmtDur(Date.now()-new Date(el.dataset.ini).getTime()); });
+  if(++_timerTicks%5===0) _timerPill();
+  var tp=document.getElementById('timer-pill');
+  if(tp){ var aberto=Array.prototype.some.call(document.querySelectorAll('.overlay'),function(o){ return o.style.display!=='none' && getComputedStyle(o).display!=='none'; }); tp.classList.toggle('tp-top', aberto); }
+},1000);
+setTimeout(_timerPill,1500);
+function _timerBotoes(demId, t){
+  if(t.status==='done') return '<span class="pmo-btn-r" style="color:#15803D;border-color:#86EFAC;background:#F0FDF4;cursor:default" title="Concluída">'+PMO_ICON_CHECK+'</span>';
+  var run=!!t.rodandoDesde;
+  return '<button class="pmo-btn-r '+(run?'pause':'play')+'" title="'+(run?'Pausar':'Iniciar / retomar')+'" onclick="event.stopPropagation();_timerAcao(\''+demId+'\',\''+t.id+'\',\''+(run?'pause':'play')+'\')">'+(run?PMO_ICON_PAUSE:PMO_ICON_PLAY)+'</button>'+
+    '<button class="pmo-btn-r ok" title="Concluir" onclick="event.stopPropagation();_timerAcao(\''+demId+'\',\''+t.id+'\',\'concluir\')">'+PMO_ICON_CHECK+'</button>';
+}
+function _timerChip(t){
+  if(t.rodandoDesde) return '<span class="pmo-chip" style="background:#FEE2E2;color:#B91C1C;display:inline-flex;align-items:center;gap:5px"><span class="pmo-dot-run" style="width:6px;height:6px"></span><span class="tmr-live" data-ini="'+t.rodandoDesde+'">'+_fmtDur(Date.now()-new Date(t.rodandoDesde).getTime())+'</span></span>';
+  if(t.status==='done') return '<span class="pmo-chip" style="background:#DCFCE7;color:#15803D">Concluída</span>';
+  if(t.status==='in_progress') return '<span class="pmo-chip" style="background:#FEF3C7;color:#B45309">Pausada</span>';
+  return '<span class="pmo-chip" style="background:var(--surface2);color:var(--text3)">A fazer</span>';
+}
+
+// ── Resumo do projeto na aba Projeto do modal ──
+function renderProjResumoBox(){
+  var el=document.getElementById('proj-resumo-box'); if(!el) return;
+  var inp=document.getElementById('f-prazo-entrega');
+  var d={marcos:modalMarcos, prazoEntrega:inp?inp.value:''};
+  var r=_pmoResumo(d), s=_pmoSaude(d, r);
+  if(!r.total){ el.innerHTML=''; return; }
+  function cel(l,v,c){ return '<div><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">'+l+'</div><div style="font-size:13px;font-weight:700;color:'+(c||'var(--text)')+'">'+v+'</div></div>'; }
+  el.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:12px">'+
+    _pmoBadgeSaude(s)+
+    cel('Orçado',_fmtH(r.orc))+
+    cel('Gasto',_fmtH(r.real), r.orc>0&&r.real>r.orc?'#DC2626':'')+
+    cel('Restante',_fmtH(r.restante))+
+    cel('Previsão de término',r.prevFim?fD(r.prevFim):'—', r.prazo&&r.prevFim&&r.prevFim>r.prazo?'#DC2626':'')+
+    (s.nivel!=='verde'?'<div style="flex-basis:100%;font-size:11px;color:var(--text3)">'+_esc(s.motivos.join(' • '))+'</div>':'')+
+  '</div>';
+}
+
+// ── Tela PMO ────────────────────────────────────────────
+function renderProjetos(){
+  var pc=document.getElementById('page-content'); if(!pc) return;
+  var projetos=state.demandas.filter(function(d){ return PROJ_STATUS_ATIVOS.indexOf(d.status)>=0; });
+  var abas=[['semana','Semana'],['carteira','Carteira'],['capacidade','Capacidade'],['cronograma','Cronograma']];
+  var html='<div style="padding:20px 24px">'+
+    '<div class="pmo-tabs">'+abas.map(function(a){ return '<button class="pmo-tab'+(_pmoView===a[0]?' on':'')+'" onclick="_pmoSetView(\''+a[0]+'\')">'+a[1]+'</button>'; }).join('')+'</div>';
+  if(_pmoView==='carteira') html+=_pmoCarteira(projetos);
+  else if(_pmoView==='capacidade') html+=_pmoCapacidade(projetos);
+  else if(_pmoView==='cronograma') html+=_pmoCronograma(projetos);
+  else html+=_pmoSemana(projetos);
+  pc.innerHTML=html+'</div>';
+  _timerPill();
+}
+function _pmoVazio(){
+  return '<div style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:15px;font-weight:700;margin-bottom:6px;color:var(--text2)">Nenhum projeto ativo</div>'+
+    '<div style="font-size:12px">Demandas com status "Fechado", "Em Execução" ou "Em Revisão" aparecem aqui.</div></div>';
+}
+function _pmoTarefaRow(x, extra){
+  var t=x.t, d=x.d, hoje=_pmoHoje();
+  var orc=parseFloat(t.horasOrcadas)||0, real=parseFloat(t.horasRealizadas)||0;
+  var atras=t.status!=='done' && t.dataPrevista && t.dataPrevista<hoje;
+  return '<div class="pmo-tr">'+
+    _timerBotoes(d.id, t)+
+    '<div style="flex:1;min-width:0;cursor:pointer" onclick="_pmoAbrir(\''+d.id+'\')">'+
+      '<div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+_esc(t.nome)+'">'+_esc(t.nome)+'</div>'+
+      '<div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b style="color:var(--accent);font-family:monospace">'+_esc(d.proposta||'')+'</b> · '+_esc(d.cliente||'')+' · '+_esc(x.m.nome||'')+'</div>'+
+    '</div>'+
+    '<div class="pmo-tr-meta" style="display:flex;align-items:center;gap:10px;flex-shrink:0">'+
+      (extra||'')+
+      '<span style="font-size:11px;color:'+(orc&&real>orc?'#DC2626':'var(--text2)')+';white-space:nowrap" title="Horas gastas / orçadas">'+_fmtH(real).replace(' h','')+' / '+(orc?_fmtH(orc):'— h')+'</span>'+
+      (t.dataPrevista?'<span style="font-size:11px;white-space:nowrap;color:'+(atras?'#DC2626':'var(--text3)')+';font-weight:'+(atras?'700':'400')+'">até '+fD(t.dataPrevista).slice(0,5)+'</span>':'')+
+      _timerChip(t)+
+    '</div>'+
+  '</div>';
+}
+
+// Semana: o que fazer hoje e nos próximos dias úteis, de todos os projetos
+function _pmoSemana(projetos){
+  if(!projetos.length) return _pmoVazio();
+  var hoje=_pmoHoje(), cap=_projCapacidade(), carga=_projCargaOutras(null);
+  var dias=[], dd=new Date(); dd.setHours(0,0,0,0);
+  while(dias.length<10){ if(_isUtil(dd)) dias.push(_ymd(dd)); dd.setDate(dd.getDate()+1); }
+  var pend=[]; projetos.forEach(function(p){ _pmoTarefas(p).forEach(function(x){ if(x.t.status!=='done') pend.push(x); }); });
+  var atrasadas=pend.filter(function(x){ return x.t.dataPrevista && x.t.dataPrevista<hoje; });
+  var semData=pend.filter(function(x){ return !x.t.dataPrevista; });
+  var andamentoSemData=semData.filter(function(x){ return x.t.status==='in_progress'; });
+  function cargaDia(k){ return (carga[k]||[]).reduce(function(a,i){return a+i.horas;},0); }
+  var h5=dias.slice(0,5).reduce(function(a,k){return a+cargaDia(k);},0);
+  var hSemData=semData.reduce(function(a,x){return a+(parseFloat(x.t.horasOrcadas)||0);},0);
+  var html='<div class="pmo-kpis">'+
+    _projKpi('Planejado para hoje', _fmtH(cargaDia(hoje)), 'de '+_fmtH(cap)+' disponíveis', cargaDia(hoje)>cap?'#EF4444':'#3B82F6')+
+    _projKpi('Próximos 5 dias úteis', _fmtH(h5), 'de '+_fmtH(cap*5)+' disponíveis', h5>cap*5?'#EF4444':'#3B82F6')+
+    _projKpi('Tarefas atrasadas', atrasadas.length, atrasadas.length?'precisam de nova data ou conclusão':'nenhuma', atrasadas.length?'#EF4444':'#10B981')+
+    _projKpi('Sem data prevista', semData.length, _fmtH(hSemData)+' fora do planejamento', semData.length?'#F59E0B':'#10B981')+
+  '</div>';
+  if(atrasadas.length){
+    html+='<div class="pmo-sec" style="border-color:#FECACA"><div class="pmo-sec-hd" style="background:#FEF2F2;color:#B91C1C">Atrasadas <span class="pmo-chip" style="background:#EF4444;color:#fff">'+atrasadas.length+'</span></div>'+
+      atrasadas.sort(function(a,b){return a.t.dataPrevista<b.t.dataPrevista?-1:1;}).map(function(x){return _pmoTarefaRow(x);}).join('')+'</div>';
+  }
+  if(andamentoSemData.length){
+    html+='<div class="pmo-sec"><div class="pmo-sec-hd">Em andamento sem data prevista</div>'+andamentoSemData.map(function(x){return _pmoTarefaRow(x);}).join('')+'</div>';
+  }
+  var nomesDia=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  dias.forEach(function(k){
+    var doDia=pend.filter(function(x){
+      var t=x.t; if(!t.dataPrevista || t.dataPrevista<hoje) return false;
+      return _diasUteis(t.dataInicioPrev||t.dataInicio||t.dataPrevista, t.dataPrevista).indexOf(k)>=0;
+    });
+    var h=cargaDia(k), pct=Math.min(h/cap*100,100), over=h>cap+0.01;
+    var dt=_parseYmd(k), rotulo=(k===hoje?'Hoje':nomesDia[dt.getDay()])+' '+fD(k).slice(0,5);
+    html+='<div class="pmo-sec"><div class="pmo-sec-hd"'+(k===hoje?' style="background:var(--accent-l);color:var(--accent)"':'')+'>'+rotulo+
+      '<div style="flex:1;max-width:160px;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+(over?'#EF4444':pct>=70?'#F59E0B':'#10B981')+'"></div></div>'+
+      '<span style="font-weight:600;color:'+(over?'#DC2626':'var(--text3)')+'">'+_fmtH(h)+' de '+_fmtH(cap)+'</span></div>'+
+      (doDia.length?doDia.map(function(x){
+        var n=_diasUteis(x.t.dataInicioPrev||x.t.dataInicio||x.t.dataPrevista, x.t.dataPrevista).length;
+        var porDia=(parseFloat(x.t.horasOrcadas)||0)/n;
+        return _pmoTarefaRow(x, porDia?'<span class="pmo-chip" style="background:var(--surface2);color:var(--text2)" title="Horas previstas neste dia">'+_fmtH(porDia)+' no dia</span>':'');
+      }).join(''):'<div style="padding:8px 14px;font-size:11px;color:var(--text3)">Livre</div>')+
+    '</div>';
+  });
+  if(semData.length){
+    html+='<div class="pmo-sec"><div class="pmo-sec-hd" style="cursor:pointer" onclick="_pmoSemDataAberto=!_pmoSemDataAberto;renderProjetos()">'+(_pmoSemDataAberto?'▼':'▶')+' Sem data prevista ('+semData.length+' tarefas · '+_fmtH(hSemData)+')'+
+      '<span style="font-weight:400;color:var(--text3)">— abra o projeto e use "Sugerir cronograma"</span></div>'+
+      (_pmoSemDataAberto?semData.map(function(x){return _pmoTarefaRow(x);}).join(''):'')+'</div>';
+  }
+  return html;
+}
+
+// Carteira: saúde de cada projeto, prazo e consumo de horas
+function _pmoCarteira(projetos){
+  var hoje=_pmoHoje(), cap=_projCapacidade();
+  var dados=projetos.map(function(d){ var r=_pmoResumo(d); return {d:d,r:r,s:_pmoSaude(d,r)}; });
+  var emRisco=dados.filter(function(x){return x.s.nivel==='vermelho';}).length;
+  var restante=dados.reduce(function(a,x){return a+x.r.restante;},0);
+  var oT=0, rT=0;
+  state.demandas.forEach(function(d){ _pmoTarefas(d).forEach(function(x){ var o=parseFloat(x.t.horasOrcadas)||0, h=parseFloat(x.t.horasRealizadas)||0; if(x.t.status==='done' && o>0 && h>0){ oT+=o; rT+=h; } }); });
+  var desvio=oT>0 ? Math.round((rT/oT-1)*100) : null;
+  var html='<div class="pmo-kpis">'+
+    _projKpi('Projetos ativos', projetos.length, 'Fechados + Em Execução + Em Revisão', '#3B82F6')+
+    _projKpi('Em risco', emRisco, emRisco?'prazo, atraso ou horas estouradas':'nenhum projeto em risco', emRisco?'#EF4444':'#10B981')+
+    _projKpi('Trabalho restante', _fmtH(restante), '≈ '+Math.ceil(restante/cap)+' dia(s) útil(eis) de '+_fmtH(cap), '#7C3AED')+
+    _projKpi('Precisão das estimativas', desvio===null?'—':(desvio>0?'+':'')+desvio+'%', desvio===null?'aparece após concluir tarefas com horas':(desvio>0?'gasto acima do orçado':'gasto abaixo do orçado'), desvio===null?'#6B7280':Math.abs(desvio)<=10?'#10B981':'#F59E0B')+
+  '</div>';
+  if(!projetos.length) html+=_pmoVazio();
+  var ordemNivel={vermelho:0,amarelo:1,cinza:2,verde:3};
+  [['Em Execução','Em Execução','#3B82F6'],['Em Revisão','Em Revisão','#7C3AED'],['Fechado','Fechados — a iniciar','#64748B']].forEach(function(g){
+    var lista=dados.filter(function(x){return x.d.status===g[0];}).sort(function(a,b){
+      return (ordemNivel[a.s.nivel]-ordemNivel[b.s.nivel]) || ((a.r.prazo||'9999')<(b.r.prazo||'9999')?-1:1);
+    });
+    if(!lista.length) return;
+    html+='<div style="display:flex;align-items:center;gap:10px;margin:6px 0 10px;padding:7px 12px;background:var(--surface2);border-radius:8px;border-left:4px solid '+g[2]+'">'+
+      '<span style="font-size:13px;font-weight:700;color:var(--text)">'+g[1]+'</span><span class="pmo-chip" style="background:'+g[2]+';color:#fff">'+lista.length+'</span></div>';
+    html+='<div class="proj-cards-grid">'+lista.map(_pmoCard).join('')+'</div>';
+  });
+  // Concluídos recentes: orçado × real (alimenta a precificação)
+  var concl=state.demandas.filter(function(d){ return d.status==='Concluído' && _pmoTarefas(d).length; }).map(function(d){
+    var fim=''; _pmoTarefas(d).forEach(function(x){ if(x.t.dataRealizada && x.t.dataRealizada>fim) fim=x.t.dataRealizada; });
+    return {d:d,r:_pmoResumo(d),fim:fim||(d.updatedAt||'').slice(0,10)};
+  }).sort(function(a,b){return a.fim<b.fim?1:-1;}).slice(0,15);
+  if(concl.length){
+    html+='<div class="pmo-sec"><div class="pmo-sec-hd" style="cursor:pointer" onclick="_pmoConclAberto=!_pmoConclAberto;renderProjetos()">'+(_pmoConclAberto?'▼':'▶')+' Concluídos recentemente — orçado × real ('+concl.length+')</div>'+
+      (_pmoConclAberto?'<div class="tw" style="border:none;border-radius:0"><table><thead><tr><th>Proposta</th><th>Serviço</th><th>Concluído</th><th style="text-align:right">Orçado</th><th style="text-align:right">Real</th><th style="text-align:right">Desvio</th></tr></thead><tbody>'+
+        concl.map(function(c){
+          var dv=c.r.orc>0&&c.r.real>0?Math.round((c.r.real/c.r.orc-1)*100):null;
+          return '<tr style="cursor:pointer" onclick="_pmoAbrir(\''+c.d.id+'\')"><td style="font-family:monospace;font-size:11px;color:var(--accent);font-weight:700">'+_esc(c.d.proposta||'')+'</td><td style="font-size:12px">'+_esc(c.d.servico||'')+'</td><td style="font-size:12px;color:var(--text3)">'+fD(c.fim)+'</td>'+
+            '<td style="text-align:right;font-size:12px">'+_fmtH(c.r.orc)+'</td><td style="text-align:right;font-size:12px">'+_fmtH(c.r.real)+'</td>'+
+            '<td style="text-align:right;font-size:12px;font-weight:700;color:'+(dv===null?'var(--text3)':Math.abs(dv)<=10?'#15803D':'#B45309')+'">'+(dv===null?'—':(dv>0?'+':'')+dv+'%')+'</td></tr>';
+        }).join('')+'</tbody></table></div>':'')+'</div>';
+  }
+  return html;
+}
+function _pmoCard(x){
+  var d=x.d, r=x.r, s=x.s, hoje=_pmoHoje();
+  var prazoTxt;
+  if(r.prazo){
+    var n=_diasUteis(hoje<r.prazo?hoje:r.prazo, hoje<r.prazo?r.prazo:hoje).length-1;
+    prazoTxt=r.prazo<hoje ? '<span style="color:#DC2626;font-weight:700">Entrega '+fD(r.prazo)+' — vencido há '+n+' dia(s) útil(eis)</span>'
+      : 'Entrega <b>'+fD(r.prazo)+'</b> <span style="color:var(--text3)">('+(n===0?'hoje':'em '+n+' dia(s) útil(eis)')+')</span>';
+  } else prazoTxt='<span style="color:#B45309">Prazo de entrega não definido</span>';
+  var hPct=r.orc>0?Math.min(r.real/r.orc*100,100):0, hCor=r.orc>0&&r.real>r.orc?'#EF4444':r.orc>0&&r.real>r.orc*0.9?'#F59E0B':'#7C3AED';
+  var pCor=PMO_COR[s.nivel].dot;
+  return '<div class="proj-card" onclick="_pmoAbrir(\''+d.id+'\')">'+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.3">'+_esc(d.servico)+'</div>'+_pmoBadgeSaude(s)+
+    '</div>'+
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:8px"><b style="font-family:monospace;color:var(--accent)">'+_esc(d.proposta||'')+'</b> · '+_esc(d.cliente||'')+'</div>'+
+    '<div style="font-size:11px;margin-bottom:10px">'+prazoTxt+'</div>'+
+    (r.total?(
+      '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px"><span>Progresso · '+r.done+'/'+r.total+' tarefas</span><b style="color:'+pCor+'">'+r.pct+'%</b></div>'+
+      '<div style="height:5px;background:var(--border);border-radius:3px;margin-bottom:8px"><div style="height:100%;width:'+r.pct+'%;background:'+pCor+';border-radius:3px"></div></div>'+
+      (r.orc>0?'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px"><span>Horas gastas</span><b style="color:'+hCor+'">'+_fmtH(r.real)+' de '+_fmtH(r.orc)+'</b></div>'+
+        '<div style="height:5px;background:var(--border);border-radius:3px;margin-bottom:8px"><div style="height:100%;width:'+hPct+'%;background:'+hCor+';border-radius:3px"></div></div>':'')+
+      (r.rodando?'<div style="font-size:11px;color:#B91C1C;display:flex;align-items:center;gap:6px"><span class="pmo-dot-run"></span>Em andamento: '+_esc(r.rodando.t.nome)+'</div>'
+        :r.proxima?'<div style="font-size:11px;color:var(--text2)">Próxima: <b>'+_esc(r.proxima.t.nome)+'</b> — até '+fD(r.proxima.t.dataPrevista)+'</div>':'')
+    ):'<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="event.stopPropagation();_pmoAbrir(\''+d.id+'\');projImportarPrecificacao()">⇣ Importar tarefas da precificação</button>')+
+  '</div>';
+}
+
+// Capacidade: carga prevista × horas disponíveis, dia a dia
+function _pmoCapacidade(projetos){
+  var cap=_projCapacidade(), carga=_projCargaOutras(null), hoje=_pmoHoje();
+  var seg=new Date(); seg.setHours(0,0,0,0); seg.setDate(seg.getDate()-((seg.getDay()+6)%7));
+  var semanas=[], diasSobre=0, livre=0;
+  for(var w=0; w<6; w++){
+    var linha=[];
+    for(var i=0;i<5;i++){ var dt=new Date(seg); dt.setDate(seg.getDate()+w*7+i); linha.push(_ymd(dt)); }
+    semanas.push(linha);
+  }
+  function itensDia(k){
+    var porProj={}, ordem=[];
+    (carga[k]||[]).forEach(function(i){ if(!porProj[i.demId]){ porProj[i.demId]={proposta:i.proposta,h:0}; ordem.push(i.demId); } porProj[i.demId].h+=i.horas; });
+    return ordem.map(function(id){return porProj[id];});
+  }
+  var html='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;color:var(--text2)">'+
+    'Horas disponíveis por dia: <input type="number" min="1" step="0.5" class="finput" style="width:80px" value="'+cap+'" onchange="if(parseFloat(this.value)>0){_projSetCapacidade(parseFloat(this.value));renderProjetos();}"/>'+
+    '<span style="color:var(--text3)">Considera as tarefas não concluídas com horas e datas previstas, em dias úteis.</span></div>';
+  var tab='<table class="pmo-heat"><thead><tr>'+['Seg','Ter','Qua','Qui','Sex'].map(function(n){return '<th style="font-size:10px;color:var(--text3);text-align:left;padding:0 4px">'+n+'</th>';}).join('')+'</tr></thead><tbody>';
+  semanas.forEach(function(linha){
+    tab+='<tr>'+linha.map(function(k){
+      var passado=k<hoje, its=itensDia(k), h=its.reduce(function(a,i){return a+i.h;},0), p=h/cap;
+      if(!passado){ if(h>cap+0.01) diasSobre++; livre+=Math.max(cap-h,0); }
+      var bg=passado?'var(--surface2)':h===0?'var(--surface)':p>1?'#FEE2E2':p>=0.7?'#FEF3C7':'#DCFCE7';
+      var fg=p>1?'#B91C1C':p>=0.7?'#B45309':'#15803D';
+      return '<td style="background:'+bg+';opacity:'+(passado?'.55':'1')+';'+(k===hoje?'outline:2px solid var(--accent);':'')+'" title="'+_esc(its.map(function(i){return (i.proposta||'Demanda')+': '+_fmtH(i.h);}).join('\n'))+'">'+
+        '<div style="display:flex;justify-content:space-between;gap:6px"><span style="color:var(--text3)">'+fD(k).slice(0,5)+'</span><b style="color:'+(h?fg:'var(--text3)')+'">'+(h?_fmtH(h):'livre')+'</b></div>'+
+        its.slice(0,3).map(function(i){return '<div style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(i.proposta||'Demanda')+' · '+_fmtH(i.h)+'</div>';}).join('')+
+        (its.length>3?'<div style="font-size:10px;color:var(--text3)">+'+(its.length-3)+'</div>':'')+
+      '</td>';
+    }).join('')+'</tr>';
+  });
+  tab+='</tbody></table>';
+  var semData=0, hSemData=0, atras=0, hAtras=0;
+  projetos.forEach(function(p){ _pmoTarefas(p).forEach(function(x){ if(x.t.status==='done') return; var o=parseFloat(x.t.horasOrcadas)||0;
+    if(!x.t.dataPrevista){ semData++; hSemData+=o; } else if(x.t.dataPrevista<hoje){ atras++; hAtras+=Math.max(o-(parseFloat(x.t.horasRealizadas)||0),0); } }); });
+  html+='<div class="pmo-kpis">'+
+    _projKpi('Dias acima da capacidade', diasSobre, 'nas próximas 6 semanas', diasSobre?'#EF4444':'#10B981')+
+    _projKpi('Horas livres', _fmtH(livre), 'nas próximas 6 semanas', '#10B981')+
+    _projKpi('Fora do mapa', semData+atras, _fmtH(hSemData+hAtras)+' (sem data ou atrasadas)', semData+atras?'#F59E0B':'#6B7280')+
+  '</div>';
+  html+='<div style="overflow-x:auto;margin-bottom:16px">'+tab+'</div>';
+  html+='<div class="pmo-sec"><div class="pmo-sec-hd">Simular um novo projeto</div><div style="padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">'+
+    '<div class="fg"><label>Horas do projeto</label><input id="pmo-sim-h" type="number" min="0.5" step="0.5" class="finput" style="width:120px" placeholder="Ex: 24"/></div>'+
+    '<div class="fg"><label>Começar em</label><input id="pmo-sim-ini" type="date" class="finput" value="'+hoje+'"/></div>'+
+    '<button class="btn btn-primary btn-sm" onclick="_pmoSimular()">Calcular entrega</button>'+
+    '<div id="pmo-sim-res" style="flex-basis:100%;font-size:12px;color:var(--text2)">Informe as horas para ver a data mais cedo em que um novo projeto poderia ser entregue, encaixando nas horas livres da agenda.</div>'+
+  '</div></div>';
+  return html;
+}
+function _pmoSimular(){
+  var h=parseFloat(document.getElementById('pmo-sim-h').value), ini=document.getElementById('pmo-sim-ini').value, out=document.getElementById('pmo-sim-res');
+  if(!(h>0) || !ini){ out.textContent='Informe as horas e a data de início.'; return; }
+  var cap=_projCapacidade(), carga=_projCargaOutras(null), d=_parseYmd(ini), rest=h, primeiro='', fim='', guard=0, cheios=0;
+  while(!_isUtil(d)) d.setDate(d.getDate()+1);
+  while(rest>0.0001 && guard++<1000){
+    var k=_ymd(d), l=cap-(carga[k]||[]).reduce(function(a,i){return a+i.horas;},0);
+    if(l>0.0001){ var u=Math.min(l,rest); rest-=u; if(!primeiro) primeiro=k; fim=k; } else cheios++;
+    if(rest>0.0001){ do{ d.setDate(d.getDate()+1); }while(!_isUtil(d)); }
+  }
+  if(rest>0.0001){ out.innerHTML='<span style="color:#DC2626">A agenda não tem espaço para '+_fmtH(h)+' no próximo ano com '+_fmtH(cap)+'/dia.</span>'; return; }
+  out.innerHTML='Com a carga atual, '+_fmtH(h)+' começando em '+fD(ini)+' terminariam em <b style="color:var(--accent)">'+fD(fim)+'</b>'+
+    ' ('+(_diasUteis(primeiro,fim).length)+' dia(s) útil(eis) de trabalho'+(cheios?', pulando '+cheios+' dia(s) já cheio(s)':'')+'). Use essa data como referência de prazo na proposta.';
+}
+function _pmoCronograma(projetos){
+  if(!projetos.length) return _pmoVazio();
+  var prazoMap={};
+  projetos.forEach(function(d){ (d.marcos||[]).forEach(function(m){ if(m.dataPrevista && m.status!=='Realizado'){ (prazoMap[m.dataPrevista]=prazoMap[m.dataPrevista]||[]).push(d.id); } }); });
+  return '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">Barras do início da primeira tarefa até o prazo de entrega (ou última data prevista). Vermelho = projeto em risco.</div>'+_renderGantt(projetos, prazoMap);
+}
+
 function renderMarcosTab() {
+  setTimeout(renderProjResumoBox,0);
   var list = document.getElementById('marcos-list');
   var empty = document.getElementById('marcos-empty');
   if(!list) return;
